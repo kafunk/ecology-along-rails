@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <title>Animate a point along a route</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' />
+  <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet'>
+  <link href='https://fonts.googleapis.com/css?family=Corben:400|Montserrat:400,700' rel='stylesheet'>
+  <link href='css/styles.css' rel='stylesheet' />
+  <style>
+    body { margin:0; padding:0; }
+    #map { position:absolute; top:0; bottom:0; width:100%; }
+    .overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+    }
+    .overlay button {
+      font:600 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+      background-color: #3386c0;
+      color: #fff;
+      display: inline-block;
+      margin: 0;
+      padding: 10px 20px;
+      border: none;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    .overlay button:hover {
+      background-color:#4ea0da;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class='flex-parent viewport-full relative scroll-hidden'>
+
+    <header class='header'>
+      <h1>Ecology Along the Rails:</h1>
+      <h3>A visualization of the journeys implicit in passenger train travel within the continental US</h3>
+      <!-- navigation? -->
+    </header>
+
+    <div class='flex-child flex-child--grow viewport-twothirds viewport-full-ml'>
+      <!-- map -->
+      <div id='map' class='viewport-twothirds viewport-full-ml'>
+      <div class='overlay'>
+        <button id='replay'>Replay</button>
+        <button id='pause'>Pause</button>
+      </div>
+    </div>
+
+    <div id='dashboard'>
+
+    </div>
+
+    <div id='sidebar' class='flex-child w-full w360-ml absolute static-ml right bottom bg-dark'>
+
+      <div id='about' class='flex-parent flex-parent--column viewport-third h-full-ml hmax-full scroll-auto'>
+        <div id='intro' class='flex-child flex-child--grow bg-accent scroll-auto-mm'>
+          <h1 class='mx18 my12 txt-h1'>Some words about this map</h1>
+          <p>This map visualizes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.</p>
+        </div>
+        <div id='furthermore' class='flex-child bg-accent scroll-auto-mm'>
+          <h2 class='txt-bold mr36'>Method, data sources, links</h2>
+          <ul class='txt-ul txt-s pl60 pr12 pl36-mm mb24'>
+            <li class='txt-li'></li>
+          </ul>
+        </div>
+      </div>
+
+      <div id='log' class='flex-parent flex-parent--column viewport-third h-full-ml hmax-full'>
+        <div class='flex-child bg-accent scroll-hidden'>
+          <h2>Journey Log</h2>
+        </div>
+        <div class='flex-child flex-child-grow bg-accent scroll-auto-mm'>
+          <table>
+            <thead>
+            </thead>
+            <tbody>
+            </tbody>
+            <tfoot>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <footer class='flex-child txt-m'>
+      <div class='flex-parent flex-parent--column flex-parent--center-main'>
+        <div class='flex-child'>
+          <p class='align-l pr120 pr36-ml'>Data accessed May 2018 on
+          <a target='_blank' class='link' href='https://data.cityofchicago.org/browse?q=libraries%202017%20by%20location&sortBy=last_modified&anonymous=true&utf8=%E2%9C%93#'>Chicago's Open Data Portal</a>.
+          </p>
+        </div>
+        <div id='compass-icon' class='flex-child pt3-mm'>
+          <img src='svg/compass-rose.svg' />
+        </div>
+        <div class='flex-child'>
+          <p class='align-r pl120 pl24-ml'>Map authored by
+            <a target='_blank' class='link' href='https://kafunk.github.io'>Katrina Funk</a> in partial fulfilment of MAP 673 // <a target='_blank' class='link' href='https://newmapsplus.uky.edu'>New Maps Plus</a>.
+          </p>
+        </div>
+       </div>
+    </footer>
+
+  </div>
+
+  <!-- load Assembly -->
+  <script async defer src='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.js'></script>
+  <!-- load MapboxGL -->
+  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script>
+  <!-- load Turf.js -->
+  <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script> 
+  <!-- load Simple Statistics -->
+  <!-- load D3 -->
+  <!-- load custom script -->
+  <script src='js/app.js'></script>
+
+</body>
+</html>
