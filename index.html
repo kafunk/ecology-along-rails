@@ -8,98 +8,171 @@
     <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet'>
     <link href='https://fonts.googleapis.com/css?family=Corben:400|Montserrat:400,700' rel='stylesheet'>
     <link href='css/styles.css' rel='stylesheet' />
+
+    <style>
+
+    .inner-wrapper {
+      padding: 6px;
+    }
+    </style>
   </head>
 
   <body>
 
-    <div id="pg-wrapper" class="wrapper mx0 my0 mx6-mm my6-mm mx12-ml my12-ml mx18-xl my18-xl">
+    <div id="pg-wrapper" class="outer-wrapper grid grid--gut0 flex-parent flex-parent--column flex-parent--stretch-cross flex-parent--center-main">
 
-      <!-- stays up top -->
-      <header class="flex-parent flex-parent--center-cross flex-parent--space-between-main h60 bg-red--dark"> <!--absolute,top?-->
-        <!-- title // always visible, fills space available -->
-        <div id="title-wrapper" class="flex-child flex-child--grow bg-red">
-          <h1 class="txt-h1 block">Ecology Along the Rails:</h1>
-          <h2 class="txt-h2 block">A visualization of the journeys implicit in passenger train travel within the continental US</h2>
-        </div>
-        <!-- nav/toggle: one of children always visible; fills right 1/5 or less -->
-        <div id="nav-wrapper" class="flex-child flex-child--no-shrink wmin24 bg-red--light">
-          <nav>
-          <!-- sometimes visible: 'about this map' link & text -->
-            <!-- visible when small -->
-            <a href="#about section">What am I looking at?</a>
-            <!-- visible when big ONLY after #about content collapse -->
-            <a href="<toggle about window>">Read more</a>
-          <!-- always visible: one of several link/nav icons -->
-            <!-- question mark or equivalent // visible when small -->
-            <img src="http://via.placeholder.com/60x60" alt="br-icon" />
-            <!-- collapse icon // visible when big AND not collapsed (including on initial load)-->
-            <img src="http://via.placeholder.com/60x60" alt="br-icon" />
-            <!-- expand icon // visible when big ONLY after #sidebar#main content collapse -->
-            <img src="http://via.placeholder.com/60x60" alt="br-icon" />
+      <!-- header stays up top -->
+      <header class="flex-child flex-child--no-shrink hmin60 bg-red--dark"> <!--absolute,top?-->
+        <div id="header-wrapper" class="inner-wrapper flex-parent flex-parent--center-cross flex-parent--space-between-main bg-red">
+          <!-- title // always visible, fills space available -->
+          <section class="flex-child flex-child--grow bg-red--light">
+            <div id="title-wrapper" class="inner-wrapper flex-parent flex-parent--column flex-parent--center-main bg-red--faint">
+              <h1 class="txt-h1 flex-child col col--11 col--offr1 col--8-mm col--offr4-mm">Ecology Along the Rails:</h1>
+              <h2 class="txt-h2 flex-child col col--11 col--offl1 col--8-mm col--offl4-mm">A visualization of the journeys implicit in passenger train travel within the continental US</h2>
+            </div>
+          </section>
+          <!-- nav/toggle: one of children always visible; fills right 1/6ish -->
+          <nav class="flex-child flex-child--no-shrink wmin60 bg-orange--faint">
+            <div id="nav-wrapper" class="inner-wrapper flex-parent flex-parent--end-main flex-parent--stretch-cross flex-parent--center-cross flex-parent--center-main bg-orange--light">
+              <!-- sometimes visible: 'about this map' link & text -->
+              <span class="nav-text bg-orange">
+                <!-- visible when small -->
+                <a class="none-ml" href="<jump to #about>">What am I looking at?</a>
+                <!-- visible when big ONLY after #about content collapse -->
+                <a class="none" href="<toggle #about>">Read more</a>
+              </span>
+              <!-- always visible: one of several link/nav icons -->
+              <span class="nav-icon bg-orange--dark">
+                <!-- question mark or equivalent // visible when small -->
+                <img class="none-ml" src="http://via.placeholder.com/60x60" alt="more info" />
+                <!-- collapse icon // visible when big AND not collapsed (including on initial load)-->
+                <img class="none inline-block-ml"src="http://via.placeholder.com/60x60" alt="collapse" />
+                <!-- expand icon // visible when big ONLY after #sidebar#main content collapse -->
+                <img class="none" src="http://via.placeholder.com/60x60" alt="expand" />
+              </span>
+            </div>
           </nav>
         </div>
       </header>
 
-
+  <!-- divs with ids tend to be flex-parents; semantic elements tend to be flex-childs; col spec further in than that -->
       <!-- grows vertically in the middle -->
-      <div id="main-container" class="flex-child flex-child--grow">
+      <main class="flex-child flex-child--grow bg-yellow-dark">
 
-        <!-- grows horizontally to fit screen; ensures map and dashboard stretch to fill vertical -->
-        <div id="content-wrapper" class="flex-parent flex-parent--stretch-cross">
+        <div id="main-wrapper" class="inner-wrapper flex-parent flex-parent--center-cross bg-yellow">
 
           <!-- occupies full width when small; width minus sidebar-container when big -->
-          <div id="map-and-dash-container" class="flex-child flex-child--grow w-full wmax-none-mm">
+          <section id="map-and-dash" class="flex-child flex-child--grow w-full w-auto-ml bg-yellow-light">
 
-            <!-- map // viewport full?-->
-            <div id="map" class="flex-parent">
-              <!-- select toggle, options, reset, play/pause -->
-              <div class='overlay'>
-                <button id='replay'>Replay</button>
-                <button id='pause'>Pause</button>
-              </div>
-            </div>
+            <div id="map-and-dash-wrapper" class="inner-wrapper flex-parent flex-parent--column flex-parent--center-main bg-yellow-faint">
 
-            <!-- occupies bottom 1/4ish; full width when small, 3/4 width (minus padding and margins) when big-->
-            <!-- placed dynamically on top of map when big? (overlay?) -->
-            <div id="dashboard" class="flex-parent flex-parent--center-cross flex-parent--space-between-main hmin240 hmin300-mm">
+              <!-- map -->
+              <div id="map" class="flex-child relative viewport-full bg-green-dark">
 
-              <!-- no display when big; occupies bottom right 2/5 of dashboard when small -->
-              <div id="legend-log-small-container" class="flex-child flex-child--grow none-mm">
-                <div id="legend-log-small" class="flex-parent flex-parent--column">
-                  <!-- title -->
-                  <!-- content // class="scroll-auto" -->
-                </div>
-              </div>
+                <!-- user input (modal-like) -->
+                <div id="route-prompter" class='overlay top mx-auto my60 flex-parent flex-parent--center-main flex-parent--center-cross viewport-half bg-green'>
 
-              <!-- center 1/5 of dash when small? left 1/4 when big  -->
-              <div id="compass-plus-container" class="flex-child flex-child--no-shrink wmin30 wmin60-mm wmin120-ml">
-                <div id="compass-plus" class="flex-parent flex-parent--column">
-                  <!-- compass -->
-                  <!-- options/reset/playpause? -->
-                </div>
-              </div>
-
-              <!-- occupies left 2/5 of bottom 1/3 when small;  -->
-              <div id="narration-container" class="flex-child flex-child--grow">
-                <div id="narration" class="flex-parent flex-parent--column flex-parent--column-reverse">
-                  <div id="narration-header-container">
-                    <div id="narration-header">
-                      <h5 class="txt-h5 txt-emph txt-fancy">You are currently:</h5>
+                  <div id="prompt-wrapper" class="col col-12 col--4-ml bg-green-light">
+                    <div class="inner-wrapper flex-parent flex-parent--wrap flex-parent--center-cross flex-parent--center-main flex-parent--end-main-ml bg-green-faint">
+                      <h4 class="txt-h4 bg-lightest">Where have you come from?</h4>
+                      <h4 class="txt-h4 bg-lightest">Where are you going?</h4>
                     </div>
                   </div>
-                  <div id="p3">Traversing special places</div>
-                  <div id="p2">Encountering incredible things</div>
-                  <!-- <div id="p1"></div> -->
+                  <!-- input wrapper -->
+                  <div id="input-wrapper" class="col col-12 col--8-ml">
+                    <!-- dropdown wrapper -->
+                    <div class="inner-wrapper flex-parent flex-parent--center-cross flex-parent--center-main flex-parent--start-main-ml flex-parent--wrap">
+                      <!-- dropdown1 (start route) -->
+                      <select class="flex-child col col--12 col--6-mm col--12-ml" placeholder="Start">
+                        <option value="<node#?>">Chicago</option>
+                      </select>
+                      <!-- dropdown2 (end route) -->
+                      <select class="flex-child col col--12 col--6-mm col--12-ml" placeholder"End">
+                        <option value="<node#?">Grand Junction</option>
+                      </select>
+                    </div>
+                    <!-- go button wrapper -->
+                    <div class="inner-wrapper flex-parent flex-parent--center-cross flex-parent--center-main">
+                      <!-- go button (initiate selected journey) -->
+                      <button id='go' class="btn txt-fancy txt-spacing2 flex-child col col--12 col--8-ml ">
+                        &#60;&#62; go &#60;&#62;
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
+
+
+                <!-- custom map/data ui elements -->
+                <div class='overlay top left'>
+                  <button id='replay'>Replay</button>
+                    <!-- keep route choice, reset counter, reset data reveal, begin again -->
+                  <button id='play-pause'>Play/Pause</button>
+                    <!-- stop/init counter without data resets -->
+                  <button id='reset-options'>Select New?</button>
+                    <!-- prompt user: do you wish to select a new route? + follow through -->
+                </div>
+
+                <!-- other expected map ui elements; zoom, pan, layer toggle? basemap select? etc -->
+                <div class='overlay top right'>
+                </div>
+
+                <div id="dashboard" class="overlay bottom left right flex-parent flex-parent--stretch-cross flex-parent--center-cross flex-parent--space-between-main viewport-third">
+
+                              <!-- no display when big; occupies bottom right 2/5 of dashboard when small -->
+                              <div id="legend-log-small-container" class="flex-child flex-child--grow none-mm">
+                                <div id="legend-log-small" class="flex-parent flex-parent--column">
+                                  <!-- title -->
+                                  <!-- content // class="scroll-auto" -->
+                                </div>
+                              </div>
+
+                              <!-- center 1/5 of dash when small? left 1/4 when big  -->
+                              <div id="compass-plus-container" class="flex-child flex-child--no-shrink wmin30 wmin60-mm wmin120-ml">
+                                <div id="compass-plus" class="flex-parent flex-parent--column">
+                                  <!-- compass -->
+                                  <!-- options/reset/playpause? -->
+                                </div>
+                              </div>
+
+                              <!-- occupies left 2/5 of bottom 1/3 when small;  -->
+                              <div id="narration-container" class="flex-child flex-child--grow">
+                                <div id="narration" class="flex-parent flex-parent--column flex-parent--column-reverse">
+                                  <div id="narration-header-container">
+                                    <div id="narration-header">
+                                      <h5 class="txt-h5 txt-emph txt-fancy">You are currently:</h5>
+                                    </div>
+                                  </div>
+                                  <div id="p3">Traversing special places</div>
+                                  <div id="p2">Encountering incredible things</div>
+                                  <!-- <div id="p1"></div> -->
+                                </div>
+                              </div>
+
+                            </div> <!-- end of dashbord -->
+                          </div> <!-- end of map-and-dash-container -->
+
               </div>
 
-            </div> <!-- end of dashbord -->
-          </div> <!-- end of map-and-dash-container -->
+              </div>
+            </div>
+          </section>
+
+          <section id="sidebar" class="flex-child flex-child--no-shrink bg-yellow-light">
+
+            <!-- occupies full width and necessary height (toward bottom) when small; full height of right 1/4 when big -->
+            <div id="sidebar-container" class="flex-child flex-child--no-shrink w-full w300-mm w360-ml w600-xl">
+
+              <div id="sidebar-wrapper" class="flex-parent flex-parent--column">
+          </section>
+      </main>
+
+
 
           <!-- occupies full width and necessary height (toward bottom) when small; full height of right 1/4 when big -->
-          <div id="sidebar-container" class="flex-child flex-child--no-shrink w-full w300-mm w360-ml w600-xl">
+          <!-- <div id="sidebar-container" class="flex-child flex-child--no-shrink w-full w300-mm w360-ml w600-xl">
 
-            <div id="sidebar" class="flex-parent flex-parent--column">
+            <div id="sidebar-wrapper" class="flex-parent flex-parent--column"> -->
 
               <!-- no display when big AND collapsed -->
               <div id='about-container' class="flex-child">
@@ -159,6 +232,10 @@
                             <span class="log-count"></span>
                           </div>
                         </div>
+                      </div>
+                      <!-- mileage tracker, elevation dataviz?, other extras -->
+                      <div id="legend-log-footer">
+
                       </div>
                     </div>
                   </div>
