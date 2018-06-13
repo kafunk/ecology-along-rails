@@ -63,24 +63,12 @@
 
   <body>
 
-    <div class="relative viewport-full scroll-hidden">
-
-<!-- <div class='flex-parent viewport-full relative scroll-hidden'>
-  <div class='flex-child w-full w240-ml absolute static-ml left bottom'>
-    <div class='flex-parent flex-parent--column viewport-third h-full hmax-full bg-white'>
-      <div class='flex-child flex-child--grow px12 py12 scroll-auto'>
-
-<div class='viewport-full relative scroll-hidden'>
-  <div class='bg-darken10 viewport-twothirds viewport-full-ml absolute top left right bottom'></div>
-  <div class='absolute top-ml left bottom z1 w-full w240-ml px12 py12-ml'>
-    <div class='flex-parent flex-parent--column viewport-third h-auto-ml hmax-full bg-white round-ml shadow-darken10'>
-      <div class='px12 py12 scroll-auto'>
-        <h3 class='txt-m txt-bold mb6'>Title here</h3> -->
+    <div class="relative viewport-full scroll-auto">
 
     <!-- flex-parents and grids defined in vertical and horizontal div wrappers; dynamic sizing via flex-childs and cols added to more semantic, core elements -->
 
     <!-- main content wrapper (vertical)-->
-    <div class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--space-between-main viewport-full">
+    <div class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--space-between-main viewport-full scroll-hidden">
 
       <!-- header stays up top, takes up full width with col-12 -->
       <header class="flex-child flex-child--no-shrink w-full hmin60 bg-red-dark">
@@ -89,14 +77,14 @@
           <!-- LEFT: title: always visible, fills horizontal space available -->
           <div class="flex-child col col--11 col--10-mm bg-red--light">
             <!-- inner2-vert-wrapper // flex provides vertical alignment and dynamic 'stacking' of content -->
-            <div class="flex-parent flex-parent--column flex-parent--center-main  bg-red--faint grid">
+            <div class="flex-parent flex-parent--column flex-parent--center-main  bg-red-faint grid">
               <!-- COMBAK make txt sizes more dynamic so title doesn't overwhelm small screens // ideally would allow for txt-nowrap on h1 element -->
               <h1 class="txt-h1 flex-child col col--12 col--11-mm col--offl1-mm">Ecology Along the Rails:</h1>
               <h2 class="txt-h2 flex-child col col--11 col--offl1 col--10-mm col--offl2-mm">A visualization of the journeys implicit in passenger train travel within the continental US</h2>
             </div>
           </div>
           <!-- RIGHT: nav/toggle icon: one of children always visible, fills right 1/6ish -->
-          <nav class="flex-child col col--1 col--2-mm bg-orange--faint">
+          <nav class="flex-child col col--1 col--2-mm bg-orange-faint">
             <!-- inner nav wrapper -->
             <div class="flex-parent flex-parent--center-cross flex-parent--center-main bg-orange--light">
               <!-- sometimes visible: 'about this map' link & text -->
@@ -123,10 +111,10 @@
       w-full">
 
         <!-- inner-horz-wrapper // combo ensures content stretches to fill space available in both directions -->
-        <div class="flex-parent flex-parent--column flex-parent--row-ml flex-parent--space-between-main flex-parent--stretch-cross bg-yellow grid grid--gut12 px12 py12 clearfix">
+        <div class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross bg-yellow grid grid--gut12 clearfix">
 
           <!-- MAP PANE // always visible, stretches over up to 12 cols; col combined with flex-child--grow to ensure full width on small screens, but more dynamic/sidebar-content-driven sizing on larger ones -->
-          <section id="map-pane" class="flex-child flex-child--grow bg-green-dark">
+          <section id="map-pane" class="flex-child flex-child--grow col col--12 col--auto-ml bg-green-dark">
 
             <!-- Map Element Wrapper // only expecting one child element, mainly here to prepare for map's absolute positioning and align vertically/stretch horizontally, just because we can -->
             <div class="flex-parent flex-parent--center-main flex-parent--stretch-cross relative bg-blue-dark">
@@ -137,7 +125,7 @@
             </div>
 
             <!-- UI Overlay Elements Wrapper // flex-parent wrapper used mainly for ease of alignment and content justification; grid gutters will be at least 12 around edges; (obviously) more in between elements!-->
-            <div class="flex-parent flex-parent--space-between-main flex-parent stretch-cross relative bg-green--faint grid grid--gut12">
+            <div class="flex-parent flex-parent--space-between-main flex-parent stretch-cross relative bg-green-faint grid grid--gut12">
 
               <!-- UI Modal // flex child just for ease alignment; display is initially none  -->
               <div id="modal" class='absolute top mx-auto my60 flex-child col col--10 col--offl1 col--offr1 col--8-mm col--offl2 col--offr2 bg-green none'>
@@ -148,7 +136,7 @@
                   <form id="get-waypoints" action="get" class="flex-child col col--10 col--offl1 col--offr1 col--8-ml col--offl2-ml col--offr2-ml">
 
                     <!-- Form inner wrapper // flex overkill here, or still helpful for alignment? -->
-                    <div class="flex-parent flex-parent--wrap flex-parent--center-cross flex-parent--center-main grid grid--gut18 bg-green--faint">
+                    <div class="flex-parent flex-parent--wrap flex-parent--center-cross flex-parent--center-main grid grid--gut18 bg-green-faint">
 
                       <!-- Form Header-->
                       <legend class="flex-child col col-12 col--4-ml txt-fancy bg-green-light">Select a Route to Experience</legend>
@@ -298,15 +286,15 @@
           </section> <!--end of map pane section -->
 
           <!-- SIDEBAR / ASIDE -->
-          <aside id="sidebar" class="flex-child flex-child--no-shrink bg-blue-dark viewport-third hmin-full-ml wmin240 wmax360-ml wmin360-mxl wmax600-mxl fr">
-<!-- size restrictions on viewport? -->
+          <aside id="sidebar" class="flex-child flex-child--no-shrink col col--12 col--auto-ml bg-blue-dark h-full-ml wmin240-ml wmax360-ml wmin-360-mxl wmax600-mxl fr absolute right bottom">
+
             <!-- siderbar inner wrapper -->
-            <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross grid bg-yellow">
+            <div class="flex-parent flex-parent--column bg-yellow hmax-full-ml grid">
 
               <!-- ABOUT // allow for toggle-collapse when mm+ (automatic collapse on mm only?)-->
-              <!-- <div id="about" class="flex-child hmin0"> <!-- flex-child extra shrink? be subsumed -->
+              <div id="about" class="flex-child hmin0 col col--6 col--8-mm col--12-ml"> <!-- flex-child extra shrink? be subsumed -->
 
-                <div class='flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross flex-parent--center-main flex-parent--center-cross'>
+                <div class='flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross'>
 
                   <!-- About--Header -->
                   <div id="about--header" class="flex-child flex-child-no-shrink hmin18 hmin0-ml bg-green">
@@ -315,14 +303,15 @@
 
                   <!-- About--Main -->
                   <div id="about--main" class="flex-child flex-child-grow scroll-auto">
-                    <div id="about-main-content-inner-wrapper" class="flex-parent flex-parent--column flex-parent--center-main">
+                    <!-- inner content wrapper; flex used only for vertical alignment of child items -->
+                    <div class="flex-parent flex-parent--center-cross grid grid--gut12">
                       <!-- main about text, orientation, etc -->
-                      <div id="intro" class='flex-child viewport-twothirds bg-blue--faint col col--10 col--offr2 col--9-mm col--offr3-mm col--8-ml col--offr4-ml col--6-mxl align-l align-r-mxl mr12-mxl'>
+                      <div id="intro" class='flex-child col col--12 col--6-mm col--11-ml col--offl1-ml align-l align-r-ml bg-blue-faint'>
                         <h4 class="txt-h4">Some words</h4>
                         <p>This map visualizes ~~~~~~.</p>
                       </div>
                       <!-- data sources, sub-about, furthermore -->
-                      <div id="sources" class='flex-child viewport-third bg-purple--faint col col--10 col--offl2 col--9-mm col--offl3-mm col--8-ml col--offl4-ml col--6-mxl align-r align-l-mxl ml12-mxl'>
+                      <div id="sources" class='flex-child col col--12 col--6-mm col--11-ml col--offr1-ml align-r align-l-ml bg-purple-faint'>
                         <h5 class='txt-h5'>Data sources etc</h5>
                         <ul class="txt-ul">
                           <li class="txt-li">
@@ -341,17 +330,17 @@
                   </div> <!-- end of about-main-->
 
                   <!-- About--Footer -->
-                  <div id="about--footer" class="flex-child flex-child-no-shrink hmin18 hmin0-ml bg-green">
+                  <div id="about--footer" class="flex-child flex-child-no-shrink hmin12 hmin0-ml bg-green">
                     <p>testing, testing</p>
                   </div> <!-- end of about-footer -->
 
                 </div> <!-- end of about-inner-wrapper-->
               </div> <!-- end of about --> -->
 
-              <!-- Legend-Log BIG // display:none on small and mm? // starts bottom 1/3 of sidebar when big; grows vertically as content added, overtaking other siderbar flex-child -->
-              <!-- <div id="legend-log-big" class="flex-child flex-child--grow hmax-full col col--0 col--12-ml ">
+              <!-- Legend-Log // grows vertically as content added on ml+, overtaking other siderbar flex-child -->
+              <div id="legend-log-big" class="flex-child flex-child--grow hmax-full col col--6 col--4-mm col--12-ml bg-orange-dark">
                 <!-- REST OF LEGEND LOG CONTENT IS SAME AS LEGEND-LOG SMALL; find a way to access w/o js; html variables?-->
-                <div id="legend-log-inner-wrapper" class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross flex-parent--center-cross">
+                <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross flex-parent--center-cross">
                   <!-- header -->
                   <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-b--2 border--dash">
                     <h4 class="txt-h4 align-center">Journey Log</h4>
