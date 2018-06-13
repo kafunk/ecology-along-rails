@@ -1,0 +1,176 @@
+/* custom CSS rules */
+body { margin:0; padding:0; }
+/* #map { position:absolute; top:0; bottom:0; width:100%; } */
+body {
+  font-family: "Montserrat", sans-serif;
+}
+h1,h2,h3,h4,h5,h6 {
+  font-family: "Corben", "Montserrat", serif;
+}
+h1,h2 {
+  color: #2A4C48;
+}
+ul li {
+  list-style: none;
+  margin: 3px 18px 3px 36px;
+}
+
+footer p {
+  color: #eee;
+  margin: 18px 24px;
+}
+
+#sidebar h1 {
+  padding-bottom: 12px;
+}
+#sidebar h2 {
+  padding-top:6px;
+}
+#sidebar footer a {
+  color: #dee27d;
+}
+#sidebar a:hover {
+  /* opacity: 0.8; */
+  color: #fa8253;
+}
+#about p {
+  color: #3d3d3d;
+  margin: 3px 24px 12px 30px;
+  padding-bottom:12px;
+  line-height: 2em;
+}
+#info li {
+  list-style: none;
+}
+#legend h4 {
+  margin: -6px;
+  letter-spacing: 0.1em;
+  font-family: 'Corben';
+  font-weight:bold;
+}
+#legend hr {
+  width: 78px;
+  position: absolute;
+  top: -6px;
+  left: 56px;
+  border: 1px dashed #999;     /* overwrite assembly.css rule */
+  margin-top: 6px;            /* overwrite assembly.css rule */
+}
+
+#map {
+  background-color: #dfe0d5;
+}
+#compass-icon {
+  width: 32px;
+  margin: -12px auto;
+}
+#info {
+  z-index: 1000;
+}
+#slider, #slider-txt, #legend, #info {
+  background-color: #eaeae8;
+  font-family: 'Montserrat';
+  font-weight: 600;
+  border: 1px solid #6B7063;
+  border-radius: 0 0 0 2px;
+  /* box-shadow: 1px 1px 1px 1px #2A4C48; */
+}
+@media screen and (min-width: 640px) {
+  #slider, #slider-txt, #legend, #info {
+    border: 4px solid #6B7063;
+    border-radius: 5px;
+  }
+}
+
+#legend .legend-smallest {
+  margin-top:-2px;
+}
+#info h4 .month {
+  color:#6B7063;
+}
+/* display none for layout but be careful of license restrictions */
+.mapbox-logo, .leaflet-control-attribution {
+  display: none;
+}
+
+.bg-lightest {
+  background-color: #eee;
+}
+.bg-lighter {
+  background-color: #eaeae8;
+}
+.bg-light {
+  background-color: #dfe0d5;
+}
+.bg-accent-l {
+  background-color: #dda44d;
+}
+.bg-accent {
+  background-color: #fc8d59;
+}
+.bg-accent-d {
+  background-color: #4575b4;
+}
+.bg-dark {
+  background-color: #6B7063;;
+}
+.bg-darker {
+  background-color: #3d3d3d;
+}
+.bg-darkest {
+  background-color: #2A4C48;
+}
+
+
+#route-prompter {
+  display:none;
+}
+
+
+
+
+
+
+.leaflet-control-zoom {
+  opacity: 0.8;
+}
+
+.overlay {
+  position: absolute;
+  /* top: 10px;
+  left: 10px; */
+}
+.overlay button {
+  font:600 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  background-color: #3386c0;
+  color: #fff;
+  display: inline-block;
+  margin: 0;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.subunit.USB { fill: #d73027; }
+.subunit.USK { fill: #fc8d59; }
+.subunit.USH { fill: #ffffbf; }
+.subunit.CAN { fill: #4575b4; }
+.subunit.MEX { fill: #fee090; }
+.subunit-boundary {
+  fill: none;
+  stroke: white;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.subunit-label {
+  fill: #404040;
+  fill-opacity: 1;
+  font-size: 20px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+/* vis -#cb5165
+circ -#fa8253
+hp - #dda44d
+hf -#b5be6a
+cs - #a2d99f */
