@@ -1,41 +1,90 @@
 (function () {
 
-// INITIALIZE MAP
 
-  // mapbox API access Token
-    L.mapbox.accessToken = 'pk.eyJ1Ijoia2FmdW5rIiwiYSI6ImNqYmc3dXJzczMzZWIzNHFmcmZuNjY3azMifQ.9i48EOQl4WCGZQqKRvuc_g';
+  // SET UP ENVIRONMENT (global bindings)
 
-  // initialize map centered on conterminous US
-    var map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/kafunk/cjhzu1ypk2nhj2sn6qkg8e3x2',
-      center: [-96, 37.8],
-      maxBounds: L.latLngBounds([40, -89], [44, -86]),
-      zoom: 4,
-      minZoom: 3,
-      maxZoom: 18
-    });
+    // MapboxGL
+      // mapbox API access Token
+        mapboxgl.accessToken = 'pk.eyJ1Ijoia2FmdW5rIiwiYSI6ImNqYmc3dXJzczMzZWIzNHFmcmZuNjY3azMifQ.9i48EOQl4WCGZQqKRvuc_g';
 
-  // https://beta.observablehq.com/@mbostock/disposing-content
-  // try {
-  //   yield map;
-  //   yield invalidation;
-  // } finally {
-  //   map.remove();
-  // }
+      // initialize map centered on conterminous US // NOTE mapboxgl uses long,lat coordinates
+      //   var map = new mapboxgl.Map({
+      //     container: 'map',
+      //     style: 'mapbox://styles/kafunk/cjhzu1ypk2nhj2sn6qkg8e3x2?optimize=true',
+      //     center: [-96.1,39.5],
+      //     zoom: 3.2,
+      //     minZoom: 3,
+      //     maxZoom: 18,
+      //     // maxBounds:([-140,20],[-50,59.5]),
+      //     attributionControl: false
+      //   });
+      //
+      // map.scrollZoom.disable()
+      // map.addControl(new mapboxgl.NavigationControl());
+      //    // .addControl(new mapboxgl.AttributionControl({
+      //    //      compact: true}));
 
-  // LOAD DATA
-    var railwaysJson = d3.json("data/us-states.json"),
-      railnodesJson = d3.json(""),
-      huExtractJson = d3.json(""),
-      ecoRegJson = d3.json("")
-      // poisJson = d3.json("poiExtract.json")
-      // basemap: other rail, hydrolines, lrger watersheds,etc
 
-       // pois include eco, geo, tunnel, etc
+    // D3
 
-    // make sure both data files are completely loaded before sending data on to callback function
-    Promise.all([railwaysJson,railnodesJson,huExtractJson,ecoRegJson]).then(drawMap, error)
+      // calculate d3 projection
+      var projection = d3.geoMercator()
+        .center([100,50])
+        .scale(240)
+        .rotate([-180,0])
+        // .translate([bbox.width/2, bbox.height/2])
+        // .scale(scale);
+
+      // define path function expression for later use
+      var path = d3.geoPath()
+        .projection(projection);
+
+      // for now, just to make this fun
+      // var color = d3.scaleThreshold()
+      //     .domain(d3.range(2, 10))
+      //     .range(d3.interpolateMagma[9]);
+
+      // define width and height of our SVG
+      var height = 600,
+           width = 960;
+
+      // // declare svg layer to manipulate with d3
+      // var container = map.getCanvasContainer();
+      var svg = d3.select('#map').append("svg")
+        // necessary?
+          .attr("width", width)
+          .attr("height", height)
+
+      // // we calculate the scale given mapbox state (derived from viewport-mercator-project's code) to define a d3 projection
+      // function getProjection() {
+      //   var bbox = document.body.getBoundingClientRect();
+      //   var center = map.getCenter();
+      //   var zoom = map.getZoom();
+      //   // 512 is hardcoded tile size, might need to be 256 or changed to suit your map config
+      //   var scale = (512) * 0.5 / Math.PI * Math.pow(2, zoom);
+      //
+      //   var projection = d3.geo.mercator()
+      //     .center([center.lng, center.lat])
+      //     .translate([bbox.width/2, bbox.height/2])
+      //     .scale(scale);
+      //
+      //   return projection;
+      // }
+
+
+  // INITIATE DATA LOAD
+    var railLinesJson = d3.json("../data/na-pass-rail-lines.json"),
+        railNodesJson = d3.json("../data/na-pass-rail-nodes.json"),
+          ecoBaseJson = d3.json("../data/na-ecoreg-iii-all.json"),
+       ecoExtractJson = d3.json("../data/na-ecoreg-iv-extract.json"),
+        hydroBaseJson = d3.json("../data/na-watersheds-all.json"),  // add rest of hydro polys here?
+        huExtractJson = d3.json("../data/na-watersheds-extract.json");
+
+        // more: hydrolines, pois incl bridges, tunnels, iNat
+
+  // DRAW MAP BASE -- USE D3 FOR THIS? (D3 ONLY?) OR ADD TO MAPBOX STUDIO TILES?
+    // make sure pertinent data files are completely loaded before sending data on to callback function
+    Promise.all([railLinesJson,ecoBaseJson,hydroBaseJson]).then(drawBase, error);
 
     // catch errors, if any
     function error(error) {
@@ -43,378 +92,231 @@
     }
 
     // accepts the data array
-    function drawMap(data) {
+    function drawBase(data) {
+
+      // parse base topojson data as mesh
       console.log(data);
+      // console.log(getLL(data[0]), project(data[0]))
+
       var railways = data[0],
          railnodes = data[1],
         watersheds = data[2],
         ecoregions = data[3];
 
-      // define width and height of our SVG
-      var width = 960,
-         height = 600
 
-      // create svg element as child of #map element
-      var svg = d3.select("#map")
-        .append("svg")
-        .attr("width", width) // give the SVG element a width and height attributes and value
-        .attr("height", height)
+      var allRoutes = topojson.mesh(data[0], data.objects.na-rail-all),
+          hydroBase = topojson.mesh(data[1], data.objects.na-watersheds),
+            ecoBase = topojson.mesh(data[2], data.objects.na-ecoregions);
 
-      // d3 feature method converts topoJSON back to geoJSON (convenient for most mapping applications)
-      var geojson = topojson.feature(statesData, {
-        type: "GeometryCollection",
-        geometries: statesData.objects.cb_2016_us_state_20m.geometries
-      })
+      var path = d3.geoPath(),
+          mesh = topojson.mesh(us),
+          transform = topojson.transform(us);
+      console.log(allRoutes);
 
-      // define a projection using the US Albers USA
-        // fit the extent of the GeoJSON data to specified width and height
-      var projection = d3.geoAlbersUsa()
-        .fitSize([width, height], geojson)
+      var baseData = {
+        id0: {
+          name: "hydro",
+          dIndex : 0,
+          objectClass: "na-watersheds"
+        },
+        id1: {
+          name: "eco",
+          dIndex : 1,
+          objectClass: "na-ecoregions"
+        },
+        id2: {
+          name: "rails",
+          dIndex : 2,
+          objectClass: "na-rails-all"
+        }
+      };
 
-      // define a path generator, which will use the specified projection
-      var path = d3.geoPath()
-        .projection(projection)
+      function getMeshArray(dataGroups) {
+        const meshArray = [];
+        for (var group in dataGroups) {
+          meshArray.push(topojson.mesh(data[group.dIndex], data.objects[group.objectClass], function(a, b) { return a !== b; }));
+        }
+        return meshArray;
+      }
 
-      // create and append a new SVG 'g' element to the SVG
-      var states = svg.append("g")
-        .selectAll("path")        // select all the paths (as yet non-existent)
-        .data(geojson.features)   // access the GeoJSON data
-        .enter()                  // enter the selection (all pre-selected path elements)
-        .append("path")           // create one new path element for each data feature
-        .attr("d", path)          // give each path a d attribute value
-        .attr("class", "state")   // give each path a class of state
+      //  create group for baselayer data with one path per layer type
+      var baseLayers = svg.append("g")
+        .selectAll("path.base")  // use mesh?
+        .data(getMeshArray(baseData))
+        enter().append("path").classed("base",true)
+          .attr("d",path)
+          // .attr("class", attribute) // ?
+          // .attr("class", d => { return baseData.(d.id).name } // what is d.id?
+          .attr("transform", "translate(0,40)") // what does this do?
+          .style({
+            fill: "#ccc",
+            // "fill-opacity": 0.6,
+            stroke: "#004d60",
+            // "stroke-width": 1
+          })
+
     }
 
-// GET USER SELECTION AND FILTER TO SINGLE ROUTE
-  // variables to be populated dynamically pending on UI
-    // start point
-    var start = [-122.414, 37.776];
+  // INITIATE ANIMATED JOURNEY EXPERIENCE
+    initNew(); // <====================== fun stuff starts here
 
-    // end point
-    var end = [-77.032, 38.913];
+    function initNew() {
+      // get initial user options
+      var selection = getRoute();
 
-    // FETCH LINE OF TRAIN ROUTE from start to end
-    var route = {
-        "type": "FeatureCollection",
-        "features": [{
-            "type": "Feature",
-            "geometry": {
-                "type": "LineString",
-                "coordinates": [
-                    start,
-                    end
-                ]
-            }
-        }]
-    };
+      // prep route specific data
+      var newRoute = prepOverlay(selection);
 
-    // A single point that animates along the route.
-    // Coordinates are initially set to start.
-    var point = {
-        "type": "FeatureCollection",
-        "features": [{
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "type": "Point",
-                "coordinates": start
-            }
-        }]
-    };
-
-    // Calculate the distance in miles between route start/end point.
-    var lineDistance = turf.lineDistance(route.features[0], 'miles');
-
-
-// // receive data from async function
-//    function drawMap(data) {
-//      // separate data into layers;
-          //  var csLayer = L.geoJson(data,options).addTo(map),
-          //    circLayer = L.geoJson(data,options).addTo(map);
-
-//      // declare default/shared styling options;
-          // var options = {
-          //  stroke: whatever
-          // }
-
-//      // fit map bounds to extent of initial data;
-          // map.fitBounds(<last layer loaded?>.getBounds(), {
-          //  paddingBottomRight: [200,0]
-          // });
-
-//      // assign custom styles by layer
-          // layerGroup.setStyle({
-            // color: '#8dbf90',
-            // fillColor: '#8dbf90',
-            // fillOpacity: 0.5
-            // fillColor: '#dee27d' //fillColor will be invisible except on mouseover
-          // });
-
-//      // pass hard-coded timestamp along with all layers
-          // updateMap()
-          // prepUIelements()
-        // }
-      // }
-
-//    function updateMap(layerGroupsToUpdate) {
-//      layerGroup.eachLayer(function(layer){
-//        // do a thing
-//      });
-//
-//      updateDash(content1);
-//      updateLog(content2)
-//   }
-
-    // function updateDash(content1) {
-    //   // 1-3 announcements from 3 priority levels
-    // }
-    // function updateLog(content2) {
-    //   // aka legend
-    //   // categories
-    //   // counts
-    // }
-
-
-
-  // BELOW MAY ALL CHANGE with more complex line:
-    // FETCH NODES from this selected rail route
-    var path = [];
-
-    // Number of steps to use in the arc and animation, more steps means
-    // a smoother arc and animation, but too many steps will result in a
-    // low frame rate
-    var steps = 500;
-
-    // Draw an arc between the `start` & `end` of the two points
-    for (var i = 0; i < lineDistance; i += lineDistance / steps) {
-        var segment = turf.along(route.features[0], i, 'miles');
-        arc.push(segment.geometry.coordinates);
+      // initiate animation
+      initExp(newRoute);
     }
 
-    // Update the route with calculated arc coordinates
-    route.features[0].geometry.coordinates = arc;
+    function getRoute(){
+      // get user input! see koordinates example
+      // toggle form overlay
+      // listen for start selection to change
 
-    // Used to increment the value of the point measurement against the route.
-    var counter = 0;
-
-  map.on('load', function () {
-    // Add a source and layer displaying a point which will be animated in a circle.
-    map.addSource('route', {
-        "type": "geojson",
-        "data": route
-    });
-
-    map.addSource('point', {
-        "type": "geojson",
-        "data": point
-    });
-
-    // COMPLETE LINE OF ROUTE
-    map.addLayer({
-        "id": "route",
-        "source": "route",
-        "type": "line",
-        "paint": {
-            "line-width": 2,
-            "line-color": "#007cbf"
-        }
-    });
-
-    // ROUTE PASSED
-
-    // ROUTE TO COME
-
-    // TRAIN ICON as animated point visual with proper bearing
-    map.addLayer({
-        "id": "point",
-        "source": "point",
-        "type": "symbol",
-        "layout": {
-            "icon-image": "airport-15",
-            "icon-rotate": ["get", "bearing"],
-            "icon-rotation-alignment": "map",
-            "icon-allow-overlap": true
-        }
-    });
-
-    function animatePoint() {
-
-        // Update point geometry to a new position based on counter denoting
-        // the index to access the arc.
-        point.features[0].geometry.coordinates = route.features[0].geometry.coordinates[counter];
-
-        // Calculate the bearing to ensure the icon is rotated to match the route arc
-        // The bearing is calculate between the current point and the next point, except
-        // at the end of the arc use the previous point and the current point
-        point.features[0].properties.bearing = turf.bearing(
-            turf.point(route.features[0].geometry.coordinates[counter >= steps ? counter - 1 : counter]),
-            turf.point(route.features[0].geometry.coordinates[counter >= steps ? counter : counter + 1])
-        );
-
-        // Update the source with this new data.
-        map.getSource('point').setData(point);
-
-        // Request the next frame of animation so long the end has not been reached.
-        if (counter < steps) {
-            requestAnimationFrame(animate);
-        }
-
-        counter = counter + 1;
+      // save start selection
+      // var startPt = GET;
+      // // save end selection
+      // var endPt = GET;
+      // match input nodes with route/line
+      // collapse form, ease to give summarizing feedback ('Loading...')
+      // return [start,end];
     }
 
-    //animateLine
-    // http://bl.ocks.org/duopixel/4063326
-      // Variable to Hold Total Length
-      var totalLength = path.node().getTotalLength();
+    function prepOverlay(selection) {
 
-      // Set Properties of Dash Array and Dash Offset and initiate Transition
-      path
-      	.attr("stroke-dasharray", totalLength + " " + totalLength)
-      	.attr("stroke-dashoffset", totalLength)
-        .transition() // Call Transition Method
-      	.duration(4000) // Set Duration timing (ms)
-      	.ease(d3.easeLinear) // Set Easing option
-      	.attr("stroke-dashoffset", 0); // Set final value of dash-offset for transition
-        }
+      // ensure data has loaded
+      Promise.all([railNodes,ecoExtract,huExtract]).then( data => {
+        // catch errors
+        if (error) throw error;
 
-// DATA REVEALED AS ANIMATION PROGRESSES
-  // Add and remove classes for dynamic styling
-    // passed (cumulative/all), just_passed (radius=medium), now_passing (radius=small)
-  // var features_passed = [],  // all that have been within radius thus far
-  // most_recent_passing = [],  // all within radius upon previous query
-  //    features_padding = [],  // all within radius as of current query
-  //   new_within_radius = []   // difference between current and previous (newly revealed)
+        // parse all
+        console.log(data);
+        var waypoints = topojson.feature(data[0], data.objects.na-pass-rail-nodes),
+          watershedExtract = topojson.feature(data[1], data.objects.watersheds-along-rail),
+          ecoregExtract = topojson.feature(data[2], data.objects.ecoregions-along-rail);
 
-  // ON DATA CHANGE
-  // map.on(DATACHANGE, function(e) {
+        // append overlay data to svg as unrendered <defs> element
+        // var overlayData = [];
+        //   // classes: routeName,huc,
+        //
+        // getFeaturesArray()
+        //
+        var overlayers = svg.append("defs")
+          .append("g")
+          .attr("class",overlay)
 
-    // select all features currently within x radius of train location
+        var hydroSelect = overlayers.append("g")
+          .selectAll("path.hydro")
+          .data(topojson.feature(hydroExtract,hydroExtract.objects.watersheds-along-rail).features)
+          // .data(getFeaturesArray(overlayData))
+          .enter().append("path").classed("overlay",true)
+            .attr("d",path)
+            .attr("fill", function (d) { return color(d.value) })
 
-    // var features_passing = map.querySourceFeatures('counties', {
-        // sourceLayer: 'original',
-        // single out all features where the ‘key’ is equal to the “value” of the specified type
-          // "filter": ['==', ['type',['get', 'key']],'value'] // Filter by location? all within x radius of train
-        // });
+        // filter to user selection (? faster to integrate with above?)
+        var thisRoute = {
+          startPt: [],
+          endPt: [],
+          routeName: ''
+          //etc
+        };
 
-    // var featuresPassed = map.queryRenderedFeatures(trainLocation, {layers: ['name','name']})
-    //   // if no features passed, return nothing
-    //   if (!featuresPassed.length) {
-    //     return;
-    //   }
-    //   // otherwise, return first in array of features
-    //   var featuresPassed = featuresPassed[0];
+        return thisRoute;
+
+      });
+    }
+
+  // ANIMATION FUNCTIONALITY
+    function initExp(newRoute){
+      // attach data to DOM nodes
+      // animate point along line
+      // as point intersects new features, style them gradually
+    }
+
+
+  // EVENT LISTENERS
+
+    // map.on("load",promptRoute());
+
+    // keep d3 and mapbox visuals aligned
+      // rerender d3 elements when view changes
+      // map.on("viewreset", function() {
+      //   render()
+      // })
+      // map.on("move", function() {
+      //   render()
+      // })
+
+    // inform
+      // update popups, tooltips, dashboard, log
+    // adjust -- rewind,pause,switch to point en route
+      // call on certain functions
+    // reset
+      // initNew();
+
+    // add visual affordance and tooltip to POIs
+    // .on("mouseover", function(d) {
+    //   d3.select(this).classed("hover", true).raise();
+    //   tooltip.style("opacity", 1).html(d.name)  // eventually getTooltipContent(d)
+    // })
+    // .on("mouseout", function() {
+    //   d3.select(this).classed("hover", false)
+    //   tooltip.style("opacity", 0)
+    // })
+
+
+    // listen for click of go button
+
     //
-    //   var withinXradius = turf.js // some function
-    //   var withinYradius = turf.js // similar function
-    //
-    //   // If a nearest library is found
-    //   if (withinXYradius !== null) {
-    //     // Update the featuresPassed data source to include
-    //     // the features currently passing
-    //     map.getSource('featuresPassed').setData({
-    //       type: 'FeatureCollection',
-    //       features: [
-    //         new_withinXYradius
-    //       ]
-    //     }
-    //   );
-    //   // Create a new polygon layer from the newlyPassing data source
-    //     map.addLayer({
-    //       id: 'newlyPassing',
-    //       type: 'polygon',
-    //       source: 'withinXYradius',
-    //       paint: {
-    //         'polygon-color': '#486DE0'
-    //       }
-    //     }, 'thisJourney');
-    //   }
-    // });
+    function populateDropdowns(stations) {
+      // access specific dropdown elements from markup
+      var chooseStart = d3.select('#startSelect'),
+            chooseEnd = d3.select('#endSelect');
 
-    // combine filters?
-      // https://www.mapbox.com/help/show-changes-over-time/#combine-the-filters
+      // start with start; end will depend on this
+      var startPts = stations.unique().sort();  // '.unique' is not real code, fix this
+      var endPts; // just declaring the var for now
 
-    // compare to previous list and filter newly added
-      // new_within_radius = features_passing - most_recent_passing;
+      // create an option element for each start point
+      chooseStart.selectAll('option')
+        .data(startPts.sort())
+        .enter().append('option')
+          .text( d => { return d.stationName })
+          .attr("value", d => { return d.franode })
+        // listen for input
+        .on('change', endPts = getEndPts());
 
-    // new features get extra special style and brief popup intro (?)
-      // new_within_radius.style
-        // gradual fill of color/opacity?? https://stackoverflow.com/questions/17438409/color-transition-in-d3-using-time-elapsed#17439022
+      chooseEnd.selectAll('option')
+        .data(endPts.sort())
+        .enter().append('option')
+          .text( d => { return d.stationName })
+          .attr("value", d => { return d.franode })
 
-        // https://datascience.blog.wzb.eu/2016/08/29/bringing-svg-to-life-with-d3-js/
-        // huc10s.each(function() {
-        //   d3.select(this).select('path')
-        //     .transition().duration(1000)
-        //     .style('fill', 'red')
-        // });
-        // cavnas + svg? to allow flood fill e.g.
-          // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
-          // https://beta.observablehq.com/@mbostock/randomized-flood-fill
 
-      // popup
-        // popup.setLngLat(e.lngLat)
-        //     .setText(feature.properties.COUNTY)
-        //     .addTo(map);
-            // automatically expire after 5 seconds?
+      // inner function, stations var remains accessible
+      function getEndPts() {
 
-    // current radius list becomes prev_radius
-      // most_recent_passing = features_passing;
-      // features_passing = [];
+        // register (and validate?) selected start node
+        var givenStart = chooseStart.property("value");
 
-  // });
+        // define hypothetical end pt possibilities
+        var potentialEnds = allStations.unique().sort();
 
-// WOULD BE A NICE TOUCH
-  // Zoom to bounds of selected route
-    // https://www.mapbox.com/mapbox-gl-js/example/zoomto-linestring/
-  // More comprehensive popups upon click when map animation is paused
-    // https://www.mapbox.com/help/analysis-with-turf/#add-interactivity
+        // exclude certain end points, depending on..? within
+        var endsToExclude = [];
+        // if Alaska, Mexico, ?
+          // exclude anything not on immediate route
+        // otherwise: exclude anything TOO close?
+          // exclude anything where path cannot be determined
+          // or, pair with nodes on same route?
 
-// EVENT LISTENERS
+        return potentialEnds - endsToExclude; // subtracting arrays is unfortunately not a thing; fix this
+      }
+    }
+  }
+)
 
-  // UPON CLICK ON MAP OR PAUSE BUTTON, PAUSE ANIMATION
-    document.getElementById('pause').addEventListener('click', function() {
-      // ??
-      // Restart the animation
-      animate(counter);
-
-  // UPON DOUBLE CLICK ON MAP, RESET ORIGIN POINT
-    // Set the coordinates of the original point back to start
-    point.features[0].geometry.coordinates = start;
-
-    // Update the source layer
-    map.getSource('point').setData(point);
-
-    // Reset the counter
-    counter = 0;
-
-  // UPON CLICK OF PLAY BUTTON
-    // Restart the animation.
-    animate(counter);
-
-  // ADJUST POINT EN ROUTE
-    // Get click coordinates
-    var flyTo = [,]; // ??
-    // Set the coordinates of the original point back to start
-    point.features[0].geometry.coordinates = flyTo;
-
-    // Update the source layer
-    map.getSource('point').setData(point);
-
-    // Adjust the counter appropriately
-      // counter = ??;
-    // Restart the animation.
-    animate(counter);
-
-  });
-
-// GET USER SELECTION
-  // PROMPT USER FOR ROUTE selection
-    // Save inputs as start / end
-
-// INITIATE ACTION
-  // Upon click of "Go" button
-    // Start the animation.
-    animate(counter);
-
-});
-
-});
+  // FORM: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
