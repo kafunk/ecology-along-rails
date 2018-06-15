@@ -4,7 +4,7 @@
     <meta charset='utf-8' />
     <title>Ecology Along the Rails</title>
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' />
+    <!-- <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' /> -->
     <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet'>
     <!-- <link href='https://fonts.googleapis.com/css?family=Corben:400|Montserrat:400,700' rel='stylesheet'>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css"> -->
@@ -26,7 +26,7 @@
       .inner-wrapper { padding: 6px; }
       .flex-parent--space-around { justify-content: space-around; }
       .hide { visisibility: hidden; }
-      .unhide { .visibility: visible; }
+      .unhide { visibility: visible; }
       @media screen and (min-width: 640px) {
         .hide--mm {
           visibility: hidden;
@@ -71,7 +71,7 @@
     <div class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--space-between-main viewport-full scroll-hidden">
 
       <!-- header stays up top, takes up full width with col-12 -->
-      <header class="flex-child flex-child--no-shrink w-full hmin60 bg-red-dark">
+      <header class="flex-child flex-child--no-shrink w-full hmin60 bg-red-dark hmax120">
         <!-- inner1-horz-wrapper -->
         <div class="flex-parent flex-parent--space-around flex-parent--center-cross bg-red grid grid--gut12 px12 py12">
           <!-- LEFT: title: always visible, fills horizontal space available -->
@@ -107,44 +107,36 @@
       </header>
 
       <!-- grows vertically in the middle -->
-      <main class="flex-child flex-child--grow bg-yellow-dark
-      w-full">
+      <main class="flex-child flex-child--grow bg-blue-dark
+      w-full h-full">
 
         <!-- inner-horz-wrapper // combo ensures content stretches to fill space available in both directions -->
-        <div class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross bg-yellow grid grid--gut12 clearfix">
+        <div class="w-full h-full bg-yellow grid clearfix">
 
           <!-- MAP PANE // always visible, stretches over up to 12 cols; col combined with flex-child--grow to ensure full width on small screens, but more dynamic/sidebar-content-driven sizing on larger ones -->
-          <section id="map-pane" class="flex-child flex-child--grow col col--12 col--auto-ml bg-green-dark">
+          <section id="map-pane" class="col col--12 col--8-ml col--9-mxl bg-green-dark flex-parent flex-parent--center-cross grid relative">
 
-            <!-- Map Element Wrapper // only expecting one child element, mainly here to prepare for map's absolute positioning and align vertically/stretch horizontally, just because we can -->
-            <div class="flex-parent flex-parent--center-main flex-parent--stretch-cross relative bg-blue-dark">
-              <!-- MAP // styled directly in header, including 'absolute' positioning... does this contradicte meaning of 'flex-child'? -->
-              <div id="map" class="flex-child bg-green-dark">
-                <img class="wmax-full "src="http://via.placeholder.com/960x600"/>
-              </div>
+            <div id="map" class="bg-blue-faint">
+              <img src="http://via.placeholder.com/1080x800"/>
             </div>
 
-            <!-- UI Overlay Elements Wrapper // flex-parent wrapper used mainly for ease of alignment and content justification; grid gutters will be at least 12 around edges; (obviously) more in between elements!-->
-            <div class="flex-parent flex-parent--space-between-main flex-parent stretch-cross relative bg-green-faint grid grid--gut12">
+            <!-- MODAL -->
+            <div id="modal" class='col col--8 col--offl2 col--offr2 bg-green z3'>
+              <!-- Form Wrapper // flex used only for ease of cross+main axis centering -->
+              <div class="flex-parent flex-parent--center-cross flex-parent--center-main grid grid--gut0 bg-green-faint">
 
-              <!-- UI Modal // flex child just for ease alignment; display is initially none  -->
-              <div id="modal" class='absolute top mx-auto my60 flex-child col col--10 col--offl1 col--offr1 col--8-mm col--offl2 col--offr2 bg-green none'>
-                <!-- Modal inner horizontal wrapper / form outer wrapper -->
-                <div class="flex-parent flex-parent--center-main flex-parent--center-cross viewport-half grid grid--gut12 bg-green">
-
-                  <!-- GET START/END FORM -->
-                  <form id="get-waypoints" action="get" class="flex-child col col--10 col--offl1 col--offr1 col--8-ml col--offl2-ml col--offr2-ml">
-
-                    <!-- Form inner wrapper // flex overkill here, or still helpful for alignment? -->
-                    <div class="flex-parent flex-parent--wrap flex-parent--center-cross flex-parent--center-main grid grid--gut18 bg-green-faint">
-
-                      <!-- Form Header-->
-                      <legend class="flex-child col col-12 col--4-ml txt-fancy bg-green-light">Select a Route to Experience</legend>
-
+                <!-- GET START/END FORM -->
+                <form id="get-waypoints" action="get" class="flex-child col col--12">
+                  <!-- Form inner wrapper // flex only for ease of vertical alignment -->
+                  <div class="flex-parent flex-parent--center-cross grid grid--gut0">
+                    <!-- Form Header-->
+                    <legend class="flex-child col col--12 col--6-mm col--4-ml txt-fancy bg-green-light">Select a Route to Experience</legend>
+                    <!-- Fieldset wrapper-->
+                    <div class="flex-child col col--12 col--6-mm col--8-ml bg-green-dark">
                       <!-- Get Start -->
-                      <fieldset class="flex-child col col-12 col--6-mm col--8-ml bg-green-faint">
+                      <fieldset class="w-full align-center bg-green-faint">
                         <label for="start">Where have you come from?</label>
-                        <input type="text" id="getStart" name="start" value="startNode" list="startList" placeholder="Start...">
+                        <input type="text" id="getStart" name="start" value="Enter origin" list="startList" placeholder="Start..." />
                         <datalist id="startList">
                           <label for="startSuggest">(Some possibilities:)</label>
                           <!-- dropdown1 wrapper -->
@@ -159,11 +151,10 @@
                           </div>
                         </datalist>
                       </fieldset>
-
                       <!-- Get End -->
-                      <fieldset class="flex-child col col-12 col--6-mm col--8-ml bg-green-faint">
+                      <fieldset class="w-full align-center bg-green-faint">
                         <label for="end">Where are you going?</label>
-                        <input type="text" id="getEnd" name="end" value="endNode" list="endList">
+                        <input type="text" id="getEnd" name="end" value="Enter destination" list="endList" placeholder="...End" />
                         <datalist id="endList">
                           <label for="endSuggest">(Some possibilities:)</label>
                           <!-- dropdown2 wrapper -->
@@ -178,140 +169,138 @@
                           </div>
                         </datalist>
                       </fieldset>
+                    </div> <!-- end fieldset wrapper -->
+                    <!-- GO button -->
+                    <fieldset class="flex-child col col--12">
+                      <button id='go' type="submit" class="w-full align-center btn round txt-fancy txt-spacing2" value="go">
+                        &#60;&#62; Let's Go &#60;&#62;
+                      </button>
+                    </fieldset>
+                  </div> <!-- end form inner wrapper -->
+                </form>
 
-                      <!-- GO button -->
-                      <fieldset>
-                        <button id='go' type="submit" class="btn round txt-fancy txt-spacing2 flex-child col col--12 col--8-ml" value="go">
-                          &#60;&#62; Let's Go &#60;&#62;
-                        </button>
-                      </fieldset>
+              </div> <!-- end modal inner wrapper -->
+            </div> <!-- end modal -->
 
-                    </div> <!-- end form inner wrapper -->
-                  </form>
-                </div> <!-- end modal inner wrapper -->
-              </div> <!-- end modal -->
+            <!-- UI Overlay Elements Wrapper -->
+            <div class="bg-green-faint col col--12">
 
               <!-- Custom Data UI Elements -->
-              <div class='absolute top left flex-child'>
+              <div class='absolute top left mx6 my6'>
                 <button class='btn round btn--purple-light replay'>Replay</button>
                   <!-- keep route choice, reset counter, reset data reveal, begin again -->
-                <button class='btn round btn-blue-light play-pause'>Play/Pause</button>
+                <button class='btn round btn--blue-light play-pause'>Play/Pause</button>
                   <!-- stop/init counter without data resets -->
                 <button class='btn round btn--green-light reset-options'>Select New?</button>
                   <!-- prompt user: do you wish to select a new route? + follow through -->
               </div>
 
               <!-- Basic/Expected Map Elements -->
-              <div class='absolute top right flex-child'>
+              <div class='absolute top right mx12 my6'>
                 <span>[ + | - ]</span>
                 <!-- Attribution -->
               </div>
 
               <!-- DASHBOARD -->
-              <div id="dashboard" class="absolute bottom flex-child col col--12 col--10-mm col--offl1-mm col--offr1-mm">
-
+              <div id="dashboard" class="absolute bottom left right hmin180 bg-purple-faint">
                 <!-- inner dash wrapper -->
-                <div class="flex-parent flex-parent--stretch-cross">
+                <div class="flex-parent flex-parent--space-around flex-parent--stretch-cross grid grid--gut12 clearfix">
 
-                    <!-- Legend-Log SMALL // no display when big; occupies bottom right 2/5 of dashboard when small -->
-                    <div id="legend-log-small" class="col col--5 col--0-ml">
-                      <div id="legend-log-inner-wrapper" class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross flex-parent--center-cross">
-                        <!-- header -->
-                        <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-b--2 border--dash">
-                          <h4 class="txt-h4 align-center">Journey Log</h4>
+                  <!-- Narration -->
+                  <div id="narration" class="flex-child col col--12 col--6-mm col--8-ml">
+                    <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--center-cross">
+                      <!-- header -->
+                      <div id="narration-header" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl bg-red border-b--2 border--dash">
+                        <h5 class="txt-h5 txt-emph txt-fancy align-center">You are currently:</h5>
+                      </div>
+                      <div id="narration-txt" class="flex-child flex-child--grow">
+                        <div class="flex-parent flex-parent--column-reverse">
+                          <div id="p3">Traversing special places</div>
+                          <div id="p2">Encountering incredible things</div>
+                          <!-- <div id="p1"></div> -->
                         </div>
-                        <!-- main content / dynamically populated legend items  -->
-                        <div id="legend-log-content" class="flex-child flex-child--grow align-center scroll-auto">
-                          <div id="legend-log-items-wrapper" class="flex-parent flex-parent--column flex-parent--stretch-cross">
-                            <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-b border--dash">">
-                              <div id="legend-log-item-inner-wrapper" class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
-                                <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24"></span>
-                                <span id="log-name" class="flex-child flex-child--grow"></span>
-                                <span id="log-count" class="flex-child flex-child--no-shrink wmin24"></span>
-                              </div>
+                      </div>
+                      <div id="narration-footer" class="flex-child fex-child--no-shrink border-t--2 h6 bg-red"></div>
+                    </div>
+                  </div> <!-- end of narration -->
+
+                  <!-- Compass + -->
+                  <div id="compass-plus" class="flex-child flex-child--grow col col--4 col--6-mm col--4-ml">
+                    <div class="flex-parent flex-parent--column flex-parent--stretch-cross flex-parent--center-main">
+                      <div id="compass" class="flex-child">
+                        compass
+                      </div>
+                      <div id="plus" class="flex-child">
+                        mileage tracker
+                        distance remaining
+                        time remaining
+                        elevation etc
+                      </div>
+                    </div>
+                  </div> <!-- end of compass+ -->
+
+                  <!-- Legend-Log SMALL // no display when big; occupies bottom right 2/3 of dashboard when small -->
+                  <div id="legend-log-small" class="flex-child col col--8 none-mm">
+                    <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross">
+                      <!-- header -->
+                      <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-b--2 border--dash">
+                        <h4 class="txt-h4 align-center">Journey Log</h4>
+                      </div>
+                      <!-- main content / dynamically populated legend items  -->
+                      <div id="legend-log-content" class="flex-child flex-child--grow scroll-auto">
+                        <div class="flex-parent flex-parent--column scroll-auto">
+                          <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-b border--dash">
+                            <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
+                              <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24"></span>
+                              <span id="log-name" class="flex-child flex-child--grow"></span>
+                              <span id="log-count" class="flex-child flex-child--no-shrink wmin24"></span>
                             </div>
                           </div>
                         </div>
-                        <!-- footer / mileage tracker, elevation dataviz?, other extras -->
-                        <div id="legend-log-footer" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-t--2 border--dash bg-red">
-                          <div id="legend-log-footer-inner-wrapper" class="flex-parent flex-parent--center-cross flex-parent--stretch-cross bg-orange">
-                            <span class="bg-yellow align-r">Rail miles: </span>
-                            <span class="bg-green align-l"> [#]</span>
-                          </div>
-                        </div> <!-- end of legend-log-footer -->
-                      </div> <!-- end of legend-log-inner-wrapper -->
-                    </div> <!--end of legend-log-small -->
-
-                    <!-- Compass + -->
-                    <div id="compass-plus" class="col col--2 col--4-ml"> -->
-                      <div id="compass-plus-inner-wrapper" class="flex-parent flex-parent--column flex-parent--stretch-cross flex-parent--center-cross flex-parent--center-main">
-                        <div id="compass" class="flex-child">
-                          <!-- compass -->
-                        </div>
-                        <div id="plus" class="flex-child">
-                          <!-- mileage tracker here instead legend-log? options toggle, reset, play/pause button-->
-                        </div>
                       </div>
-                    </div> <!-- end of compass+ -->
+                      <!-- footer / mileage tracker, elevation dataviz?, other extras -->
+                      <div id="legend-log-footer" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-t--2 border--dash bg-red">
+                        <div class="flex-parent flex-parent--center-cross bg-orange">
+                          <span class="bg-yellow align-r">Rail miles: </span>
+                          <span class="bg-green align-l"> [#]</span>
+                        </div>
+                      </div> <!-- end of legend-log-footer -->
+                    </div> <!-- end of legend-log-inner-wrapper -->
+                  </div> <!--end of legend-log-small -->
 
-                    <!-- Narration -->
-                    <div id="narration" class="col col--5 col--8-ml">
-                      <div id="narration-inner-wrapper" class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--center-cross flex-parent--stretch-cross">
-                        <!-- header -->
-                        <div id="narration-header" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-b--2 border--dash">
-                          <h5 class="txt-h5 txt-emph txt-fancy align-center">You are currently:</h5>
-                        </div>
-                        <div id="narration-txt" class="flex-child flex-child--grow">
-                          <div id="narration-txt-inner-wrapper" class="flex-parent flex-parent--column-reverse">
-                            <div id="p3">Traversing special places</div>
-                            <div id="p2">Encountering incredible things</div>
-                            <!-- <div id="p1"></div> -->
-                          </div>
-                        </div>
-                        <div id="narration-footer" class="flex-child flex-child--no-shrink hmin18 bg-red">
-                          <div id="narration-footer-inner-wrapper" class="flex-parent flex-parent--center-cross flex-parent--stretch-cross bg-orange">
-                            <span class="bg-yellow align-r">i</span>
-                            <span class="bg-green align-l">Dunno</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div> <!-- end of narration -->
-
-                  </div> <!-- end of dashbord-inner-wrapper -->
-                </div> <!-- end of dashboard-semantic -->
-              </div> <!-- end of dashboard-wrapper -->
+                </div> <!-- end of dashbord-inner-wrapper -->
+              </div> <!-- end of dashboard-semantic -->
 
             </div> <!-- end of ui-overlay-group -->
 
           </section> <!--end of map pane section -->
 
           <!-- SIDEBAR / ASIDE -->
-          <aside id="sidebar" class="flex-child flex-child--no-shrink col col--12 col--auto-ml bg-blue-dark h-full-ml wmin240-ml wmax360-ml wmin-360-mxl wmax600-mxl fr absolute right bottom">
+          <aside id="sidebar" class="col col--12 col--4-ml col--3-mxl bg-blue-dark fr relative">
 
             <!-- siderbar inner wrapper -->
-            <div class="flex-parent flex-parent--column bg-yellow hmax-full-ml grid">
+            <div class="flex-parent flex-parent--column-ml flex-parent--stretch-cross flex-parent--space-between-main bg-yellow grid grid--gut0 w-full">
 
-              <!-- ABOUT // allow for toggle-collapse when mm+ (automatic collapse on mm only?)-->
-              <div id="about" class="flex-child hmin0 col col--6 col--8-mm col--12-ml"> <!-- flex-child extra shrink? be subsumed -->
-
-                <div class='flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross'>
-
+              <!-- ABOUT -->
+              <div id="about" class="flex-child hmin0 col col--12">
+                <!-- flex-child extra shrink? be subsumed -->
+                <!-- inner vertical wrapper -->
+                <div class='flex-parent flex-parent--column flex-parent--stretch-cross'>
                   <!-- About--Header -->
-                  <div id="about--header" class="flex-child flex-child-no-shrink hmin18 hmin0-ml bg-green">
+                  <div class="flex-child flex-child-no-shrink hmin18 hmin0-ml bg-green col col--12">
                     <h3 class="txt-h3">About This Map</h3>
                   </div> <!-- end of about-header -->
-
                   <!-- About--Main -->
-                  <div id="about--main" class="flex-child flex-child-grow scroll-auto">
+                  <div class="col col--12 flex-child flex-child-grow scroll-auto">
                     <!-- inner content wrapper; flex used only for vertical alignment of child items -->
-                    <div class="flex-parent flex-parent--center-cross grid grid--gut12">
+                    <div class="flex-parent flex-parent--column flex-parent--stretch-cross grid grid--gut24">
                       <!-- main about text, orientation, etc -->
-                      <div id="intro" class='flex-child col col--12 col--6-mm col--11-ml col--offl1-ml align-l align-r-ml bg-blue-faint'>
+                      <div class='flex-child col col--12 col--6-mm col--12-ml'>
                         <h4 class="txt-h4">Some words</h4>
                         <p>This map visualizes ~~~~~~.</p>
                       </div>
                       <!-- data sources, sub-about, furthermore -->
-                      <div id="sources" class='flex-child col col--12 col--6-mm col--11-ml col--offr1-ml align-r align-l-ml bg-purple-faint'>
+                      <div class='flex-child col col--12 col--6-mm col--12-ml align-r'>
                         <h5 class='txt-h5'>Data sources etc</h5>
                         <ul class="txt-ul">
                           <li class="txt-li">
@@ -328,31 +317,27 @@
                       </div>
                     </div> <!-- end of about-main-content-inner-wrapper -->
                   </div> <!-- end of about-main-->
-
                   <!-- About--Footer -->
-                  <div id="about--footer" class="flex-child flex-child-no-shrink hmin12 hmin0-ml bg-green">
-                    <p>testing, testing</p>
-                  </div> <!-- end of about-footer -->
-
+                  <div class="flex-child flex-child-no-shrink hmin12 bg-green"></div>
                 </div> <!-- end of about-inner-wrapper-->
-              </div> <!-- end of about --> -->
+              </div> <!-- end of about -->
 
-              <!-- Legend-Log // grows vertically as content added on ml+, overtaking other siderbar flex-child -->
-              <div id="legend-log-big" class="flex-child flex-child--grow hmax-full col col--6 col--4-mm col--12-ml bg-orange-dark">
+              <!-- Legend-Log // grows vertically as content added on ml+, overtaking #about to the north -->
+              <div id="legend-log-big" class="flex-child flex-child--grow hmin180 hmax-full col col--0 col--12-ml bg-orange-dark absolute bottom right none block-ml">
                 <!-- REST OF LEGEND LOG CONTENT IS SAME AS LEGEND-LOG SMALL; find a way to access w/o js; html variables?-->
-                <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross flex-parent--center-cross">
+                <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross h-full">
                   <!-- header -->
                   <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-b--2 border--dash">
                     <h4 class="txt-h4 align-center">Journey Log</h4>
                   </div>
                   <!-- main content / dynamically populated legend items  -->
-                  <div id="legend-log-content" class="flex-child flex-child--grow align-center scroll-auto">
-                    <div id="legend-log-items-wrapper" class="flex-parent flex-parent--column flex-parent--stretch-cross">
-                      <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-b border--dash">">
+                  <div id="legend-log-content" class="flex-child flex-child--grow h-full w-full align-center bg-pink scroll-auto">
+                    <div id="legend-log-items-wrapper" class="flex-parent flex-parent--column flex-parent--stretch-cross h-full">
+                      <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-b border--dash">
                         <div id="legend-log-item-inner-wrapper" class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
-                          <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24"></span>
-                          <span id="log-name" class="flex-child flex-child--grow"></span>
-                          <span id="log-count" class="flex-child flex-child--no-shrink wmin24"></span>
+                          <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24">sym</span>
+                          <span id="log-name" class="flex-child flex-child--grow">name</span>
+                          <span id="log-count" class="flex-child flex-child--no-shrink wmin24">#</span>
                         </div>
                       </div>
                     </div>
@@ -375,7 +360,7 @@
       </main> <!-- end of main -->
 
       <!-- footer stays on the bottom at full width -->
-      <footer class="flex-child flex-child--no-shrink hmin60 w-full bg-purple-dark">
+      <footer class="flex-child flex-child--no-shrink hmin36 w-full bg-purple-dark">
         <!-- inner horizontal grid wrapper; flex used only for vertical alignment -->
         <div class='flex-parent flex-parent--center-cross grid grid--gut18'>
           <!-- author name, NMP link? -->
