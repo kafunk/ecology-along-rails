@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <title>Ecology Along the Rails</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <!-- <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' /> -->
+    <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet'>
+    <!-- <link href='https://fonts.googleapis.com/css?family=Corben:400|Montserrat:400,700' rel='stylesheet'>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css"> -->
+    <!-- <link href='css/styles.css' rel='stylesheet' /> -->
+
+    <style>
+      body { margin:0; padding:0; }
+      #map { position:absolute; top:0; bottom:0; width:100%; }
+
+      .axis line {
+        stroke-opacity: 0.3;
+        shape-rendering: crispEdges;
+      }
+
+      button {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+      }
+
+      /* .leaflet-control-zoom { opacity: 0.8; }
+      /* display none for layout purposes but be careful of license restrictions */
+      /* .mapbox-logo { display: none; }
+      /* .inner-wrapper { padding: 6px; } */
+      /* .hydro {}
+      .eco {}
+      .rail {}
+      .selected {}
+      .encountered {}
+      .encountering {}
+      .flex-parent--space-around { justify-content: space-around; }
+      .hide { visibility: hidden; }
+      .unhide { visibility: visible; }
+      @media screen and (min-width: 640px) {
+        .hide--mm { visibility: hidden; }
+        .unhide--mm { visibility: visible; }
+      }
+      @media screen and (min-width: 800px) {
+        .hide--ml { visibility: hidden; }
+        .unhide--ml { visibility: visible; }
+      }
+      /* @media screen and (min-width: 1200px) {
+        .hide--mxl { visibility: hidden; }
+        .unhide--mxl { visibility: visible; }
+      } */
+      /* svg icon .inline { display: inline-block; }
+      li { list-style: none; }
+      a::hover {
+        text-decoration: line;
+        opacity: 0.8;
+      }
+      .my-blue { background: #849ab5; } */
+    </style>
+  </head>
+
+  <body>
+
+    <div class="relative viewport-full scroll-auto">
+
+    <!-- flex-parents and grids defined in vertical and horizontal div wrappers; dynamic sizing via flex-childs and cols added to more semantic, core elements -->
+
+    <!-- main content wrapper (vertical)-->
+    <div class="flex-parent flex-parent--column h-full scroll-auto">
+
+      <!-- grows vertically in the middle -->
+      <main class="flex-child flex-child--grow bg-transparent w-full">
+
+        <!-- inner horizontal wrapper -->
+        <div class="flex-parent flex-parent--column flex-parent--row-ml w-full h-full bg-transparent grid clearfix">
+
+          <!-- MAP PANE -->
+          <section id="map-pane" class="flex-child flex-child--grow col col--12 col--8-ml col--9-mxl bg-transparent grid relative">
+
+            <div id="map"></div>
+
+        </div> <!-- end of main-innerwrapper -->
+      </main> <!-- end of main -->
+
+    </div>  <!-- end body inner wrapper -->
+
+
+<!---~~~=== JAVASCRIPT ===~~~--->
+
+  <!-- load Assembly -->
+  <script async defer src='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.js'></script>
+  <!-- load MapboxGL -->
+  <!-- <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script> -->
+  <!-- load Turf.js -->
+  <!-- <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script> -->
+  <!-- load Simple Statistics -->
+  <!-- <script src="https://unpkg.com/simple-statistics@6.0.1/dist/simple-statistics.min.js"></script> -->
+  <!-- load D3 -->
+  <script src="https://d3js.org/d3.v5.js"></script>
+  <script src="https://unpkg.com/topojson@3"></script>
+  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+  <!-- HERE Routing API -->
+  <!-- <script src="http://js.api.here.com/v3/3.0/mapsjs-core.js"></script>
+  <script src="http://js.api.here.com/v3/3.0/mapsjs-service.js"></script> -->
+  <!-- load custom script -->
+  <script src="js/colors.js"></script>
+
+  <script>
+
+  var width = 960,
+     height = 860;
+
+  var svg = d3.select("#map").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  // set up zoom behavior
+  var zoom = d3.zoom()
+    .scaleExtent([1, 40])
+    .translateExtent([[-100, -100], [width + 90, height + 100]])
+      // .translate(projection.translate())
+      // .scaleExtent([height, Infinity])
+      // .scale(projection.scale())
+    .on("zoom", zoomed);
+
+  // declaring here for later updating from within zoomed() function
+  var geoAttune,
+      scale,
+      translate,
+      area; // minimum area threshold
+//////
+  // color time! create linear gradient stored in <defs> element
+  var defs = svg.append("defs");
+
+  // append a linearGradient element to the <defs> and give it a unique id
+  var linearGradient = defs.append("linearGradient")
+    .attr("id", "linear-gradient")
+    .attr("x1", "30%")
+    .attr("y1", "30%")
+    .attr("x2", "70%")
+    .attr("y2", "70%");
+
+  // bind gradient stops to linearGradient element
+  linearGradient.selectAll("stop")
+    .data(gradientScale.range())
+    .enter().append("stop")
+      .attr("offset", function(d,i) { return i/(gradientScale.range().length-1); })
+      .attr("stop-color", d => { return d });
+
+  // again, because this is fun
+  var linearGradient2 = defs.append("linearGradient")
+    .attr("id", "linear-gradient-2")
+      .attr("x1", "30%")
+      .attr("y1", "30%")
+      .attr("x2", "70%")
+      .attr("y2", "70%");
+  linearGradient2.selectAll("stop")
+    .data(gradientScale2.range())
+    .enter().append("stop")
+      .attr("offset", function(d,i) { return i/(gradientScale2.range().length-1); })
+      .attr("stop-color", d => { return d });
+
+  // LOAD DATA
+  d3.json("../data/mapshaped/watersheds102008_2.json").then(drawMap, error);
+
+  function drawMap(data) {
+
+    console.log(data);
+
+    var hydroTJ = data,
+        hydroGJ = topojson.feature(data, data.objects.all_na_watersheds),
+        mesh = topojson.mesh(data, data.objects.all_na_watersheds, function(a,b) { return a!== b });
+
+  ////// set projections, path, and geoIdentity
+    // projection is already baked into some of the Topojson files, will be used selectively
+
+    var projection = d3.geoConicEqualArea()
+      // .center([0, 48]) // center of geography in latitude
+      // .rotate([-96,0])  // rotate the earth negative degrees in longitude
+      // .scale(1100)     // adjust the scale (i.e., "zoom")
+      .fitSize([width, height], hydroGJ) // data in form of geoJSON object
+
+    // declare geoIdentity function for transforming/aligning preprojected data
+    geoAttune = d3.geoIdentity()
+      // .reflectY(true)
+      .fitSize([width, height], hydroGJ) // data in form of geoJSON object
+
+    // see d3.geoTransform for other transformations on preprojected geometry
+
+    // define path generator
+    // var path = d3.geoPath().projection(null);
+    var path = d3.geoPath().projection(geoAttune);  // connect to geoAttune function for easy path transforms following zoom,pan,etc
+
+    // example values for testing only
+    var poi = projection([-87.65,42.01]);
+    var center = projection.translate();
+
+    var land = svg.append("path")
+      .attr("stroke", "none")
+      .attr("fill", "url(#linear-gradient-2)")
+      .attr("d", path(hydroGJ))
+      .classed("zoomable", true)
+
+    // var hydroGroup = svg.append("g")
+    //   .attr("fill", "none")
+    //   .attr("class", "base hydro group")
+    //
+    // hydroGroup.selectAll("path")
+    //   .data(hydroGJ.features)
+    //     .enter().append("path")
+    //     .attr("d", path)
+    //     .attr("stroke", "cyan")
+    //     .classed("zoomable", true)
+
+    var hydroMesh = svg.append("path")
+      .attr("class", "mesh base hydro zoomable")
+      .attr("fill", "none")
+      .attr("d", path(mesh))
+      // .attr("stroke-dasharray", 2,1)
+      // .attr("stroke-width", 0.7)
+      // .attr("stroke","#515151")
+      .attr("stroke","url(#linear-gradient)")
+
+
+  // initiate zoomability
+  svg.call(zoom);
+  // svg.call(zoom.event);
+  // svg.call(zoomTo(center, 1).event)
+  //   .transition()
+  //   .duration(2500)
+  //     .call(zoom.transform, d3.zoomIdentity)
+  //     .call(zoomTo(poi, 4).event)
+  //     .transition()
+  //     .call(zoomTo(center, 1).event)
+}
+
+  function zoomTo(point, scale) {
+    return zoom
+      .translate([width / 2 - point[0] * scale, height / 2 - point[1] * scale])
+      .scale(scale);
+  }
+  function zoomed(d) {
+    translate = zoom.translate();
+    scale = zoom.scale();
+    area = 4 / scale / scale;
+    path(d)
+  }
+  function zoomed(d) {
+    var allZoomable = svg.selectAll("path.zoomable");
+    allZoomable.attr("transform", d3.event.transform);
+    // or, if transforming projection rather extent:
+      // projection.translate(d3.event.translate)
+      //           .scale(d3.event.scale);
+      // geoAttune.translate(d3.event.translate)
+      //           .scale(d3.event.scale);
+      // allZoomable.attr("d", path);
+  }
+
+
+  // function resetZoom() {
+  //   svg.transition()
+  //     .duration(750)
+  //     .call(zoom.transform, d3.zoomIdentity);
+  // }
+
+  // endless zooming back and forth, but interesting function
+  // function jump() {
+  //   var t = d3.select(this);
+  //   (function repeat() {
+  //     t = t.transition()
+  //         .call(zoomTo(poi, 4).event)
+  //       .transition()
+  //         .call(zoomTo(center, 1).event)
+  //         .each("end", repeat);
+  //   })();
+  // }
+
+  ///////////////// MESH / BASE ///////////////////
+
+  /////////////////////////////////////////////////
+  /////////////////////////////////////////////////
+
+  /////////////// OVERLAY / DEFS //////////////////
+  ////
+   ///
+    // USING <defs></defs> and <use></use>
+    //
+    // var defs = svg.append("defs");
+    //
+    // defs.append("path")
+    //     .attr("id", "land")
+    //     .datum(topojson.feature(topology, topology.objects.land))
+    //     .attr("d", path);
+    //
+    // defs.append("clipPath")
+    //     .attr("id", "clip")
+    //   .append("use")
+    //     .attr("xlink:href", "#land");
+    // svg.append("use")
+    //   .attr("xlink:href", "#land")
+    //   .attr("class", "stroke");
+
+  ////////////// OVERLAY / RENDER /////////////////
+  ////
+   ///  pass-rail-lines
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+
+
+/////// Functions that can happily stay out of the way ////////
+
+  function error(error) {
+    console.log(error);
+  }
+
+  </script>
+
+</body>
+</html>
