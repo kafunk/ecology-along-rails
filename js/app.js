@@ -1,13 +1,12 @@
-(function () {
-
+// (function () {
 
   // SET UP ENVIRONMENT (global bindings)
 
     // MapboxGL
       // mapbox API access Token
-        mapboxgl.accessToken = 'pk.eyJ1Ijoia2FmdW5rIiwiYSI6ImNqYmc3dXJzczMzZWIzNHFmcmZuNjY3azMifQ.9i48EOQl4WCGZQqKRvuc_g';
-
-      // initialize map centered on conterminous US // NOTE mapboxgl uses long,lat coordinates
+      //   mapboxgl.accessToken = 'pk.eyJ1Ijoia2FmdW5rIiwiYSI6ImNqYmc3dXJzczMzZWIzNHFmcmZuNjY3azMifQ.9i48EOQl4WCGZQqKRvuc_g';
+      //
+      // // initialize map centered on conterminous US // NOTE mapboxgl uses long,lat coordinates
       //   var map = new mapboxgl.Map({
       //     container: 'map',
       //     style: 'mapbox://styles/kafunk/cjhzu1ypk2nhj2sn6qkg8e3x2?optimize=true',
@@ -73,12 +72,12 @@
 
 
   // INITIATE DATA LOAD
-    var railLinesJson = d3.json("../data/na-pass-rail-lines.json"),
-        railNodesJson = d3.json("../data/na-pass-rail-nodes.json"),
-          ecoBaseJson = d3.json("../data/na-ecoreg-iii-all.json"),
-       ecoExtractJson = d3.json("../data/na-ecoreg-iv-extract.json"),
-        hydroBaseJson = d3.json("../data/na-watersheds-all.json"),  // add rest of hydro polys here?
-        huExtractJson = d3.json("../data/na-watersheds-extract.json");
+    var railLinesJson = d3.json("../data/na_pass_rail_lines.json"),
+         railStnsJson = d3.json("../data/na_main_rail_stns.json"),
+          ecoBaseJson = d3.json("../data/na_ecoreg_iii_all.json"),
+       ecoExtractJson = d3.json("../data/na_ecoreg_iv_extract.json"),
+        hydroBaseJson = d3.json("../data/na_watersheds_all.json"),  // add rest of hydro polys here?
+        huExtractJson = d3.json("../data/na_watersheds_extract.json");
 
         // more: hydrolines, pois incl bridges, tunnels, iNat
 
@@ -98,10 +97,10 @@
       console.log(data);
       // console.log(getLL(data[0]), project(data[0]))
 
-      var railways = data[0],
-         railnodes = data[1],
-        watersheds = data[2],
-        ecoregions = data[3];
+      // var railways = data[0],
+      //    railnodes = data[1],
+      //   watersheds = data[2],
+      //   ecoregions = data[3];
 
 
       var allRoutes = topojson.mesh(data[0], data.objects.na-rail-all),
@@ -157,19 +156,36 @@
 
     }
 
-  // INITIATE ANIMATED JOURNEY EXPERIENCE
-    initNew(); // <====================== fun stuff starts here
+    // called by submit button
+    function initNew(input) {
+      // prompt form button loading wheel
 
-    function initNew() {
-      // get initial user options
-      var selection = getRoute();
+      // save and parse input
+      var start = form.<inputname>.value,
+            end = form.<inputboxname>.value
 
-      // prep route specific data
-      var newRoute = prepOverlay(selection);
+      // attempt to get new routing from HERE api
+      var possibleRoute = getRoute(start,end);
 
-      // initiate animation
-      initExp(newRoute);
+      // if (unsuccessful)
+        // indicate error to the user
+          return false
+
+      // if (successful)
+        // indicate success to user
+          hide("#modal")  // TODO add transition into loading bar
+
+          // prep route specific data
+          var newRoute = prepOverlay(selection);
+
+          // initiate animation
+          initExp(newRoute)
+
+      // necessary to give feedback to form?
+      return true;
+
     }
+
 
     function getRoute(){
       // get user input! see koordinates example
@@ -188,7 +204,7 @@
     function prepOverlay(selection) {
 
       // ensure data has loaded
-      Promise.all([railNodes,ecoExtract,huExtract]).then( data => {
+      Promise.all([railStnsJson,ecoExtractJson,huExtractJson]).then( data => {
         // catch errors
         if (error) throw error;
 
@@ -316,7 +332,55 @@
         return potentialEnds - endsToExclude; // subtracting arrays is unfortunately not a thing; fix this
       }
     }
-  }
-)
 
-  // FORM: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
+    // EVENT LISTENERS
+      // passed e event with e.target
+
+      // Buttons and functional icons
+        // d3.selectAll(".hide-trigger").on("click", e=> {
+        //   hide(e.target.for); // controls? (for as attribute containing id of element to hide)
+        //   // with the exception of the modal hide-trigger (and all submit buttons)
+        //   if (e.target.type != "submit") {
+        //     // expand something else? (expand-trigger icon?)
+        //   }
+        // });
+        // d3.selectAll(".expand-trigger").on("click", e=> {
+        //   expand(e.target.for); // controls?
+        //   hide(e.target);  // hide the icon that prompted expansion, once expansion is attained
+        // });
+      // Form(s)
+        // <form>.on("focus", e => { e.target.style.background = "lightgoldenrod" }
+        //       .on("blur", e => { e.target.style.background = "" })
+      // Window
+        // window.onresize
+      // Data
+      // Popups
+      // Tooltips
+        // .on('mouseenter', function (d, i) { // do something! });
+      // Other
+        // onload,onlock,onmouseover
+        // onfocus,onblur,
+        // setTimeOut(function,milliseconds);
+        // setInterval
+
+  // FUNCTIONS
+        function expand(element <elementId | selected element> ) {
+          // if the element info received is an id (string with #), get actual element
+          if element.typeOf(string)) {
+            element = d3.select(element);
+          }
+          // change element visibility
+          element.style.visibility = visible;
+        }
+
+        function hide(element <elementId | selected element>) {
+          // if the element info received is an id (string with #), reassign with actual element
+          if element.typeOf(string)) {
+            element = d3.select(element);
+          }
+          // change element visibility
+          element.style.visibility = hidden;
+        }
+
+//   }
+// )
