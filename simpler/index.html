@@ -13,21 +13,9 @@
     <style>
       body { margin:0; padding:0; }
       #map { position:absolute; top:0; bottom:0; width:100%; }
-
-      .axis line {
-        stroke-opacity: 0.3;
-        shape-rendering: crispEdges;
-      }
-
-      button {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-      }
-
+      svg path { shape-rendering: optimizeSpeed }
+      /* .mix-blend ## { mix-blend-mode: hue? color? exclusion? more: https://developer.mozilla.org/en-US/docs/Web/CSS/mix-blend-mode } */
       /* .leaflet-control-zoom { opacity: 0.8; }
-      /* display none for layout purposes but be careful of license restrictions */
-      /* .mapbox-logo { display: none; }
       /* .inner-wrapper { padding: 6px; } */
       /* .hydro {}
       .eco {}
@@ -104,18 +92,59 @@
   <!-- HERE Routing API -->
   <!-- <script src="http://js.api.here.com/v3/3.0/mapsjs-core.js"></script>
   <script src="http://js.api.here.com/v3/3.0/mapsjs-service.js"></script> -->
-  <!-- load custom script -->
+
+  <!-- load custom scripts -->
   <script src="js/colors.js"></script>
+  <script src="js/scales.js"></script>
 
-  <script>
+  <script>  // below will become app.js, loaded last
 
-  var width = 960,
-     height = 860;
+/////// SET UP BASEMAP
+mapbox://styles/kafunk/cjhzu1ypk2nhj2sn6qkg8e3x2
 
-  var svg = d3.select("#map").append("svg")
-    .attr("width", width)
-    .attr("height", height);
+/////// SET UP SVG
+    var width = 960,
+       height = 860;
 
+    var svg = d3.select("#map").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  ///// DEF ELEMENTS
+    var defs = svg.append("defs");
+
+    /// COLOR GRADIENTS
+
+      // append gradient elements to svg <defs> and give each a unique id
+      var linearGradient = defs.append("linearGradient")
+        .attr("id", "linear-gradient")
+        .attr("x1", "30%")
+        .attr("y1", "30%")
+        .attr("x2", "70%")
+        .attr("y2", "70%");
+      var linearGradient2 = defs.append("linearGradient")
+        .attr("id", "linear-gradient-2")
+        .attr("x1", "30%")
+        .attr("y1", "30%")
+        .attr("x2", "70%")
+        .attr("y2", "70%");
+
+      // bind gradient stops to gradient elements
+      linearGradient.selectAll("stop")
+        .data(gradientScale.range())
+        .enter().append("stop")
+          .attr("offset", function(d,i) { return i/(gradientScale.range().length-1); })
+          .attr("stop-color", d => { return d });
+      linearGradient2.selectAll("stop")
+        .data(gradientScale2.range())
+        .enter().append("stop")
+          .attr("offset", function(d,i) { return i/(gradientScale2.range().length-1); })
+          .attr("stop-color", d => { return d });
+
+
+  ///// ANTICIPATORY GROUPS
+
+/////// SET UP ZOOM/TRANSFORM ALIGNMENT
   // set up zoom behavior
   var zoom = d3.zoom()
     .scaleExtent([1, 40])
@@ -125,44 +154,35 @@
       // .scale(projection.scale())
     .on("zoom", zoomed);
 
-  // declaring here for later updating from within zoomed() function
-  var geoAttune,
-      scale,
-      translate,
-      area; // minimum area threshold
-//////
-  // color time! create linear gradient stored in <defs> element
-  var defs = svg.append("defs");
+  // Declare some variables for later assignment
+    var geoAttune,
+        scale,
+        translate,
+        area; // minimum area threshold
 
-  // append a linearGradient element to the <defs> and give it a unique id
-  var linearGradient = defs.append("linearGradient")
-    .attr("id", "linear-gradient")
-    .attr("x1", "30%")
-    .attr("y1", "30%")
-    .attr("x2", "70%")
-    .attr("y2", "70%");
+// function i will need..
+  // filtering:
+  // filtered = geojson.features.filter(function(d) { return d.id === <>; })[0];
+  // scaling/trasnlating to bbox:
+  // projection
+  //   .scale(1)
+  //   .translate([0, 0]);
+  //
+  // var b = path.bounds(state),
+  //     s = .95 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height),
+  //     t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
+  //
+  // projection
+  //     .scale(s)
+  //     .translate(t);
+  // use classes:
+    // .attr("class", "mesh")
+    // .attr("class", "feature")
+    // .attr("class", "outline")
 
-  // bind gradient stops to linearGradient element
-  linearGradient.selectAll("stop")
-    .data(gradientScale.range())
-    .enter().append("stop")
-      .attr("offset", function(d,i) { return i/(gradientScale.range().length-1); })
-      .attr("stop-color", d => { return d });
 
-  // again, because this is fun
-  var linearGradient2 = defs.append("linearGradient")
-    .attr("id", "linear-gradient-2")
-      .attr("x1", "30%")
-      .attr("y1", "30%")
-      .attr("x2", "70%")
-      .attr("y2", "70%");
-  linearGradient2.selectAll("stop")
-    .data(gradientScale2.range())
-    .enter().append("stop")
-      .attr("offset", function(d,i) { return i/(gradientScale2.range().length-1); })
-      .attr("stop-color", d => { return d });
+/////// LOAD DATA
 
-  // LOAD DATA
   d3.json("../data/mapshaped/watersheds102008_2.json").then(drawMap, error);
 
   function drawMap(data) {
@@ -287,42 +307,238 @@
    ///
     // USING <defs></defs> and <use></use>
     //
-    // var defs = svg.append("defs");
-    //
-    // defs.append("path")
-    //     .attr("id", "land")
-    //     .datum(topojson.feature(topology, topology.objects.land))
-    //     .attr("d", path);
-    //
-    // defs.append("clipPath")
-    //     .attr("id", "clip")
-    //   .append("use")
-    //     .attr("xlink:href", "#land");
-    // svg.append("use")
-    //   .attr("xlink:href", "#land")
-    //   .attr("class", "stroke");
+    var defs = svg.append("defs");
 
-  ////////////// OVERLAY / RENDER /////////////////
-  ////
-   ///  pass-rail-lines
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
+    defs.append("path")
+        .attr("id", "land")
+        .datum(topojson.feature(topology, topology.objects.land))
+        .attr("d", path);
+
+    defs.append("clipPath")
+        .attr("id", "clip")
+      .append("use")
+        .attr("xlink:href", "#land");
+    svg.append("use")
+      .attr("xlink:href", "#land")
+      .attr("class", "stroke");
+
+// NOT TONIGHT
+  // add svg <filter>s
+    // #blurTrain
+    // #dropShade
+
+// prep svg for data flow
+  var route = svg.append("g")
+    .attr("class", "rail line group")
+
+  var train = route.append("circle")
+      .attr("cx","36")  // TODO make dynamic/replace with icon
+      .attr("cy","36")       // adding 'headlight' effects
+      .attr("r", "24")       // add filters, fills, whatever
+      .attr("class", "train icon stationary ready2go")
+  var approaching = route.append("g")
+      .attr("id", "approaching")
+      .append("g")
 
 
-/////// Functions that can happily stay out of the way ////////
+
+function update() {
+
+approaching.selectAll(".node-open")
+  .data(getApproaching())
+.attr("id", d => {return d.id} )
+.attr("class",".anticipating")
+  // chain transitions with classes; set safe delay time tofirst;
+  .transition( /// )    // fetch transition functions based on data type, timelapsed/togo?, *polygon transversing?? for fuzzy, post-route reveal times passed?? (for curves, etc -- points returned more than once; don't start anew, but build further)
+    // plus obviously based in geometry, associated with d.id
+      // elevation? landuse? polygon? time ellapsed in polygon?
+    // set safe wait/delay time (or reset small wait on intervals, until #go?) PLUS TIME OUT in case train route takes a turn / no precise intersection occurs)
+      // longer delay for farther elements
+  // make sure plenty of time on initial // or set interval?
+    .attr("class",".growing")
+    // + time to grow
+  .transition( // shimmery shiny wonderful // )
+    .attr("class", ".NOW")
+    // pass d.id to encountering(now)?
+    .attr("class", ".peaking")
+    // + time to peak
+  .transition (// slowly passing us by // )
+    .attr("class", ".passing")
+    // + time to pass
+  .transition( // fading, flickering, out // )
+    .attr("class", ".past") // fade to freeze/sepia?
+  // on final transition end, bind one last class!
+    .attr("class", ".node-open")
+
+
+// COUNTER is milemarker
+  mm = 0;
+
+function getApproaching() {
+
+  moveForward()
+  orient() {
+    calculateSector(theView.where.now[1])
+  filter(possPoints)
+  possPts.filter(thisRoutlimitingbbox)
+  getIntersecting()
+
+  return theViewFrom(here)
+  // return array of [intersectPts,ids] to primary update() function!
+}
+
+function orient() {
+  // prompt refresh calculations
+
+  let currentPt = theView.where.now[1],
+  currentBearing = theView.where.headed; //?
+  upAhead = calculateSector(currentPt,currentBearing) //
+  getIntersecting
+  /// lots more /// outputting functions can go around here
+
+}
+// similuated journey experience thing
+// theViewFromHere, thisIsHappening
+
+function whatsHappening()
+//
+// let theView = {
+
+let where: {
+    to:     [], // destination coordinates
+    from:   [], //origin coordinates
+    been:   [], // nodes traversed
+    going:  [], // nodes yet to come
+    headed: '', // bearing/azimuth
+    here:   [], // lng/lat
+    now:    [prevPt, currentPt, nextPt]
+  }, {
+
+  how: {
+    far: {      // distance in miles
+      toGo: '',
+      gone: '',
+    },
+  }, {
+    long: {
+      since: '', // travel time passed
+      still: ''  // travel time remaining
+    },
+  }, {
+    fast: '', // speed used to calculate transitions (// IDEA let user set dynamically via range slider)
+    high: '' // current elevation?
+  }, {
+
+let what: {
+  enriches: [], // allEnrichData
+  couldBe: [], // allEnrichData.clipped to thisRoute.segmented.chunkBBoxes and sorted
+  willBe: [] // bounded/intersected data; polys/pts separate // STORE elsewhere?
+  is.approaching: [] //??
+  is.imminent: [],
+  is.peaking
+  is.passing
+  is.past
+  }
+  }
+  was: { }  // store encouter log
+};
+
+
+let enriched = { }, // to store (pre-?)paired data?
+allPolys = '',
+possPolys = turf.bboxClip(allPolys,thisRoute.bounds)); // whole route
+let allLines,
+possLines; // whole route for actual line intersection
+let allPoints,
+possPoints; // filtered to various route chunk BBoxes; queried as necessary
+
+
+// routeSpec, initStats, function expressions
+let thisRoute = {
+  fromLatLng: [], // + place name
+  toLatLng:   [], // + place name
+  via: '',
+  linePath: '',
+  bounds: path.bounds(this.routeLine);
+  segmented: {
+    // chunks, chunkBBoxes // staggered, with overlap?
+  },
+  fromPlanar: [ox,oy],
+  toPlanar: [dx,dy],
+  along: [] // //interpolate between orig,dest; for now, step is linear; 1 mile => translate[1,1]?
+    // destinationPt as function of miles,azimuth or bearing,greatarc distance?, y + same? // elevation? more!] ??;
+}
+
+
+/////// FUNCTIONS //////////
+
+// update data and rendering
+  function update() {
+    approaching = route.selectAll(".approaching");
+      // selectively update elements that are newly free?
+      past = approaching.selectAll(".past")
+        .attr("class", "node-open")
+        // cancel remaining transitions, clear all other attributes, etc!
+      allOpen = approaching.selectAll(".node-open")
+        .data([new])
+          .update()
+          .enter().append() // if more dew elements than opened elementsnecessary to add new elements to store data?
+          // .attr(etc)
+          .exit().remove() // if remaining nodes, extras
+  }
+
+
+// track and adjust state
+  // ==================> the future is this way =================>
+    // been[] << >> oldPrev </> newPrev </> oldCurrent </> newCurrent </> oldNext </> newNext << >> going[]
+  function moveForward() {
+    where.been.push(here.shift());
+    where.here.push(going.shift());
+    mm += 1;
+  }
+
+// getIntersecting //
+  function getIntersectingPts(callerPt,sectorArea,possPts) {
+    let intersecting = [ ];
+    // queryIntersecting(a,b,function)
+      // iterate over possPts
+        // if (booleanIntersects(possPt,sector)
+          // add to callerNode.intersecting[]
+    return [callerPt,intersecting.SORTED];
+  }
+  function getIntersectingLines(routeLine,queryLines) {
+    // intersection of two lines only; not overlapping area/sector
+    // queryIntersect(a,b,function)
+      // calc something, return pts
+    // return array of linePts with associates lineCrossPts
+  }
+  function getIntersectionPolys(routeLine,queryPolys) {
+    // queryIntersect(a,b,function) intersecting
+      // calc something, return pts
+    // RETURN array of nodes with associated pts at polygonEnter and polygonExit
+    return [{ nodeId: { polygonId: [[enterPt],[exitPt]] },
+                      { polygon02: [[enterPt],[exitPt]] }},
+            { node02: { polygon03: [[enterPt],[exitPt]] }}];
+  }
+  function queryIntersect(a,b,what2do) {
+    return what2do(a,b);
+  }
+
+// output and alert
+  function output(encounter) {}
+    orient(now) // update dashboard elements: compass visual?,
+    inform()    // time limited, automatic tooltip raises as new points and layers encountered
+    log()       // initial element type/symbol, plus counter +=1 on each subsequent
+    // subsequent encounters
+      // add 1 to log count
+  }
+
+// Other helpers / not that interesting! //
 
   function error(error) {
     console.log(error);
   }
+
 
   </script>
 
