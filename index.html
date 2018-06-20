@@ -25,26 +25,76 @@
       .encountering {}
       .flex-parent--space-around { justify-content: space-around; }
       .hide { visibility: hidden; }
-      .unhide { visibility: visible; }
+      .show { visibility: visible; }
       @media screen and (min-width: 640px) {
         .hide--mm { visibility: hidden; }
-        .unhide--mm { visibility: visible; }
+        .show--mm { visibility: visible; }
       }
       @media screen and (min-width: 800px) {
         .hide--ml { visibility: hidden; }
-        .unhide--ml { visibility: visible; }
+        .show--ml { visibility: visible; }
+      }
+      .block-sm {
+        @media screen and (min-width: 400px) {
+          display: block;
+        }
       }
       /* @media screen and (min-width: 1200px) {
         .hide--mxl { visibility: hidden; }
-        .unhide--mxl { visibility: visible; }
+        .show--mxl { visibility: visible; }
       } */
       svg icon .inline { display: inline-block; }
       li { list-style: none; }
-      a::hover {
+      a:hover {
         text-decoration: line;
         opacity: 0.8;
       }
       .my-blue { background: #849ab5; }
+      /* set toggle icon font size */
+      label[for="toggle"] { font-size: 3rem; }
+
+      /* hide sidebar toggle offscreen */
+      input[type="checkbox"] { position: absolute; top: -100px; }
+
+      /* sidebar about styling */
+      aside { position: fixed; top: 0; right: -370px; transition: 0.6s all; }
+
+      /* when siderbar's adjacent input element is checked, show sidebar */
+      input[type=checkbox]:checked + aside { right: 0px; }
+
+      /* when dashboard's adjacent input element is checked, show sidebar */
+      input[type=checkbox]:checked + #dashboard { visibility: visible; }
+
+      /* Hide all actual toggle checkboxes */
+      input[type=checkbox] { display: none; }
+
+      /* Hide expandable content by default */
+        /* start with a blank slate to keep things dynamic -- populate things selectively on pageload, icon click, etc */
+      .expandable {
+        visibility: hidden;
+        /* display: none; */
+      }
+      .collapsible {
+        visibility: visible;
+      }
+      button[type=submit]:after + div#go-load {
+        visibility: visible;
+      }
+      .txt-fancy { /* tbd */}
+      .expand-trigger:after {
+        visibility: hidden:
+        /* OTHER triggle visibility: visible; */
+        /* check adjacent-parent checkbox */
+      }
+      .collapse-trigger:after {
+        visibility: hidden;
+        /* OTHER trigger visibility: visible; */
+        /* uncheck adjacent-parent checkbox */
+      }
+      /* css classes on init load only? : */
+        /* show-sm, show-mm show-ml show-mxl
+        hide-sm hide-mm hide-ml hide-mxl  */
+
     </style>
   </head>
 
@@ -84,9 +134,12 @@
               <!-- <img class="relative" src="http://via.placeholder.com/1080x800"/> -->
             </div>
 
+            <!-- modal wrapper -->
             <div class="flex-parent flex-parent--center-main flex-parent--center-cross grid">
+            <!-- or? <div class='fixed top right bottom left scroll-auto'></div>-->
+
               <!-- MODAL -->
-              <div id="modal" class='none flex-child col col--8 col--offl2 col--offr2 bg-green z3'>
+              <div id="modal" class='collapsible flex-child col col--8 col--offl2 col--offr2 bg-green z3' aria-hidden="false">
                 <!-- Form Wrapper // flex used only for ease of cross+main axis centering -->
                 <div class="flex-parent flex-parent--center-cross flex-parent--center-main grid bg-green-faint">
 
@@ -99,15 +152,19 @@
                       <!-- Fieldset wrapper-->
                       <div class="flex-child col col--12 col--6-mm col--8-ml bg-green-dark">
                         <!-- Get Start -->
-                        <fieldset class="w-full align-center bg-green-faint">
+                        <fieldset class="relative w-full align-center bg-green-faint">
                           <label for="start">Where have you come from?</label>
-                          <input type="text" id="getStart" name="start" value="Enter origin" list="startList" placeholder="Start..." />
+                          <!-- default input (search box with matching) wrapper -->
+                          <div class='absolute flex-parent flex-parent--center-cross flex-parent--center-main w36 h36'>
+                            <svg class='icon'><use xlink:href='#icon-caret-right'></use></svg>
+                          </div>
+                          <input type="text" id="getStart" class="input pl36" name="start" value="Enter origin" list="startList" placeholder="You have to start somewhere" />
                           <datalist id="startList">
                             <label for="startSuggest">(Some possibilities:)</label>
-                            <!-- dropdown1 wrapper -->
+                            <!-- backup input box (dropdown) wrapper -->
                             <div class="select-container">
                               <!-- dropdown1 (start route) -->
-                              <select id="startSuggest" class="select start-node" name="altStart">
+                              <select id="startSuggest" class="input select start-node" name="altStart">
                                 <option value="node#?">Start...</option>
                                 <option value="">Chicago</option>
                                 <!-- <option>etc</option> -->
@@ -117,15 +174,19 @@
                           </datalist>
                         </fieldset>
                         <!-- Get End -->
-                        <fieldset class="w-full align-center bg-green-faint">
+                        <fieldset class="relative w-full align-center bg-green-faint">
                           <label for="end">Where are you going?</label>
-                          <input type="text" id="getEnd" name="end" value="Enter destination" list="endList" placeholder="...End" />
+                          <!-- default input (search box with matching) wrapper -->
+                          <div class='absolute flex-parent flex-parent--center-cross flex-parent--center-main w36 h36'>
+                            <svg class='icon fr'><use xlink:href='#icon-caret-right'></use></svg>
+                          </div>
+                          <input type="text" id="getEnd" class="input pl36" name="end" value="Enter destination" list="endList" placeholder="Everything ends" />
                           <datalist id="endList">
                             <label for="endSuggest">(Some possibilities:)</label>
-                            <!-- dropdown2 wrapper -->
+                            <!-- backup input box (dropdown) wrapper -->
                             <div class="select-container">
                               <!-- dropdown2 (end route) -->
-                              <select id="endSuggest" class="select end-node" name="altEnd">
+                              <select id="endSuggest" class="input select end-node" name="altEnd">
                                 <option value="node#?">...End</option>
                                 <option value="">Grand Junction</option>
                                 <!-- <option>etc</option> -->
@@ -137,9 +198,12 @@
                       </div> <!-- end fieldset wrapper -->
                       <!-- GO button -->
                       <fieldset class="flex-child col col--12">
-                        <button id='go' type="submit" class="w-full align-center btn round txt-fancy txt-spacing2" value="go">
-                          &#60;&#62; Let's Go &#60;&#62;
+                        <button id='go-btn' type="submit" class="w-full align-center btn round txt-fancy txt-spacing2" value="go" onclick="initNew()">
+                          <span id="go-txt">Let's Go</span>
                         </button>
+                        <div class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top right bottom left bg-darken10 z5'>
+                          <span id="go-load" class="hide flex-child loading"></span>
+                        </div>
                       </fieldset>
                     </div> <!-- end form inner wrapper -->
                   </form>
@@ -151,13 +215,18 @@
             <!-- UI Overlay Elements Wrapper -->
             <div class="bg-gray col col--12">
 
+              <!-- (static for now) Loader Bar (prepping route, loading animation) -->
+              <div class='h12 bg-darken10 relative round-full'>
+                <div class='absolute h12 bg-green-light round-full' style='width:50%;'></div>
+              </div>
+
               <!-- Custom Data UI Elements -->
               <div class='absolute top left mx6 my6'>
                 <button class='btn round my-blue replay mx3'>Replay</button>
                 <!-- keep route choice, reset counter, reset data reveal, begin again -->
                 <button class='btn round my-blue play-pause mx3'>Play/Pause</button>
                   <!-- stop/init counter without data resets -->
-                <button class='btn round my-blue reset-options mx3'>Select New?</button>
+                <button type='reset' class='btn round my-blue reset-options mx3'>Select New?</button>
                   <!-- prompt user: do you wish to select a new route? + follow through -->
               </div>
 
@@ -184,7 +253,12 @@
               <!-- </div> -->
 
               <!-- DASHBOARD -->
-              <div id="dashboard" class="absolute bottom left right bg-red txt-s txt-m-mm txt-l-mxl round-mm mx12-mm my12-mm">
+              <label for="toggle-dash" class="toggle-trigger">
+                <span class='triangle-l triangle-l--r color-green inline-block'></span>
+                <span class='triangle-l triangle-l--r color-green inline-block'></span>
+              </label>
+              <input type="checkbox" id="toggle-dash" aria-expanded="false" aria-controls="dashboard">
+              <div id="dashboard" class="expandable absolute bottom left right bg-red txt-s txt-m-mm txt-l-mxl round-mm mx12-mm my12-mm">
                 <!-- inner dash wrapper -->
                 <div class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid h-full px12-mm hmin120 py12-mm bg-lighten10">
 
@@ -278,6 +352,18 @@
 
             <!-- siderbar inner wrapper -->
             <div class="flex-parent flex-parent--column-ml flex-parent--space-around flex-parent--stretch-cross grid">
+              <label for="toggle-about" class="toggle-trigger">
+                <span>❔</span>
+                <span>About</span>
+                <!-- when content collapsed, show expand trigger:  -->
+                <span class='expand-trigger hide-sm show-mm hide-mxl triangle-l triangle-l--d color-green inline-block'></span>
+                <!-- when content expanded, show collapse trigger: -->
+                <span class='collapse-trigger show-sm hide-mm show-mxl triangle-l triangle-l--l color-green-dark inline-block'></span>
+              </label>
+              <input type="checkbox" id="toggle-about" aria-controls="about">
+              <button class='absolute top right px12 py12'>
+                <svg class='icon link color-darken50'><use xlink:href='#icon-close'></use></svg>
+              </button>
 
               <!-- ABOUT -->
               <div id="about" class="flex-child hmin0 col col--12">
@@ -317,37 +403,27 @@
                   </div> <!-- end of about-main -->
                   <!-- About--Footer -->
                   <div class="flex-child flex-child-no-shrink hmin12 bg-green round-bl-ml round-br-ml"></div>
+
                 </div> <!-- end of about-inner-wrapper-->
               </div> <!-- end of about -->
 
-              <!-- Legend-Log // grows vertically as content added on ml+, overtaking #about to the north -->
-              <div id="legend-log-big" class="flex-child flex-child--grow hmax-full col col--0 col--12-ml bg-orange-dark absolute bottom right my12 none block-ml">
-                <!-- REST OF LEGEND LOG CONTENT IS SAME AS LEGEND-LOG SMALL; find a way to access w/o js; html variables? -->
-                <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross h-full">
-                  <!-- header -->
-                  <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin18 hmin24-mm hmin30-ml hmin36-mxl border-b--2 border--dash bg-red py6">
-                    <h4 class="txt-h4 align-center">Journey Log</h4>
-                  </div>
-                  <!-- main content / dynamically populated legend items -->
-                  <div id="legend-log-content" class="flex-child flex-child--grow h-full w-full align-center bg-pink scroll-auto px12 py6">
-                    <div class="flex-parent flex-parent--column hmin-full py6">
-                      <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-b border-t border--dash">
-                        <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
-                          <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24">sym</span>
-                          <span id="log-name" class="flex-child flex-child--grow">name</span>
-                          <span id="log-count" class="flex-child flex-child--no-shrink wmin24">#</span>
-                        </div>
-                      </div>
+              <!-- ALTERNATE / TO COMBINE WITH TOGGLE OPTIONS: -->
+              <div class='viewport-full relative scroll-hidden'>
+                <div class='bg-darken10 viewport-twothirds viewport-full-ml absolute top left right bottom'></div>
+                <div class='absolute top-ml left bottom z1 w-full w240-ml px12 py12-ml'>
+                  <div class='flex-parent flex-parent--column viewport-third h-auto-ml hmax-full bg-white round-ml shadow-darken10'>
+                    <div class='px12 py12 scroll-auto'>
+                      <h3 class='txt-m txt-bold mb6'>Title here</h3>
+                      <p>Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Aenean lacinia bibendum nulla sed consectetur. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.</p>
                     </div>
+                    <footer class='px12 py12 bg-gray-faint round-b-ml txt-s'>
+                      Footer content here
+                    </footer>
                   </div>
-                  <!-- legend-log footer -->
-                  <div id="legend-log-footer" class="flex-child flex-child--no-shrink h12 border-t--2 border--dash bg-red">
-                    <div class="flex-parent flex-parent--center-cross bg-orange"></div>
-                  </div> <!-- end of legend-log-footer -->
-                </div> <!-- end of legend-log-inner-wrapper -->
-              </div> <!-- end of legend-log-big -->
+                </div>
+              </div>
 
-            </div> <!-- end of sidebar-inner-wrapper -->
+            </div>
 
           </aside> <!-- end of sidebar section -->
 
@@ -366,12 +442,13 @@
           </div>
           <!-- break/divider icon -->
           <div class="flex-child">
-            <div id='compass-icon' class="none block-mm align-center">
+            <div id='compass-icon' class="none block-sm align-center">
               <img style="border-radius:50%" src="http://via.placeholder.com/40x40"/>
             </div>
           </div>
           <!-- social media --> <!-- TODO ADD REAL LINKS-->
           <div class="flex-child">
+            <!-- change to flex-parent inline for clarity?? -->
             <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross w-full"
               <a target="_blank" href="#">
                 <svg class='mx6 icon flex-child inline-block h24 w24 mb-neg3' alt="collapse"><use xlink:href='#icon-github'/></svg>
@@ -415,39 +492,21 @@
 </body>
 </html>
 
-<!-- ALL COLORS TEMPORARY using only for layout distinction testing -->
-            <!-- flex wrapper used for ease of vertical alignment-->
-            <!-- inner2-horz-wrapper // flex provides vertical alignment -->
-            <!-- inner2-vert-wrapper // flex provides vertical alignment and dynamic 'stacking' of content -->
+<!-- TODO: -->
 <!-- make consistent use of single of double quotes within markup -->
-<!-- css classes to define: .txt-fancy (form legend) -->
-
 <!--
-<button class="collapse-trigger" aria-expanded="true" aria-controls="collapse-2">
-  ::before
-  Examples
-</button>
-PLUS event listener on button
-<div id="collapse-2" class="collapsible" aria-hidden="false"><p>text etc</p></div>
-function() {
-  toggleCollapse(this)
-}
-can interpolate between visible and not-visible!
-.visible {
-  visibility: visible;
-}
+        <svg class='icon link color-darken50'><use xlink:href='#icon-close'></use></svg>
+        <svg class='icon link color-darken50'><use xlink:href='#icon-info'></use></svg>
+        plus / minus
+        menu
+        question
+        rotate => transform (rotate! 90deg left )
+        chevron-right (once normal, once translated?)
+        caret-right -->
+<!-- play with mix-blend-mode, filters: sepia(),blur(),drop-shadow(),grayscale() -->
+<!--backdrop-filters? (not much browser compatability right now) -->
+<!--svg-filters! <filter id="<idName>"> <feGaussianBlur in="SourceGraphic" stdDeviation="5"/> </filter>
 
-.not-visible {
-  visibility: hidden;
-}    function toggle_visibility(id) {
-       var e = document.getElementById(id);
-       if(e.style.display == 'block')
-          e.style.display = 'none';
-       else
-          e.style.display = 'block';
-    }
+  // active inactive, input class, icon/btn classes
 
-      <!-- <div id="basic-map-element-wrapper" class='absolute top right flex-parent flex-parent--center-cross flex-parent--end-main'> -->
-      <!-- <div id="small-custom-map-ui-wrapper" class='absolute top left flex-parent flex-parent--center-cross'> -->
-      <!-- <div id="go-btn-wrapper" class="inner-wrapper flex-parent flex-parent--center-cross flex-parent--center-main"> -->
-      <!-- <"mx-auto flex-parent flex-parent--stretch-cross flex-parent--center-cross flex-parent--space-between-main viewport-third"> -->
+  // FORM: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
