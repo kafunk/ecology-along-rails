@@ -30,37 +30,14 @@
 // ASSORTED VARIABLE DECLARATION
 
   var dash0 = "0.8 1.6",
-    // dash1 = "0.2 1.4",
-    // dash1 = "4 8",
-    // dash1 = "0.1 0.4",
       dash1 = "0.1 0.2",
       dash2 = "0.05 0.1",
-    // dash2 = "0.2 1.2",
-    // dash0 = "0.2 0.2",
-    // dash0 = "4 8 16 8",
-      dash3 = "0.05 2.4",
-    dashTwo = "2 2",
-    origDash = "4 8 16 8",
-    line = d3.line().curve(d3.curveCardinal.tension(0)),
-    t = 12000;  // default
-
-  // var pi = Math.PI,
-  //    tau = 2 * pi;
-
-  // var minZ,  // minimum area threshold for dynamic simplification
-  //   simplify = d3.geoTransform({
-  //     point: function(x, y, z) {
-  //       if (z >= minZ) this.stream.point(x, y);
-  //     }
-  //   })
+   origDash = "4 8 16 8",
+       line = d3.line().curve(d3.curveCardinal.tension(0)),
+          t = 12000;  // default
 
   var padX = 0,
       padY = 0;
-
-  // var margin = { top: d3.select("#header").node().clientHeight + 6, left: 12, bottom: 6, right: 12 },
-  //   parentWindow = d3.select("#map-and-dash-pane").node(),
-  //   height = parentWindow.clientHeight - margin.top - margin.bottom,
-  //   width = parentWindow.clientWidth - margin.left - margin.right;
 
   var parentWindow = d3.select("#map-and-dash-pane").node(),
             height = parentWindow.clientHeight,
@@ -82,17 +59,6 @@
       initiated: false,
       animating: false
     };
-
-// // SET UP CANVAS
-//   // ?? TEMP
-//   var barbSize = 40,
-//     intervalsTemp = [14,17,20,23,26,29,35,38];
-//
-//   var canvas = d3.select("#map").append("canvas")
-//     .attr("width", width)
-//     .attr("height", height);
-//
-//   var context = canvas.node().getContext("2d");
 
 // SET UP SVG
 
@@ -228,9 +194,8 @@
 
   // Typical Mapshaper CLI transform:
     // mapshaper *filein*.geojson name=*objectunits* \
-    // //    -simplify resolution=1920x1600 \
-    // //    -clean \
     //     -o quantization=1e5 format=topojson mapshaped/*fileout*.json
+    // then simplified and cleaned in browser for visual
 
     // more: pois incl bridges, tunnels, iNat
 
@@ -253,25 +218,11 @@
        enrichPts = d3.json("../data/final/enrich_pts.json");
 
   // SET BOUNDING BOX
-    Promise.all([admin0]) // admin0
+    Promise.all([admin0])
            .then(setBounding,onError)
-    // IF ATTEMPTING TO USE BOTH PREPROJECTED & UNPROJECTED DATA
-      // Promise.all([admin1,admin1Proj])
-      //        .then(setPPBounding,onError)
-      //        .then(setBounding,onError)
-
-  // PREP OVERLAY DATA
-    // Promise.all([enrichPolys,enrichLines,enrichPts]).then(prepOverlay, onError);
-    // also passRail, prBuffers?
-
-  // DRAW RASTER BASE
-    // Promise.all([terrain]).then(drawRaster, onError);
 
   // DRAW VECTOR BASE
     Promise.all([admin0,admin1,hydroBase,urbanBase,railBase,railStns]).then(drawBase, onError);
-
-  // JOIN ATTRIBUTES
-    // Promise.all([*,*]).then(joinAttributes,onError)
 
 
 //////////////////////////
@@ -281,80 +232,6 @@
 //// PREPARE MAP LAYERS
 
   // DATA: OVERLAY / DEFS //
-  function prepOverlay(data) {
-
-    // console.log(data)
-
-    let presimp = [];
-
-    data.forEach(json => {
-      if (json.arcs.length > 0) {
-        presimp.push(topojson.presimplify(json));
-      } else {
-        presimp.push(json);
-      }
-    })
-
-    // receive and parse data
-    var polys = topojson.feature(presimp[0], presimp[0].objects.enrichPolys),
-        lines = topojson.feature(presimp[1], presimp[1].objects.enrichLines),
-        points = topojson.feature(presimp[2], presimp[2].objects.enrichPoints);
-    // vs no presimp?
-    // var polys = topojson.feature(data[0], data[0].objects.enrichPolys),
-    //     lines = topojson.feature(data[1], data[1].objects.enrichLines),
-    //     points = topojson.feature(data[2], data[2].objects.enrichPoints);
-
-    // overlayers group
-    var overlayers = defs.append("g")
-      .attr("class","overlay overlayers")
-
-    // append overlay data to svg <defs> element
-    var enrichPolys = overlayers.append("g")
-        .attr("id", "enrich-polygons")
-        .attr("class", "enrich polys extract overlay group")
-      .selectAll("path")
-      .data(polys.features)
-      .enter().append("path")
-        .attr("d", path)
-        .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
-        .classed("enrich poly waiting", true)
-        .style("fill", d => { return d3.interpolateSinebow(Math.random()); })
-        .style("stroke", "none")
-       // .on("intersected", highlightPoly)
-
-    var enrichLines = overlayers.append("g")
-        .attr("id", "enrich-lines")
-        .attr("class", "enrich lines extract overlay group")
-      .selectAll("path")
-      .data(lines.features)
-      .enter().append("path")
-        .attr("d", path)
-        .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
-        .classed("enrich line waiting", true)
-        .style("stroke", d => { return d3.interpolateWarm(Math.random()); })
-        .style("stroke-width", 1.6)
-        .style("fill", "none")
-       // .on("intersected", highlightLine)
-
-    // console.log(enrichLines.nodes())
-
-    var enrichPoints = overlayers.append("g")
-        .attr("id", "enrich-points")
-        .attr("class", "enrich points extract overlay group")
-      .selectAll("circle")
-      .data(points.features)
-      .enter().append("circle")
-        .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-        .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-        .attr("r", 1)
-        .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
-        .classed("enrich point waiting", true)
-        .style("fill", d => { return d3.interpolateCool(Math.random()); })
-        .style("stroke", d => { return d3.interpolateGreys(Math.random()); })
-        .style("stroke-width", 0.4)
-       // .on("intersected", highlightPt)
-
-  }
 
   // DATA: MESH / BASE //
   function drawBase(data) {
@@ -365,28 +242,14 @@
     let sourceData = new Object();
 
     data.forEach(datum => {
-      // if (datum instanceof ArrayBuffer) {
-      //   // SPECIAL HANDLING FOR GEOTIFF
-      //   sourceData.terrain = {
-      //     tif: datum
-      //   };
-      // }
       if (datum["type"] == "Topology") {
         let oKey = Object.keys(datum.objects)[0],  // object key
            sdKey = oKey;                           // sourceData key (to distinguish multiple TJ's with objects of same name)
         if (sourceData[sdKey]) { sdKey += "2" };
-        // if (datum.arcs.length > 0) {
-        //   sourceData[sdKey] = {
-        //     tj: topojson.presimplify(datum) // QUESTION is this helpful?
-        //   };
-        //   // mesh: getMesh(sourceData[sdKey],oKey) was here
-        // } else {
-        //   // NOTE: don't try to presimplify points!
+        // regardless
         sourceData[sdKey] = {
           tj: datum
         },
-        // }
-        // regardless
         sourceData[sdKey].gj = getGj(sourceData[sdKey],oKey);
       } else {  // if not topojson, assume already geojson
         sourceData[datum.name] = {
@@ -394,8 +257,6 @@
         }
       }
     });
-
-    // CUSTOM, ADDITIONAL, SPECIFIC, COMPLEX, ETC
 
     // MESH SELECT
     let lakeMesh = getMesh(sourceData.hydroLines,"hydroLines", (a,b) => { return a.properties.strokeweig === null }),
@@ -540,99 +401,9 @@
   }
 
 
-// PIZAZZ: TOOLTIPS
-  // function makeTooltip() {
-  //   // Create new html div element to house the tooltip and give it a class so css can hide with opacity
-  //   var tooltip = d3.select("body").append("div")
-  //     .attr("class", "tooltip")
-  //
-  //   var tooltipInfo = getTooltip(props,percentVal,currentYear);
-  //
-  //   // call drawLegend function
-  //   drawLegend(svg, width, height)
-  //
-  // }
-
-  function bindTooltip(parent){
-    // bind a tooltip to the layer with geography-specific information
-    parent.bindTooltip(tooltipInfo, {
-      // sticky property so tooltip follows the mouse
-      sticky: true,
-      tooltipAnchor: [200, 200]
-    });
-
-    parent.on('mouseover', function(e) {
-      e.target.setStyle({
-        color: 'greenyellow',
-        fillColor: 'honeydew',
-        fillOpacity: 0.7
-      }).bringToFront()
-      .openTooltip();
-    });
-
-    parent.on('mouseout', function(e) {
-      dataLayer.resetStyle(e.target);
-      e.target.setStyle({
-        fillColor: colorize(percentVal)
-      }).closeTooltip();
-    });
-
-    parent.on("mouseover", onMouseover())
-
-  }
-
-  function onMouseover() {
-    d3.select(this).classed("hover", true).raise();
-    tooltip.style("opacity",1).html(getTooltipContent(d))
-  }
-  function onMouseout() {
-    d3.select(this).classed("hover", false) // remove the class
-    tooltip.style("opacity", 0)  // hide the element
-  }
-  function positionTooltip(event) {
-    // update the position of the tooltip relative to location of mouse event (offset 10,-30)
-    tooltip.style("left", (d3.event.pageX + 10) + "px")
-      .style("top", (d3.event.pageY - 30) + "px");
-  }
-  // PIZAZZ: COLOR
-  // PIZAZZ: TRANSITIONS
-
-// Map animation, experience, encounters, triggers
-
-  // spur data refresh?, start/end/midpoint?
-  // on.("encountered", output(encounter)) // FIXME PSEUDOCODE
-    // temp popups/tooltips fade in/out
-    // legend-log populated
-    // dashboard/trackers updated
-    //
-
-  function flashName(e,t) {
-    console.log(this)
-    console.log(e)
-    console.log(t)
-    // .each(flashName(d,i)) {
-    //
-    // }
-  }
-  //   .on("mouseover", function raiseTooltip(d,i,e) {
-  //     console.log(d)
-  //     console.log(i)
-  //     console.log(e)
-  //     // div.transition()
-  //     //     .duration(200)
-  //     //     .style("opacity", .9);
-  //     // div	.html(formatTime(d.date) + "<br/>"  + d.close)
-  //     //     .style("left", (d3.event.pageX) + "px")
-  //     //     .style("top", (d3.event.pageY - 28) + "px");
-  //     // })
-  // }
-
-  // Dashboard Interaction
 
 
-// ~ : if applicable
-
-//// KAFUNK'S SEMI-GENERALIZABLE WEBMAP APPLICATION OUTLINE
+//// AN OPTIMISTIC OUTLINE
 
   // D3 DYNAMISM
     // Declare function expressions for later use
@@ -647,22 +418,6 @@
     // KEEP TRACK OF THINGS
       // Classes, Instances, Objects
         // Layers
-          // function addLayer(data) { // ( | type,options)
-            // id/nickname:
-            // baselayer/overlayer flag
-            // type: geojson, topojson, shapefile
-            // actual data
-            // metadata:
-              // geom type: point, line, polygon
-              // subtype1: symbol, linestring, multilinestring
-              // subtype2: interior borders, state, counties?
-              // source: file/link/citation
-                // access details
-                // transform/hx details
-            // options: {attributes}
-            // layout flags:
-              // e.g., for train point! icon-image: "<name/source>", "icon-rotate": ["get","bearing"], "icon-rotatation-alignment": "map", icon-allow-overlap: true}  *** SEE / ADAPT MAPBOX GL SOURCECODE?
-          // }
         // Layer Groups
         // Views/Frames
         // Currently Rendered
@@ -940,26 +695,27 @@
             mileMarkers() { return this.getMileMarkers(); },
             arcPts() { return getArcPts(this.lineString,this.totalDistance); },
             ticks: {},
-            queryChunks: newFeatureCollection(),
+            // queryChunks: newFeatureCollection(),
             // quadtree: d3.quadtree(),
             overallBearing: turf.bearing([places[0].lng,places[0].lat],[places[1].lng,places[1].lat]),
             gj: gj,
             getPath() { return g.select("#full-route").attr("d"); },
             getPathLength() { return this.getPath().node().getTotalLength(); },
             getBounds() { return path.bounds(this.lineString); },
-            getProjectedGj() {
-              let segments = this.segments;
-              let projectedSegments = [];
-              for (var i = 0; i < segments.length; i++) {
-                let wgsCoords = segments[i].lineString.coordinates,
-                  projectedCoords = [];
-                wgsCoords.forEach(coord => {
-                  projectedCoords.push(projection(coord));
-                });
-                projectedSegments = projectedSegments.concat(projectedCoords);
-              }
-              return turf.lineString(projectedSegments);
-            },
+            // getProjectedGj() {
+            //   let segments = this.segments;
+            //   let projectedSegments = [];
+            //   for (var i = 0; i < segments.length; i++) {
+            //     let wgsCoords = segments[i].lineString.coordinates,
+            //       projectedCoords = [];
+            //     wgsCoords.forEach(coord => {
+            //       projectedCoords.push(projection(coord));
+            //     });
+            //     projectedSegments = projectedSegments.concat(projectedCoords);
+            //   }
+            //   return turf.lineString(projectedSegments);
+            // },
+            // PATH NODES / SEGMENTS (to interpolate b/t orig and destination at regular, arbitrary intervals)
             getMileMarkers() {
               let miles = Math.floor(this.totalDistance);
               this.mileMarkers = [...getBreaks(this.lineString,this.totalDistance,miles)].map(point => projection(point));
@@ -972,14 +728,14 @@
           // thisRoute.mileMarkers = [...getBreaks(thisRoute.lineString,thisRoute.totalDistance,miles)].map(point => projection(point));
 
           // OVERLAPPING BBOX CHUNKS (in order)
-          let queryChunks = 5,
-              chunkBreaks = [...getBreaks(thisRoute.lineString,thisRoute.totalDistance,queryChunks)].map(point => projection(point));
-          for (var i = 0; i < chunkBreaks.length-1; i ++) {
-            let line = turf.lineString([chunkBreaks[i],chunkBreaks[i+1]]);
-            let bbox = turf.bbox(line);
-            let bboxPolygon = turf.bboxPolygon(bbox);
-            thisRoute.queryChunks.features.push(bboxPolygon);
-          }
+          // let queryChunks = 5,
+          //     chunkBreaks = [...getBreaks(thisRoute.lineString,thisRoute.totalDistance,queryChunks)].map(point => projection(point));
+          // for (var i = 0; i < chunkBreaks.length-1; i ++) {
+          //   let line = turf.lineString([chunkBreaks[i],chunkBreaks[i+1]]);
+          //   let bbox = turf.bbox(line);
+          //   let bboxPolygon = turf.bboxPolygon(bbox);
+          //   thisRoute.queryChunks.features.push(bboxPolygon);
+          // }
 
           // ALL STOPS
           route.segments.forEach(segment => {
@@ -1071,7 +827,7 @@
           })
           .on("end", () => {
             // confirm g transform where it should be
-            g.attr("transform",identity0.toString())//routeBounds.toString())
+            g.attr("transform",identity0.toString()) //routeBounds.toString())
             // pause (offer route overview here?) then zoom to firstFrame
             d3.timeout(() => {
               initAnimation(chosen);
@@ -1197,18 +953,10 @@
       }
 
       // Relate route waypts/nodes/links to spatially intersecting (given buffer) data for interesting and illuminating route experience
-      function enrichRoute(data) {
+      function enrichRoute(chosen) {
 
-        let enriched = queryData(data);
-
-        return enriched;
-
-      }
-
-      // ENRICH DATA
-      function queryData(chosen) {
-
-        let bufferedRoute = buffer(chosen.lineString);
+        // keeps radius consistent with fitlered pool of enrichData
+        let bufferedRoute = turf.buffer(chosen.lineString, 0.5, {units: "degrees", steps: 12}); // ? re: steps (default much more)
 
         g.append("path")
           .attr("id","route-buffer")
@@ -1386,7 +1134,7 @@
 
         }
 
-        function getTriggerPts(pts,lines,polys,route,buffer){
+        function getTriggerPts(pts,lines,polys,route,buffer) {
 
           let polyIntersectPts = polys.map((d,i) => {
             // get first interesect pt in direction of travel + type-spec id
@@ -1481,7 +1229,6 @@
         }
 
         return quadtree;
-
       }
 
       function intersectingDefs(all) {
@@ -1504,36 +1251,11 @@
             // .attr("stroke", "teal")
             // FILTER
 
-          console.log(d3.select("#enrich-pool"))
+          // console.log(d3.select("#enrich-pool"))
 
-          console.log(g.node())
-          console.log(defs.node())
       }
 
-      // function enrich(newRoute) {
-        // receive object of waypts/nodes/links
-        // cluster basic route elements (links/nodes) in a way that makes sense [Q: optimization](#optimization)
-        // retrieve BBoxes for route clusters
-        // filter all enrichData to elements within these BBoxes
-          // function retrievePotentiallyIntersecting(routeClustersBBoxes) {
-          //       // return selection to inspect further
-          //     }
-        // potentiallyIntersectingPOLYGONS ONLY (I think this will be most efficient):
-          // iterate through polygons,compare with entireline of route;
-            // for those polygons that indicate ANY intersection,
-              // retrieve routeNode at polygonEnter
-              // retrieve routeNode at polygonExit
-        // iterate through all route nodes (including those already containing polygon enter/exit points)
-          // use specific intersect queries to pair remaining potentiallyIntersecting elements (lines/points) with each route node
-          // function retrieveIntersecting(routeNodes,potentialIntersectClusters) {
-          //       // compare each node to remaining potentialIntersect data (again, optimize this somehow! not all railNodes/allPOIs; not Wisconsin to California):
-          //         // run specific queries with turf.js (or even just stick with d3 since it can clearly do everything?)
-          //         // store references to matching points/lines for each node (there will be crossover/overlap: all nodes with radius of point, all intersections of line and line)
-          //     }
-        // return completely enriched route object
-      // }
-
-      function initAnimation(routeObj){
+      function initAnimation(routeObj) {
 
         // SHOULD ALREADY BE ZOOMED TO ROUTE BOUNDS, NO MODAL, ETC
         let length = Math.floor(routeObj.totalDistance),
@@ -1561,28 +1283,14 @@
         if (simpLength > 300) {
           firstLast = getFirstLast(fullSimp,int);
 
-          // clip path between center of first and center of last (100m in/out)
-          // console.log("route longer than 300 miles. first & last coord trios: ")
-          // console.log(firstLast)
-          // let in100 = firstLast[0][1],
-          //    out100 = firstLast[1][1];
-
           simpSlice = turf.lineSlice(firstLast[0][1],firstLast[1][1],fullSimp);
-
-          // firstFocus = simpSlice.geometry.coordinates[0],
-          // lastFocus = simpSlice.geometry.coordinates[simpSlice.geometry.coordinates.length-1];
-
-          // similar but not exact
-          // console.log(in100)
-          // console.log(firstFocus)
-          // console.log(out100)
-          // console.log(lastFocus)
 
           // update firstLast with exact 100in/100out focus coordinates
           firstLast[0][1] = simpSlice.geometry.coordinates[0],
           firstLast[1][1] = simpSlice.geometry.coordinates[simpSlice.geometry.coordinates.length-1];
 
         } else {
+
           let both = [fullSimp.geometry.coordinates[0],turf.along(fullSimp,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2)),fullSimp.geometry.coordinates[fullSimp.geometry.coordinates.length - 1]];
           // aka first, middle, last
 
@@ -1591,81 +1299,71 @@
 
           simpSlice = fullSimp,
           firstLast = [both,both];
+
         }
 
-          let zoomArc = g.append("path")
-            .attr("id", "zoom-arc")
-            .datum(simpSlice.geometry.coordinates.map(d => projection(d)))
-            .attr("d", line)
-            .style("fill","none")
-            .style("stroke","none")
-            // uncomment below for visual of zoomArc
-              // .style("stroke", "rebeccapurple")
-              // .style("stroke-width",2)
+        let zoomArc = g.append("path")
+          .attr("id", "zoom-arc")
+          .datum(simpSlice.geometry.coordinates.map(d => projection(d)))
+          .attr("d", line)
+          .style("fill","none")
+          .style("stroke","none")
+          // uncomment below for visual of zoomArc
+            // .style("stroke", "rebeccapurple")
+            // .style("stroke-width",2)
 
         // tprm hard coded as goal of animated ms per route mile;
         // tpsm is based on same, calculated per simplified miles
-        let tprm = 40, // harded coded as goal of animated ms per route mile (more == slower)
+        let tprm = 20, // harded coded as goal of animated ms per route mile (more == slower)
             tpsm = tprm * length / simpLength;
 
-        // depart(train)
-          // if (experience.animating)
-          // while (experience.animating)
-          // transition automatically after user prep
-          // if (confirm("Ready?")) {
-            experience.animating = true;
-            goTrain(point,path,zoomArc,tprm,tpsm,simpLength,firstLast,routeObj.enrichData);
+        // transition automatically after user prep
+        // if (confirm("Ready?")) {
+          experience.animating = true;
+          goTrain(point,path,zoomArc,tprm,tpsm,simpLength,firstLast,routeObj.enrichData);
+        // }
 
-          // set up select event listeners
-            d3.select("#replay").on("click", () => {
-              let pausedAt = projection.invert(pauseTrain()),
-                 traversed = turf.lineSlice(firstLast[0][0],pausedAt,routeObj.lineString),
-              reversedPath = makeFeature(traversed.geometry.coordinates.slice().reverse(), "LineString"),
-               reversedArc = makeFeature(turf.lineSlice(firstLast[0][0],pausedAt,fullSimp).geometry.coordinates.slice().reverse(), "LineString"),
-                   rewindT = turf.length(traversed, {units: "miles"}) * tpm/2;
-
-              g.transition().duration(rewindT)
-                .on("start", rewindAll(point,traversed,reversedPath,reversedArc,rewindT))
-                .on("end", () => {
-                  // confirm g exactly in alignment for next transition
-                  g.attr("transform",firstIdentity.toString())
-                  // restart with same data
-
-                  goTrain(point,path,zoomArc,tprm,tpsm,simpLength,firstLast)
-                })
-            });
-          // }
+        // // set up select event listeners
+        // d3.select("#replay").on("click", () => {
+        //   let pausedAt = projection.invert(pauseTrain()),
+        //      traversed = turf.lineSlice(firstLast[0][0],pausedAt,routeObj.lineString),
+        //   reversedPath = makeFeature(traversed.geometry.coordinates.slice().reverse(), "LineString"),
+        //    reversedArc = makeFeature(turf.lineSlice(firstLast[0][0],pausedAt,fullSimp).geometry.coordinates.slice().reverse(), "LineString"),
+        //        rewindT = turf.length(traversed, {units: "miles"}) * tpm/2;
+        //
+        //   g.transition().duration(rewindT)
+        //     .on("start", rewindAll(point,traversed,reversedPath,reversedArc,rewindT))
+        //     .on("end", () => {
+        //       // confirm g exactly in alignment for next transition
+        //       g.attr("transform",firstIdentity.toString())
+        //       // restart with same data
+        //       goTrain(point,path,zoomArc,tprm,tpsm,simpLength,firstLast)
+        //     })
+        // });
 
       }
-      function rewindAll(point,path,reversedPath,reversedArc,t) {  // enrichRendered)
 
-        point.transition().delay(3000).duration(tFull).ease(d3.easeLinear)
-        		 .attrTween("transform", translateAlong(reversedPath))
-             // point transition triggers additional elements
-             .on("start", () => {
-               path.transition().duration(t).ease(d3.easeLinear)
-                 .styleTween("stroke-dasharray",dashBack)
-               g.transition().duration(t).ease(d3.easeLinear)
-                 .attrTween("transform", zoomAlong(reversedArc)) //,scale))
-             })
-      }
-      // function followAlong() {
-      //   use train pt location for numerous checks/adjustments
+      // function rewindAll(point,path,reversedPath,reversedArc,t) {  // enrichRendered)
+      //
+      //   point.transition().delay(3000).duration(tFull).ease(d3.easeLinear)
+      //   		 .attrTween("transform", translateAlong(reversedPath))
+      //        // point transition triggers additional elements
+      //        .on("start", () => {
+      //          path.transition().duration(t).ease(d3.easeLinear)
+      //            .styleTween("stroke-dasharray",dashBack)
+      //          g.transition().duration(t).ease(d3.easeLinear)
+      //            .attrTween("transform", zoomAlong(reversedArc)) //,scale))
+      //        })
       // }
+
       function getFirstLast(fullLine,int) {
 
-        // turf.js returning same three coordinates at distance - 200, distance - 100, distance;
+        // turf.js returning same three coordinates at distance minus 200, distance minus 100, & distance;
         // reversing instead
         let fullLineReversed = makeFeature(fullLine.geometry.coordinates.slice().reverse(), "LineString");
 
         let firstThree = threePts(fullLine,int),
              lastThree = threePts(fullLineReversed,int).reverse();
-
-        // confirm in alignment with first and last pts
-        // console.log(firstThree)
-        // console.log(lastThree)
-        // console.log(fullLine.geometry.coordinates[0])
-        // console.log(fullLine.geometry.coordinates[fullLine.geometry.coordinates.length-1])
 
         return [firstThree,lastThree];
 
@@ -1683,88 +1381,6 @@
             ty = -scale * pt[1] + height/2;
         return {x: tx, y: ty, k: scale};
       }
-      // function transformed(b,k) {
-      //   // console.log("from bbox => string")
-      //   return getIdentity(getTransform(b),k).toString()
-      // }
-
-      // function centerView(distance,fullLine) {
-      //
-      // // // clip projected data to minimize shift/render calculations
-      // // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
-      // // identity.clipExtent(clipExtent) //
-      // // projection.clipExtent(clipExtent)
-      //
-      //   let interval = 100,
-      //       chunkNum = Math.ceil(distance/interval),
-      //       breakNum = chunkNum/2 + 1,
-      //     zoomChunks = getZoomChunks(fullLine,interval,breakNum),
-      //              k = getTransform(zoomChunks[0]).k, // define stable k across all zoomChunks
-      //             tt = distance * 4,
-      //            ttt = tt/zoomChunks.length;
-      //          // tt = t/breakNum;
-      //
-      //         // console.log(ttt)
-      //         // console.log(tt)
-      //         // console.log(t)
-      //
-      //   // function testing() {
-      //   //   // let ia = d3.interpolateArray(chunks[i][0],chunks[i+1][0]),
-      //   //   //     ib = d3.interpolateArray(chunks[i][1],chunks[i+1][1]);
-      //   //   let startTransform = getIdentity(getTransform(zoomChunks[0]),k),
-      //   //       finalTransform = getIdentity(getTransform(zoomChunks[zoomChunks.length-1]),k);
-      //   //   g.attr("transform",startTransform.toString())
-      //   //    .transition().duration(tt*4)
-      //   //      .attr("transform",finalTransform.toString())
-      //   // }
-      //
-      // //   function initZoom(chunks,i = 0) {
-      // //
-      // //     let currentTransform = function(i) {
-      // //       return getIdentity(getTransform(chunks[i]),k);
-      // //     }
-      // //     startTransform = getIdentity(getTransform(chunks[0]),k),
-      // //     finalTransform = getIdentity(getTransform(chunks[chunks.length-1]),k);
-      // //
-      // //     g.transition()//.delay(1000).duration(tt*2) // TOTAL MILES * F
-      // //         // .attr("transform", // initial transform? final transform?)
-      // //       .on("start", function () {
-      // //         svg.on('.zoom',null)  // disable free zooming
-      // //         zoomAlong(i)
-      // //         function zoomAlong(i) {
-      // //           console.log("zooming along " + i)
-      // //           let ia = d3.interpolateArray(chunks[i][0],chunks[i+1][0]),
-      // //               ib = d3.interpolateArray(chunks[i][1],chunks[i+1][1]);
-      // //           g.attr("transform",currentTransform(i).toString())
-      // //             .transition().duration(ttt).ease(d3.easeLinear)
-      // //               .attrTween("transform", () => { return t => { return transformed([ia(t),ib(t)],k); } })
-      // //               .on("end", function () {
-      // //                 console.log("end " + i)
-      // //                 i++
-      // //                 if (i < chunks.length - 1) { // bc new start relies on value of chunks[i+1]
-      // //                   zoomAlong(i);
-      // //                 } else {
-      // //                   wrapUp();
-      // //                 }
-      // //               })
-      // //         }
-      // //       })
-      // //       function wrapUp() {
-      // //         console.log("destination reached")
-      // //         // remove all transitions from g?
-      // //         // align d3 zoom behavior with final transform value and reenable free zooming
-      // //         svg.call(zoom.transform, finalTransform)
-      // //            .call(zoom)
-      // //       }
-      // //     }
-      // //
-      // //   // initZoom(zoomChunks) // call elsewhere?
-      // //   // testing()
-      // //
-      // //   return zoomChunks;
-      // //   // return zoomAlong(zoomChunks)
-      // //
-      // }
 
       // receives unprojected coords, finds bbox of three received coords and pads returned bbox to ensure all three remain well within zoom frame
       function paddedBounds(ptArray) {
@@ -1786,56 +1402,25 @@
         return [pt0.map(d => +d.toFixed(5)),pt1.map(d => +d.toFixed(5)),pt2.map(d => +d.toFixed(5))];
       }
 
-      // // returns array of breakNum projected bounding boxes
-      // function getZoomChunks(fullLine,int,breakNum) {
-      //   // simplify / replace with [...getBreaks(fullLine,length,chunkNum)].map(point => projection(point)); ?
-      //   let zoomChunks = [],
-      //                i = 0;
-      //   while (i < breakNum) {
-      //     zoomChunks.push(path.bounds(paddedBounds(threePts(fullLine,int,i))));
-      //     i++;
-      //   }
-      //   let lastPt = fullLine.geometry.coordinates[fullLine.geometry.coordinates.length-1],
-      //    lastFrame = path.bounds(paddedBounds(threePts(fullLine,int,i).slice(0,2).concat([lastPt])));
-      //   zoomChunks.push(lastFrame);
-      //   return zoomChunks;
-      // }
-
       // if explicitly using d3.interpolateZoom, will need:
       // function getCenterWidth(bounds,center) {
       //   return [center[0],center[1],Math.abs(bounds[1][0]-bounds[0][0])];
       // }
 
       // TRANSLATE ONLY
-      // function zoomFollow(path,tDelay,tMid,tEnd,scale,lastTransform) {
-      //   g.transition().duration(tMid).ease(d3.easeLinear)
-      //   // g.transition().delay(tDelay).duration(tMid).ease(d3.easeLinear)
-      //     .attrTween("transform", zoomAlong(path,scale))
-      //     // .on("end", () => {
-      //     //   g.transition().duration(tEnd)
-      //     //     .attr("transform",lastTransform.toString())
-      //     // })
-      // }
       function zoomAlong(path,k = currentView.scale) {
-        var l = path.node().getTotalLength(); // orig 'this'
-        // let train = d3.select("#train-point")
+        var l = path.node().getTotalLength();
         return function(d, i, a) {
           return function(t) {
             // KEEP NODE P IN CENTER OF FRAME
             var p = path.node().getPointAtLength(t * l);
             // calculate translate necessary to center data within extent
-            // let tx = (width - k * p.x) / 2,
-            //     ty = (height - k * p.y) / 2;
             let tx = -k * p.x + width/2,
                 ty = -k * p.y + height/2;
-            // let px = +/translate\((.*?),/.exec(train.attr("transform"))[1],
-            //     py = +/,(.*?)\)/.exec(train.attr("transform"))[1];
-            // console.log(train.node()) // 165,-26 | 164, -26
-            // console.log(g.node()) // -786, 376 | -789, 372
-            // // clip projected data to minimize shift/render calculations
-            let clipExtent = [[-tx, -ty], [tx, ty]]; // extended for leeway around edges
-            // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
-            identity.clipExtent(clipExtent) //
+            // clip projected data to minimize shift/render calculations?
+            let clipExtent = [[-tx, -ty], [tx, ty]];
+            // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
+            identity.clipExtent(clipExtent)
             projection.clipExtent(clipExtent)
             return "translate(" + tx + "," + ty + ") scale(" + k + ")";
           }
@@ -1873,121 +1458,115 @@
         // exit excessive DOM nodes
           function removeExcess() { }
     // UPDATE SECONDAY VISUALS (WIDGETS, ETC)
+
       function updateTooltip() { }
       function getTooltipContent(d) {
-        var content = '<span class="category">Facility Name: </span>' +
-        '<span class="align-r">' + titleCase(d.Facility_Name) + '</span>' +
-        '<br /><span class="category">Location: </span>' +
-        '<span class="align-r">' + titleCase(d.City) + ', ' + d.State + '</span>' +
-        '<br /><span class="category">2018 Percent Voter Turnout: </span>' +
-        '<span class="align-r">' + Math.floor(d.Total).toLocaleString() +
-        ' metric tons</span>'
-        return content;
+        // var content = '<span class="category">Facility Name: </span>' +
+        // '<span class="align-r">' + titleCase(d.Facility_Name) + '</span>' +
+        // '<br /><span class="category">Location: </span>' +
+        // '<span class="align-r">' + titleCase(d.City) + ', ' + d.State + '</span>' +
+        // '<br /><span class="category">2018 Percent Voter Turnout: </span>' +
+        // '<span class="align-r">' + Math.floor(d.Total).toLocaleString() +
+        // ' metric tons</span>'
+        // return content;
       }
 
-      function drawLegend(svg,width,height) {
+      // PIZAZZ: TOOLTIPS
+        // function makeTooltip() {
+        //   // Create new html div element to house the tooltip and give it a class so css can hide with opacity
+        //   var tooltip = d3.select("body").append("div")
+        //     .attr("class", "tooltip")
+        //
+        //   var tooltipInfo = getTooltip(props,percentVal,currentYear);
+        //
+        //   // call drawLegend function
+        //   drawLegend(svg, width, height)
+        //
+        // }
 
-        // append a new g element
-        var legend = svg.append("g")
-          .attr("id", "legend")
-          .attr("dy", "1.3em")  // adjust the vertical displacement
-          .attr("class", "legend")  // add a class (for CSS)
-          .attr("transform", "translate(" + (width - 54) + "," + (height - 20) + ")")
-          .selectAll("g")       // select all new g elements
-          .data([5e6, 2e7])     // apply two numbers (approx median/max)
-          .enter().append("g"); // enter and append the two new g elements
+        function bindTooltip(parent){
+          // bind a tooltip to the layer with geography-specific information
+          parent.bindTooltip(tooltipInfo, {
+            // sticky property so tooltip follows the mouse
+            sticky: true,
+            tooltipAnchor: [200, 200]
+          });
 
-          legend.append("rect")
-            .attr("width", 180)
-            .attr("height", 24)
-            .attr("fill", "url(#colorizeGradient)")
+          parent.on('mouseover', function(e) {
+            e.target.setStyle({
+              color: 'greenyellow',
+              fillColor: 'honeydew',
+              fillOpacity: 0.7
+            }).bringToFront()
+            .openTooltip();
+          });
 
-          // append text to each
-          legend.append("text")
-            .attr("y", function (d) {
-              return -2 * radius(d);
-            })
-            .attr("dy", "1.3em")
-            .text(d3.format(".1s"));
+          parent.on('mouseout', function(e) {
+            dataLayer.resetStyle(e.target);
+            e.target.setStyle({
+              fillColor: colorize(percentVal)
+            }).closeTooltip();
+          });
 
-          // append a legend label at bottom
-          legend.append("text")
-            .attr("y", 16)
-            .text("Percent of Registered Voters who Voted, Fall 2018")
-
-      }  // end drawLegend()
-
-      function updateLegend() { }
-
-      function addFilter(facilityData, facilities) {
-
-        // create new select element in the DOM as child of #map
-        var dropdown = d3.select('#map')
-          .append('select')         // append a new select element
-          .attr('class', 'filter')  // add a class name
-          .on('change', onChange)   // listen for change event, call onChange function
-
-        // array to hold select options
-        var uniqueTypes = ["All facilities"];
-
-        // loop through all features and push unique types to array
-        facilityData.forEach(function (facility) {
-          // if the type is not included in the array, push it to the array
-          if (!uniqueTypes.includes(facility.Industry_Type)) uniqueTypes.push(facility.Industry_Type)
-        })
-
-        // sort types alphabeticaly in array
-        uniqueTypes.sort();
-
-        // confirm list of unique Industry Type values from CSV data
-        // console.log(uniqueTypes)
-
-        // create new option elements for each unique type
-        dropdown.selectAll('option')  // 'option' pre-selected as element to be created
-          .data(uniqueTypes).enter()  // attach our array as data
-          .append("option")           // append a new option element for each data item
-          .text(function (d) {
-            return d                  // use the item as text
-          })
-          .attr("value", function (d) {
-            return d                  // use the time as value attribute
-          })
-
-        // define what will happen when option is selected by user
-        function onChange() {
-
-          // get the current value from the select element
-          var val = d3.select('select').property('value')
-
-          // style the display of the facilities
-          facilities.style("display", function (d) {
-            // if it's our default, show them all with inline
-            if (val === "All facilities") return "inline"
-            // otherwise, if each industry type doesn't match the value
-            if (d.Industry_Type != val) return "none"  // don't display it
-          })
+          parent.on("mouseover", onMouseover())
 
         }
 
-      }
+        function onMouseover() {
+          d3.select(this).classed("hover", true).raise();
+          tooltip.style("opacity",1).html(getTooltipContent(d))
+        }
+        function onMouseout() {
+          d3.select(this).classed("hover", false) // remove the class
+          tooltip.style("opacity", 0)  // hide the element
+        }
+        function positionTooltip(event) {
+          // update the position of the tooltip relative to location of mouse event (offset 10,-30)
+          tooltip.style("left", (d3.event.pageX + 10) + "px")
+            .style("top", (d3.event.pageY - 30) + "px");
+        }
+        // PIZAZZ: COLOR
+        // PIZAZZ: TRANSITIONS
 
+      // Map animation, experience, encounters, triggers
+
+        // spur data refresh?, start/end/midpoint?
+        // on.("encountered", output(encounter)) // FIXME PSEUDOCODE
+          // temp popups/tooltips fade in/out
+          // legend-log populated
+          // dashboard/trackers updated
+          //
+
+        function flashName(e) { }
+        //   .on("mouseover", function raiseTooltip(d,i,e) {
+        //     console.log(d)
+        //     console.log(i)
+        //     console.log(e)
+        //     // div.transition()
+        //     //     .duration(200)
+        //     //     .style("opacity", .9);
+        //     // div	.html(formatTime(d.date) + "<br/>"  + d.close)
+        //     //     .style("left", (d3.event.pageX) + "px")
+        //     //     .style("top", (d3.event.pageY - 28) + "px");
+        //     // })
+        // }
 
   // AWAIT USER INTERACTION or OTHER NEW INFO
     // UPON RECEIPT...                            ===>  LOOP TO (*)(*)(*)
 
 
-/////////////////////
-///// FUNCTIONS /////
-/////////////////////
+//////////////////////////
+///// MORE FUNCTIONS /////
+//////////////////////////
 
 //// SVG/CANVAS
 
   // MAP DATA
 
-    function dynamicallySimplify() {
-      minZ = 1 / scale * scale;
-      // minZi, minZp
-    }
+    // function dynamicallySimplify() {
+    //   minZ = 1 / scale * scale;
+    //   // minZi, minZp
+    // }
     function redraw(layerGroupSelector){
       d3.selectAll(`g${layerGroupSelector}`) // could be # or .
         .selectAll("path")
@@ -2011,106 +1590,106 @@
     }
 
     // RASTER & CANVAS
-    function drawRaster(data) {
-
-      // console.log(data)
-
-      GeoTIFF.fromArrayBuffer(data).then(tiff => {
-        // console.log(tiff);
-        const image = tiff.getImage();
-        Promise.all([image]).then(proceed,onError);
-      },onError);
-
-      function proceed(data) {
-
-        const image = data[0];
-
-        // console.log(image)
-
-        const rasters = image.readRasters(),
-                width = image.getWidth(),
-               height = image.getHeight(),
-               origin = image.getOrigin(),
-           resolution = image.getResolution(),
-                 bbox = image.getBoundingBox();
-
-        // console.log(origin) // [-180, 90, 0]
-        // console.log(bbox) // [-180, 10, -50, 90]
-
-        // below drawn heavily from http://bl.ocks.org/rveciana/263b324083ece278e966686d7dba700f
-        const tiepoint = image.getTiePoints()[0];
-
-        // console.log(rasters) // PROMISE
-        // console.log(tiepoint) // {i: 0, j: 0, k: 0, x: -180, y: 90, z: 0}
-
-        const geoTransform = [tiepoint.x, resolution[0], 0, tiepoint.y, 0, -1 * resolution[1]],
-           invGeoTransform = [-geoTransform[0]/geoTransform[1], 1/geoTransform[1], 0, -geoTransform[3]/geoTransform[5], 0, 1/geoTransform[5]];
-
-        var tempData = new Array(height);
-
-        Promise.all([rasters]).then(data => {
-
-          let rasters = data[0];
-
-          for (var i = 0; i < height; i++) {
-            tempData[i] = new Array(height);
-            for (var j = 0; j < width; j++) {
-              tempData[i][j] = rasters[0][j + i * width];
-            }
-          }
-
-          // Canvas II
-          var canvasRaster = d3.select("#map").append("canvas")
-            .attr("width", width)
-            .attr("height", height)
-            .style("display","none");
-
-          var contextRaster = canvasRaster.node().getContext("2d");
-
-          var id = contextRaster.createImageData(width,height),
-            data = id.data,
-             pos = 0;
-
-          for (var i = 0; i < height; i++) {
-
-            for (var j = 0; j < width; j++) {
-
-              let coords = projection.invert([j,i]),
-                      px = invGeoTransform[0] + coords[0]* invGeoTransform[1],
-                      py = invGeoTransform[3] + coords[1] * invGeoTransform[5];
-
-              if (Math.floor(px) >= 0 && Math.ceil(px) < width && Math.floor(py) >= 0 && Math.ceil(py) < height) {
-
-                // https://en.wikipedia.org/wiki/Bilinear_interpolation
-                let value = tempData[Math.floor(py)][Math.floor(px)]*(Math.ceil(px)-px)*(Math.ceil(py)-py)+
-                tempData[Math.floor(py)][Math.ceil(px)]*(px-Math.floor(px))*(Math.ceil(py)-py) +
-                tempData[Math.ceil(py)][Math.floor(px)]*(Math.ceil(px)-px)*(py-Math.floor(py)) +
-                tempData[Math.ceil(py)][Math.ceil(px)]*(px-Math.floor(px))*(py-Math.floor(py));
-
-                //let color = d3.rgb(d3.interpolateRdBu(1-((value- 14)/24)));
-                let v = (value - 14) / 24;
-
-                data[pos+0] = 255 * (v < 0.5 ? 2 * v : 1);
-                data[pos+1] = 255 * (v < 0.5 ? 2 * v : 1 - 2 * (v - 0.5));
-                data[pos+2] = 255 * (v < 0.5 ? 1 : 1 - 2 * (v - 0.5));
-                data[pos+3] = 180;
-
-                pos = pos + 4
-
-              }
-
-            }
-
-          }
-
-          contextRaster.putImageData( id, 0, 0);
-          context.drawImage(canvasRaster.node(), 0, 0);
-
-        },onError);
-
-      }
-
-    }
+    // function drawRaster(data) {
+    //
+    //   // console.log(data)
+    //
+    //   GeoTIFF.fromArrayBuffer(data).then(tiff => {
+    //     // console.log(tiff);
+    //     const image = tiff.getImage();
+    //     Promise.all([image]).then(proceed,onError);
+    //   },onError);
+    //
+    //   function proceed(data) {
+    //
+    //     const image = data[0];
+    //
+    //     // console.log(image)
+    //
+    //     const rasters = image.readRasters(),
+    //             width = image.getWidth(),
+    //            height = image.getHeight(),
+    //            origin = image.getOrigin(),
+    //        resolution = image.getResolution(),
+    //              bbox = image.getBoundingBox();
+    //
+    //     // console.log(origin) // [-180, 90, 0]
+    //     // console.log(bbox) // [-180, 10, -50, 90]
+    //
+    //     // below drawn heavily from http://bl.ocks.org/rveciana/263b324083ece278e966686d7dba700f
+    //     const tiepoint = image.getTiePoints()[0];
+    //
+    //     // console.log(rasters) // PROMISE
+    //     // console.log(tiepoint) // {i: 0, j: 0, k: 0, x: -180, y: 90, z: 0}
+    //
+    //     const geoTransform = [tiepoint.x, resolution[0], 0, tiepoint.y, 0, -1 * resolution[1]],
+    //        invGeoTransform = [-geoTransform[0]/geoTransform[1], 1/geoTransform[1], 0, -geoTransform[3]/geoTransform[5], 0, 1/geoTransform[5]];
+    //
+    //     var tempData = new Array(height);
+    //
+    //     Promise.all([rasters]).then(data => {
+    //
+    //       let rasters = data[0];
+    //
+    //       for (var i = 0; i < height; i++) {
+    //         tempData[i] = new Array(height);
+    //         for (var j = 0; j < width; j++) {
+    //           tempData[i][j] = rasters[0][j + i * width];
+    //         }
+    //       }
+    //
+    //       // Canvas II
+    //       var canvasRaster = d3.select("#map").append("canvas")
+    //         .attr("width", width)
+    //         .attr("height", height)
+    //         .style("display","none");
+    //
+    //       var contextRaster = canvasRaster.node().getContext("2d");
+    //
+    //       var id = contextRaster.createImageData(width,height),
+    //         data = id.data,
+    //          pos = 0;
+    //
+    //       for (var i = 0; i < height; i++) {
+    //
+    //         for (var j = 0; j < width; j++) {
+    //
+    //           let coords = projection.invert([j,i]),
+    //                   px = invGeoTransform[0] + coords[0]* invGeoTransform[1],
+    //                   py = invGeoTransform[3] + coords[1] * invGeoTransform[5];
+    //
+    //           if (Math.floor(px) >= 0 && Math.ceil(px) < width && Math.floor(py) >= 0 && Math.ceil(py) < height) {
+    //
+    //             // https://en.wikipedia.org/wiki/Bilinear_interpolation
+    //             let value = tempData[Math.floor(py)][Math.floor(px)]*(Math.ceil(px)-px)*(Math.ceil(py)-py)+
+    //             tempData[Math.floor(py)][Math.ceil(px)]*(px-Math.floor(px))*(Math.ceil(py)-py) +
+    //             tempData[Math.ceil(py)][Math.floor(px)]*(Math.ceil(px)-px)*(py-Math.floor(py)) +
+    //             tempData[Math.ceil(py)][Math.ceil(px)]*(px-Math.floor(px))*(py-Math.floor(py));
+    //
+    //             //let color = d3.rgb(d3.interpolateRdBu(1-((value- 14)/24)));
+    //             let v = (value - 14) / 24;
+    //
+    //             data[pos+0] = 255 * (v < 0.5 ? 2 * v : 1);
+    //             data[pos+1] = 255 * (v < 0.5 ? 2 * v : 1 - 2 * (v - 0.5));
+    //             data[pos+2] = 255 * (v < 0.5 ? 1 : 1 - 2 * (v - 0.5));
+    //             data[pos+3] = 180;
+    //
+    //             pos = pos + 4
+    //
+    //           }
+    //
+    //         }
+    //
+    //       }
+    //
+    //       contextRaster.putImageData( id, 0, 0);
+    //       context.drawImage(canvasRaster.node(), 0, 0);
+    //
+    //     },onError);
+    //
+    //   }
+    //
+    // }
 
   // ZOOM BEHAVIOR
     function dblclicked(d,i) {
@@ -2142,10 +1721,7 @@
       identity.clipExtent(clipExtent)
       projection.clipExtent(clipExtent)
 
-      g.style("stroke-width", 1 / (scale*scale));
-      // g.style("stroke-width", 1 / (scale*scale) + "px");
-
-      // g.style("transform-origin","0% 0% 0") // reset after auto center elsewhere
+      g.style("stroke-width", 1 / (scale*scale) + "px");
 
       g.attr("transform", "translate(" + translate[0] + "," + translate[1] + ") scale(" + scale + ")");
 
@@ -2159,20 +1735,16 @@
 
     function scaleOnly(k) {
 
-      console.log(k)
-      console.log(g.node())
-
-      // let currentTranslate = +/translate\((.*?)\)/.exec(g.attr("transform"))[1],
       let cTx = +/translate\((.*?),/.exec(g.attr("transform"))[1],
           cTy = +/,(.*?)\)/.exec(g.attr("transform"))[1];
 
-        console.log(cTx,cTy)
       let scaled = d3.zoomIdentity
         .translate(cTx,cTy)
         .scale(k)
 
       svg.transition().duration(750)
         .call(zoom.transform, scaled)
+
     }
 
     function zoomTo(bounds,k) {
@@ -2222,6 +1794,7 @@
       return transform;
 
     }
+
     // function makeBounds(centerPt,h,w) {
     //   console.log(centerPt)
     //   console.log(h)
@@ -2273,16 +1846,9 @@
     function drawDashed() {
       var l = this.getTotalLength();
       var i = d3.interpolateString(-l,"0"); // results in 0=>dashed in wrong direction
-      // var i = d3.interpolateString(l,"0"); // results in full=>dashed in correct direction
-      // var i = d3.interpolateString("0",l); // results in dashed=>full in wrong direction
-      // var i = d3.interpolateString("0",-l); // results in dashed=>0 in correct direction
-      // var i = d3.interpolateString(-l,l); // results in 0=>dashed=>full in wrong direction
-      // var i = d3.interpolateString("0","0"); // results in unmoving dashed
-      // var i = d3.interpolateString(l,l,"0"); // results in unmoving full
-      // var i = d3.interpolateString(-l,-l,"0"); // results in zippo
-      // var i = d3.interpolateString(l,-l,"0"); // results in full=>dashed=>0 in correct direction
       return function(t) { return i(t); };
     }
+
     function animateSolid(along,t){
       along.style("opacity", 0.6)
            .transition()
@@ -2391,248 +1957,8 @@
       return fittedObj;
     };
 
-  // ATTUNE FACTORS
-
-    // function attuneRoute(received) {
-    //
-    //   // Rome2Rio is returning stations with slightly different coordinates than my original data, resulting in offset of returned route and underlaying railBase
-    //   // solution? calculate scale/translate factors between two sets of stations points using orig/returned coordinates as bounds,
-    //   // then use those factors to attune projection function before rendering
-    //
-    //   let ppStns = {
-    //     from: g.select("#rail-stations").selectAll("path").filter(d => {
-    //       return d.properties.city === received.from.shortName && (d.properties.province || d.properties.state) === received.from.regionCode;
-    //     }),
-    //     to: g.select("#rail-stations").selectAll("path").filter(d => {
-    //       return d.properties.city === received.to.shortName && (d.properties.province || d.properties.state) === received.to.regionCode;
-    //     })
-    //   };
-    //
-    //   // start with lat/lon only; projection happens within path.bounds()
-    //   let origPts = {
-    //     from: {
-    //       lng: ppStns.from.datum().properties.lon,
-    //       lat: ppStns.from.datum().properties.lat
-    //     },
-    //     to: {
-    //       lng: ppStns.to.datum().properties.lon,
-    //       lat: ppStns.to.datum().properties.lat
-    //     }
-    //   },
-    //     r2rPts = {
-    //       from: {
-    //         lng: received.from.lng,
-    //         lat: received.from.lat
-    //       },
-    //       to: {
-    //         lng: received.to.lng,
-    //         lat: received.to.lat
-    //       }
-    //     }
-    //
-    //   // console.log(origPts)
-    //   // console.log(r2rPts)
-    //
-    //   // console.log("orig data coordinate bounds transform")
-    //   let origLineString = turf.lineString([[origPts.from.lng,origPts.from.lat],[origPts.to.lng,origPts.to.lat]]),
-    //     origBounds = path.bounds(origLineString),
-    //     origTransform = getTransform(origBounds);
-    //   // console.log(origTransform)
-    //
-    //   // console.log("r2r coordinate bounds transform")
-    //   let r2rLineString = turf.lineString([[r2rPts.from.lng,r2rPts.from.lat],[r2rPts.to.lng,r2rPts.to.lat]]),
-    //     r2rBounds = path.bounds(r2rLineString),
-    //     r2rTransform = getTransform(r2rBounds);
-    //   // console.log(r2rTransform)
-    //
-    //   console.log("r2r => orig scale factors")
-    //   let sF = origTransform.k/r2rTransform.k;
-    //   console.log(sF)
-    //
-    //   console.log("r2r => orig translate factors")
-    //   let txF = origTransform.x/r2rTransform.x,
-    //       tyF = origTransform.y/r2rTransform.y;
-    //   console.log([txF,tyF])
-    //
-    //   console.log("r2r => orig translate diff")
-    //   let translateDiff = [
-    //     (origTransform.x - r2rTransform.x),
-    //     (origTransform.y - r2rTransform.y)
-    //   ];
-    //   console.log(translateDiff)
-    //
-    //   // update received data / routeObj
-    //   received.adjustFactors = {
-    //     scale: sF,
-    //     translate: [txF,tyF]
-    //     // translate: translateDiff
-    //   },
-    //   received.adjustPoint = function([x,y]) {
-    //     let k = this.adjustFactors.scale,
-    //        tx = this.adjustFactors.translate[0],
-    //        ty = this.adjustFactors.translate[1];
-    //     let adjustedPt = [ x / k / tx, y / k / ty]; // **closest
-    //       // when used with tx == txF, ty == txF
-    //     return adjustedPt;
-    //   }
-    //
-    //   attuneFx(projection,"projection",sF,[txF,tyF]);
-    //
-    //   return received;
-    //
-    //   // accumulating data:
-    //   // burlington -> vancouver
-    //     // sf: 1.0006935273976958
-    //     // tf: [ 0.9958824306841211, 0.9989666221629282 ]
-    //     // tdiff: [ -0.24029694947043367, -0.3775123135125682 ]
-    //   // burlington -> ann arbor
-    //     // sf: 0.9982915274864625
-    //     // tf: [ 0.9981176688637599, 1.0235940918333646 ]
-    //     // tdiff: [ 6.221325162820449, -4.159399630463668 ]
-    //
-    // }
-
-    // PREFER TO ADJUST FUNCTION YOU WILL BE USING LESS, LIKELY THE OPPOSITE OF THAT USED TO SET BOUNDS
-    // (DEFAULT TO ADJUSTING PROJECTION)
-    // MAKE SURE SETTING BOUNDS COMPLETE, *THEN* CALC & APPLY ATTUNE FACTORS
-    /// OR ///
-    // CALC & APPLY ATTUNE FACTORS, THEN FIT TO EXTENT
     function getScaleAtZoomLevel(zoomLevel, tileSize = 256) {
       return tileSize * 0.5 / Math.PI * Math.pow(2, zoomLevel);
-    }
-    function attuneIdentity([wgsJson,ppJson]) {
-      attunePaths([wgsJson,ppJson],identity);
-      return [wgsJson,ppJson];
-    }
-    function attuneProjection([wgsJson,ppJson]) {
-      attunePaths([wgsJson,ppJson],projection);
-      return [wgsJson,ppJson];
-    }
-    function attunePaths([wgsJson,ppJson],fx = projection) {
-
-      let attuneFactors = calcAttuneFactors(wgsJson,ppJson);
-
-      console.log(attuneFactors)
-      // identity not technically a function so doesn't have access to Function.prototype.name... fudging for now
-      let fxName;
-      (fx.name) ? fxName = fx.name : fxName = "identity";
-
-      let scaleFactor = attuneFactors[fxName].scale,
-      translateFactors = attuneFactors[fxName].translate;
-
-      attuneFx(fx,fxName,scaleFactor,translateFactors);
-
-      return [wgsJson,ppJson];
-    }
-    function calcAttuneFactors(wgsJson,ppJson) {
-
-      // RECEIVES TWO VERSIONS OF SAME DATA
-        // One unprojected (EPSG:4326)
-        // One preprojected (EPSG Varies)
-        // Both typically were converted to GeoJSON using QGIS (later preprojected at same time), then converted to TopoJSON using Mapshaper CLI (-simplify resolution 1920x1600 -quantize 1e5)
-      // EACH IS FITTED TO SAME PIXEL EXTENT 3 TIMES
-      // RESULTING BBOX & CENTER PTS COMPARED
-      // AVERAGE FACTORS CALCULATED
-
-      let a = extent0[0],
-          b = extent0[1],
-         extent1 = [[0,0], [b[0]/2,b[1]/2]],
-         extent2 = [[a[0]*2,a[1]*2], [b[0]*2,b[1]*2]];
-
-      const extents = [extent0, extent1, extent2];
-
-      let wgsGj = tj2gj(wgsJson),
-           ppGj = tj2gj(ppJson);
-
-      // returns array of objects, each containing bbox and center of respective dataset when fitted to specified extent
-      let wgsData = dataMaker(wgsGj,projection,extents),
-           ppData = dataMaker(ppGj,identity,extents);
-
-      let iData = sampleFactors({a: wgsData, b: ppData}),
-          pData = sampleFactors({a: ppData, b: wgsData});
-
-      // FINAL ATTUNE FACTORS
-      let attuneFactors = {
-        identity: {
-          scale: iData.scale.getAvg(),
-          translate: iData.translate.getAvg()
-        },
-        projection: {
-          scale: pData.scale.getAvg(),
-          translate: pData.translate.getAvg()
-        }
-      }
-
-      return attuneFactors;
-
-    }
-    function dataMaker(json,fx,extents) {
-      let fittedData = [];
-      for ( var i = 0; i < extents.length; i++ ) {
-        fittedData.push(fitted(json,fx,extents[i]));
-      }
-      return fittedData;
-    }
-
-    function sampleFactors(data) {
-      return {
-        scale: {
-          factors: getSFactors(data),
-          getAvg() { return avg(this.factors) }
-        },
-        translate: {
-          factors: getTFactors(data),
-          getAvg() {
-            return [avg(this.factors,0),avg(this.factors,1)]
-          }
-        }
-      }
-    }
-
-    function getSFactors(fittedData){
-      let sFactors = [];
-      for (var i = 0; i < fittedData.a.length; i++) {
-        sFactors[i] = factor(fittedData.a[i].transform.k,fittedData.b[i].transform.k);
-      }
-      return sFactors;
-    }
-
-    function getTFactors(fittedData){
-      let tFactors = [];
-      for (var i = 0; i < fittedData.a.length; i++) {
-        let transA = [fittedData.a[i].transform.x, fittedData.a[i].transform.y],
-            transB = [fittedData.b[i].transform.x, fittedData.b[i].transform.y];
-        tFactors[i] = [factor(transA[0],transB[0]),factor(transA[1],transB[1])];
-      }
-      return tFactors;
-    }
-
-    function factor(a,b) {  // for iFactor, pass (wgs0,pp0)
-      return +(b/a);        // for pFactor, pass (pp0,wgs0)
-    }
-
-    function attuneFx(fx,fxName,scaleFactor,translateFactors) {
-      if (fx) {
-        // store current fx settings, then multiply by passed factors to get new transform
-        let oldScale = fx.scale(),
-          oldTranslate = fx.translate(),
-          newScale = oldScale * scaleFactor,
-          newTranslate = [oldTranslate[0]*translateFactors[0], oldTranslate[1]*translateFactors[1]];
-
-        console.log(`attuning ${fxName} function using
-          scaleFactor ${scaleFactor}
-          and
-          translateFactors ${translateFactors}`)
-        console.log(`old transform:
-          scale: ${oldScale}
-          translate: ${oldTranslate}`)
-        console.log(`new transform:
-          scale: ${newScale}
-          translate: ${newTranslate}`)
-
-        fx.scale(newScale)
-          .translate(newTranslate)
-      }
     }
 
 
@@ -2794,31 +2120,8 @@
 
     }
 
-    function i0i1(datum,route) {
-      // let a = turf.lineString([[126, -11], [129, -21]]),
-      //     b = turf.lineString([[123, -18], [131, -14]]);
-      // var intersects = turf.lineIntersect(a,b);
-      // return intersects;
-    }
-    function buffer(feature, radius = 0.5, options = { units: "degrees", steps: 12 }) {
-      // keep radius consistent with pool of enrichData
-      // ? re:steps (default much more)
-      return turf.buffer(feature, radius, options);
-    }
-    function getT(route,i0,i1,getProjectedGjm) {
-      // route and tprm constant per experience; don't force reevaluation?
-      let segment = turf.lineSlice(i0,i1,route),
-         distance = turf.length(segment, { units: "miles" }),
-                t = distance * tprm;
-      return t;
-    }
-
 //// ANIMATION
     function goTrain(point,fullPath,simpPath,tprm,tpsm,simpDistance,[firstThree,lastThree],enrichData) {
-
-      // FOR OSHAWA
-      console.log(firstThree)
-      console.log(paddedBounds(firstThree))
 
       // scale of initial view
       let firstFrame = path.bounds(paddedBounds(firstThree)),
@@ -2828,11 +2131,6 @@
       // calc first and last zoomIdentity based on stable k
       let firstIdentity = getIdentity(centerTransform(projection(firstThree[1]),scale)),
            lastIdentity = getIdentity(centerTransform(projection(lastThree[1]),scale));
-
-      // currentView.scale = scale;
-
-      console.log("FIRST FRAME")
-      console.log(firstIdentity)
 
       // tFull is based on ms/simplified mile for tDelay calc reasons
       let tFull = tprm * simpDistance, // effective ms per simp mile * simp miles
@@ -2860,28 +2158,6 @@
             }, 3000)
           })
 
-      // let train = point.node();
-      // const observerConfig = { attributes: true },
-      //             observer = new MutationObserver(trainMoved);
-      // observer.observe(train,observerConfig)
-      // observer.disconnect()
-
-      let mostRecent;
-      function animate(elapsed) {
-
-        // dispatch another move event
-        dispatch.call("move", point, elapsed) // pass point @ elapsed
-
-        // if train has stopped moving, stop timer
-        if (mostRecent === point.attr("transform")) timer.stop() // {
-        //   timer.stop();
-        //   observer.disconnect();
-        // }
-
-        mostRecent = point.attr("transform");
-
-      }
-
       function goOnNow() {
         // start at pt 0
         dispatch.call("depart", this, tFull) // depart.train?
@@ -2903,8 +2179,6 @@
                 .on("end", () => {
                   // ensure final alignment
                   g.attr("transform",lastIdentity.toString())
-                  // end MutationObserver
-                  // observer.disconnect();
                 })
             }
             // follow along checking for intersecting encounters
@@ -2916,24 +2190,23 @@
            svg.call(zoom)
          });
       }
+      let mostRecent;
+      function animate(elapsed) {
 
+        // dispatch another move event
+        dispatch.call("move", point, elapsed) // pass point @ elapsed
+
+        // if train has stopped moving, stop timer
+        if (mostRecent === point.attr("transform")) timer.stop() // {
+        //   timer.stop();
+        //   observer.disconnect();
+        // }
+
+        mostRecent = point.attr("transform");
+      }
     }
 
-    function pauseTrain(e){
-      // console.log(g.interrupt())
-      console.log(e)
-      console.log(e.target)
-      console.log(this)
-      console.log(d3.event)
-      console.log(g.interrupt())
-      // console.log(point)
-      // g.interrupt()
-      // let px = +/translate\((.*?),/.exec(point.attr("transform"))[1],
-      //     py = +/,(.*?)\)/.exec(point.attr("transform"))[1];
-      // return [px,py];
-    }
-
-    let train = d3.select("#train-point")
+    let train = d3.select("#train-point");
     function departed(t) {
       console.log("train departing @ " + t)
       d3.timerFlush() // necessary?
@@ -2941,15 +2214,14 @@
     }
 
     let prevLocation, bufferExtent, prevExtent;
-    let triggerPts = g.select("#trigger-pts").selectAll(".trigger-pt")
+    let triggerPts = g.select("#trigger-pts").selectAll(".trigger-pt");
     function trainMoved() { // point,elapsed) {
 
     // alt trainMoved()
     // function trainMoved(mutationsList,observer) {
-      // let triggerPts = g.select("#trigger-pts").selectAll(".trigger-pt")
       // for (var mutation of mutationsList) {
-        // accessing translate values this way slightly more efficient than using point.attr("transform") + regex parser
 
+        // accessing translate values this way slightly more efficient than using point.attr("transform") + regex parser
         // let transformMatrix = mutation.target.transform.animVal[0].matrix,
         let transformMatrix = this.node().transform.animVal[0].matrix,
             currentLocation = [transformMatrix.e, transformMatrix.f];
@@ -2979,35 +2251,24 @@
                          .attr("y", d => { return d[0][1]; })
                          .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
                          .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-                         .style("fill","rebeccapurple")
+                         .style("fill","steelblue")
                          .style("stroke","whitesmoke")
                          .style("stroke-width","0.2px")
                          .style("opacity", 0.4)
 
-        // let bufferVis =
-        // g.selectAll(".momentary-buffer")
-        //   .data([extent])
-        //   .enter().append("rect")
-        //     .classed("momentary-buffer",true)
-        //     .attr("x", function(d) { return d[0][0]; })
-        //     .attr("y", function(d) { return d[0][1]; })
-        //     .attr("width", function(d) { return d[1][0] - d[0][0]; })
-        //     .attr("height", function(d) { return d[1][1] - d[0][1]; })
-        //     .style("fill","steelblue")
-        //     .style("stroke","whitesmoke")
-        //     .style("stroke-width","0.2px")
-        //     .style("opacity", 0.4)
+        bufferVis.lower()
+            .transition().duration(750)
+            .style("opacity","0.6")
+            .on("end", () => {
+              bufferVis.transition().duration(750)
+                .style("opacity","0")
+                .on("end", () => {
+                  bufferVis.classed("none",true)
+                  bufferVis.exit().remove()
+                })
+            })
 
-        bufferVis.transition().duration(750)
-          .style("opacity","0.6")
-          .on("end", () => {
-            bufferVis.transition().duration(750)
-              .style("opacity","0")
-              .on("end", () => {
-                bufferVis.classed("none",true)
-                bufferVis.exit().remove()
-              })
-          })
+        // this.raise()
 
         // find all within buffer extent
         triggerPts.each( d => {
@@ -3050,7 +2311,6 @@
       // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
       log()
     }
-
     function log(encounter) {
       // initial element type/symbol, plus counter +=1 on each subsequent
       // subsequent encounters
@@ -3149,7 +2409,6 @@
       // change element visibility via class toggle
           toOpen.classed("none", false);
     }
-
     function xClose(elementStr) {
       // grab caller element's parent
       let toClose = d3.select(`#${elementStr}`);
@@ -3157,6 +2416,55 @@
       toClose.classed("none", true);
       // in case veil is still obscuring underlayers
       d3.select('#veil').classed("none", true);
+    }
+
+//// BUTTONS & FUNCTIONAL ICONS
+
+    function playPause(booElement){
+      let playing = (booElement) ? false : true;
+      (playing) ? pauseAnimation() : resumeAnimation()
+    }
+    function pauseAnimation() {
+      // capture pause state?
+      // g.interrupt()?
+      if (experience.animating) {
+        let pauseMatrix = g.select("#train-point").node().transform.animVal[0].matrix,
+                pausePt = [transformMatrix.e, transformMatrix.f];
+        experience.animating = false;
+        pauseTrain(pausePt);
+      }
+    }
+    function pauseTrain(where){
+      // console.log(where)
+      // g.interrupt()?
+    }
+    function resumeAnimation() {
+      if (experience.initiated) {
+        // get resume point?
+        experience.animating = true;
+        // goTrain(resumePt,+++)
+      } else {
+        selectNew()
+      }
+    }
+    function selectNew() {
+      // if mid-animation, pause and confirm user intent
+      if (experience.animating) {
+        pauseAnimation()
+        let confirmed = confirm('Do you wish to select a new route?');
+        if (!confirmed) {
+          resumeAnimation();
+          return;
+        }
+      }
+      // in animation finished/canceled or select new confirmed
+        // perform variety of resets
+        d3.select("#submit-btn-txt").classed("none",false);
+        d3.select("#submit-btn-load").classed("none",true);
+        experience.initiated = false;
+        // resetZoom();
+        // open selection form
+        oOpen('modal');
     }
 
 //// OTHER EVENT LISTENERS & VISUAL AFFORDANCES
@@ -3176,27 +2484,156 @@
     // thisWindow.on("resize.map", resize);
 
     d3.select("#getInitOptions").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
-                             .on("blur", function (e) { e.target.style.background = "#fafafa" })
+                                .on("blur", function (e) { e.target.style.background = "#fafafa" })
 
   // Other mouseover
-    // Tooltips (post-animation?)
-    // .on("mouseenter", function(d) {
-    //   d3.select(this).classed("hover", true).raise();
-    //   tooltip.style("opacity", 1).html(d.name)  // eventually getTooltipContent(d)
-    // })
-    // .on("mouseout", function() {
-    //   d3.select(this).classed("hover", false)
-    //   tooltip.style("opacity", 0)
-    // })
+  //   Tooltips (post-animation?)
+  //   .on("mouseenter", function(d) {
+  //     d3.select(this).classed("hover", true).raise();
+  //     tooltip.style("opacity", 1).html(d.name)  // eventually getTooltipContent(d)
+  //   })
+  //   .on("mouseout", function() {
+  //     d3.select(this).classed("hover", false)
+  //     tooltip.style("opacity", 0)
+  //   })
 
-  // Buttons and functional icons
+    d3.select("#play-pause").on("click", playPause(experience.animating))
 
-    d3.select("#play-pause").on("click", toggleState(experience.animating))
 
-function toggleState(booElement){
-  let playing = (booElement) ? false : true;
-  (playing) ? pauseAnimation() : resumeAnimation()
-}
+// PIZAZZ: TOOLTIPS
+  // function makeTooltip() {
+  //   // Create new html div element to house the tooltip and give it a class so css can hide with opacity
+  //   var tooltip = d3.select("body").append("div")
+  //     .attr("class", "tooltip")
+  //
+  //   var tooltipInfo = getTooltip(props,percentVal,currentYear);
+  //
+  //   // call drawLegend function
+  //   drawLegend(svg, width, height)
+  //
+  // }
+
+  function bindTooltip(parent){
+    // bind a tooltip to the layer with geography-specific information
+    parent.bindTooltip(tooltipInfo, {
+      // sticky property so tooltip follows the mouse
+      sticky: true,
+      tooltipAnchor: [200, 200]
+    });
+
+    parent.on('mouseover', function(e) {
+      e.target.setStyle({
+        color: 'greenyellow',
+        fillColor: 'honeydew',
+        fillOpacity: 0.7
+      }).bringToFront()
+      .openTooltip();
+    });
+
+    parent.on('mouseout', function(e) {
+      dataLayer.resetStyle(e.target);
+      e.target.setStyle({
+        fillColor: colorize(percentVal)
+      }).closeTooltip();
+    });
+
+    parent.on("mouseover", onMouseover())
+
+  }
+
+  function onMouseover() {
+    d3.select(this).classed("hover", true).raise();
+    tooltip.style("opacity",1).html(getTooltipContent(d))
+  }
+  function onMouseout() {
+    d3.select(this).classed("hover", false) // remove the class
+    tooltip.style("opacity", 0)  // hide the element
+  }
+  function positionTooltip(event) {
+    // update the position of the tooltip relative to location of mouse event (offset 10,-30)
+    tooltip.style("left", (d3.event.pageX + 10) + "px")
+      .style("top", (d3.event.pageY - 30) + "px");
+  }
+
+  // PIZAZZ: TOOLTIPS
+    // function makeTooltip() {
+    //   // Create new html div element to house the tooltip and give it a class so css can hide with opacity
+    //   var tooltip = d3.select("body").append("div")
+    //     .attr("class", "tooltip")
+    //
+    //   var tooltipInfo = getTooltip(props,percentVal,currentYear);
+    //
+    //   // call drawLegend function
+    //   drawLegend(svg, width, height)
+    //
+    // }
+
+    function bindTooltip(parent){
+      // bind a tooltip to the layer with geography-specific information
+      parent.bindTooltip(tooltipInfo, {
+        // sticky property so tooltip follows the mouse
+        sticky: true,
+        tooltipAnchor: [200, 200]
+      });
+
+      parent.on('mouseover', function(e) {
+        e.target.setStyle({
+          color: 'greenyellow',
+          fillColor: 'honeydew',
+          fillOpacity: 0.7
+        }).bringToFront()
+        .openTooltip();
+      });
+
+      parent.on('mouseout', function(e) {
+        dataLayer.resetStyle(e.target);
+        e.target.setStyle({
+          fillColor: colorize(percentVal)
+        }).closeTooltip();
+      });
+
+      parent.on("mouseover", onMouseover())
+
+    }
+
+    function onMouseover() {
+      d3.select(this).classed("hover", true).raise();
+      tooltip.style("opacity",1).html(getTooltipContent(d))
+    }
+    function onMouseout() {
+      d3.select(this).classed("hover", false) // remove the class
+      tooltip.style("opacity", 0)  // hide the element
+    }
+    function positionTooltip(event) {
+      // update the position of the tooltip relative to location of mouse event (offset 10,-30)
+      tooltip.style("left", (d3.event.pageX + 10) + "px")
+        .style("top", (d3.event.pageY - 30) + "px");
+    }
+    // function raiseTooltip(d,i,e) {
+    //     console.log(d)
+    //     console.log(i)
+    //     console.log(e)
+    //     // div.transition()
+    //     //     .duration(200)
+    //     //     .style("opacity", .9);
+    //     // div	.html(formatTime(d.date) + "<br/>"  + d.close)
+    //     //     .style("left", (d3.event.pageX) + "px")
+    //     //     .style("top", (d3.event.pageY - 28) + "px");
+    //     // })
+    // }
+
+// PIZAZZ: COLOR
+
+// PIZAZZ: TRANSITIONS
+
+// Map animation, experience, encounters, triggers
+
+  // spur data refresh?, start/end/midpoint?
+  // on.("encountered", output(encounter)) // FIXME PSEUDOCODE
+    // temp popups/tooltips fade in/out
+    // legend-log populated
+    // dashboard/trackers updated
+    //
 
 //// OTHER HELPER FUNCTIONS
 
@@ -3233,57 +2670,16 @@ function toggleState(booElement){
   // RESET, RESIZE, REDRAW
     function clearDOM() { }
     function resize() {
-
       console.log('resizing..')
-
       // update current dimensions
             height = parentWindow.clientHeight,
              width = parentWindow.clientWidth;
-
       // resize map container
       svg.attr("width", width)
          .attr("height", height)
-
       rerender()
+    }
 
-    }
-    // ON PAUSE
-    // capture animation
-    function pauseAnimation() {
-      // capture pause state?
-      let where = {};
-      // pauseTrain(pausePt,+++)
-      experience.animating = false;
-    }
-    function resumeAnimation() {
-      if (experience.initiated) {
-        // get resume point?
-        experience.animating = true;
-        // goTrain(resumePt,+++)
-      } else {
-        selectNew()
-      }
-    }
-    function selectNew() {
-      // if mid-animation, pause and confirm user intent
-      if (experience.animating) {
-        pauseAnimation()
-        let confirmed = confirm('Do you wish to select a new route?');
-        if (!confirmed) {
-          resumeAnimation();
-          return;
-        }
-      }
-      // console.log('HERE')
-      // in animation finished/canceled or select new confirmed
-        // perform variety of resets
-        d3.select("#submit-btn-txt").classed("none",false);
-        d3.select("#submit-btn-load").classed("none",true);
-        experience.initiated = false;
-        // resetZoom();
-        // open selection form
-        oOpen('modal');
-    }
   // DEFAULT PREVENTION
     function nozoom() {
       d3.event.preventDefault();
@@ -3333,7 +2729,6 @@ function toggleState(booElement){
       var stored = localStorage.getItem(val);
       return stored;
     }
-
     function perfCheck(fx,params) {
       let t0 = performance.now();
       fx(params)
