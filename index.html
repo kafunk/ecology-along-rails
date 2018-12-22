@@ -1,463 +1,487 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset='utf-8' />
-    <title>Ecology Along the Rails</title>
-    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <!-- <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' /> -->
-    <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet'>
-    <!-- <link href='https://fonts.googleapis.com/css?family=Corben:400|Montserrat:400,700' rel='stylesheet'>
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css"> -->
-    <!-- <link href='css/styles.css' rel='stylesheet' /> -->
+<head>
+  <meta charset='utf-8' />
+  <title>Ecology Along the Rails</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' />
+  <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet'>
+  <link href="https://fonts.googleapis.com/css?family=Cabin+Sketch:400,700|Mirza:400,500,600,700|Buda:300|Londrina+Sketch|Raleway+Dots" rel="stylesheet">
+  <!-- <link href="https://fonts.googleapis.com/css?family=Almendra+Display|Amatic+SC:400,700|Arima+Madurai:100,200,300,400,500,700,800,900|Autour+One|Averia+Gruesa+Libre|Bad+Script|Buda:300|Bungee+Hairline|Cabin+Sketch:400,700|Corben:400,700|East+Sea+Dokdo|Farsan|Felipa|Fredericka+the+Great|Glass+Antiqua|Homemade+Apple|Iceland|Kalam:300,400,700|Kavivanar|Kirang+Haerang|La+Belle+Aurore|Limelight|Londrina+Outline|Londrina+Sketch|Mirza:400,500,600,700|Overlock:400,400i,700,700i,900,900i|Paprika|Patrick+Hand+SC|Raleway+Dots|Ranga:400,700|Share:400,400i,700,700i|Sirin+Stencil|Sriracha|Stardos+Stencil:400,700" rel="stylesheet"> -->
+  <!-- <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css"> -->
+  <link href='css/styles.css' rel='stylesheet' />
+</head>
 
-    <style>
-      body { margin:0; padding:0; }
-      #map { position:absolute; top:0; bottom:0; width:100%; }
-      .leaflet-control-zoom { opacity: 0.8; }
-      /* display none for layout purposes but be careful of license restrictions */
-      .mapbox-logo { display: none; }
-      /* .inner-wrapper { padding: 6px; } */
-      .hydro {}
-      .eco {}
-      .rail {}
-      .selected {}
-      .encountered {}
-      .encountering {}
-      .flex-parent--space-around { justify-content: space-around; }
-      .hide { visibility: hidden; }
-      .show { visibility: visible; }
-      @media screen and (min-width: 640px) {
-        .hide--mm { visibility: hidden; }
-        .show--mm { visibility: visible; }
-      }
-      @media screen and (min-width: 800px) {
-        .hide--ml { visibility: hidden; }
-        .show--ml { visibility: visible; }
-      }
-      .block-sm {
-        @media screen and (min-width: 400px) {
-          display: block;
-        }
-      }
-      /* @media screen and (min-width: 1200px) {
-        .hide--mxl { visibility: hidden; }
-        .show--mxl { visibility: visible; }
-      } */
-      svg icon .inline { display: inline-block; }
-      li { list-style: none; }
-      a:hover {
-        text-decoration: line;
-        opacity: 0.8;
-      }
-      .my-blue { background: #849ab5; }
-      /* set toggle icon font size */
-      label[for="toggle"] { font-size: 3rem; }
+<body>
 
-      /* hide sidebar toggle offscreen */
-      input[type="checkbox"] { position: absolute; top: -100px; }
-
-      /* sidebar about styling */
-      aside { position: fixed; top: 0; right: -370px; transition: 0.6s all; }
-
-      /* when siderbar's adjacent input element is checked, show sidebar */
-      input[type=checkbox]:checked + aside { right: 0px; }
-
-      /* when dashboard's adjacent input element is checked, show sidebar */
-      input[type=checkbox]:checked + #dashboard { visibility: visible; }
-
-      /* Hide all actual toggle checkboxes */
-      input[type=checkbox] { display: none; }
-
-      /* Hide expandable content by default */
-        /* start with a blank slate to keep things dynamic -- populate things selectively on pageload, icon click, etc */
-      .expandable {
-        visibility: hidden;
-        /* display: none; */
-      }
-      .collapsible {
-        visibility: visible;
-      }
-      button[type=submit]:after + div#go-load {
-        visibility: visible;
-      }
-      .txt-fancy { /* tbd */}
-      .expand-trigger:after {
-        visibility: hidden:
-        /* OTHER triggle visibility: visible; */
-        /* check adjacent-parent checkbox */
-      }
-      .collapse-trigger:after {
-        visibility: hidden;
-        /* OTHER trigger visibility: visible; */
-        /* uncheck adjacent-parent checkbox */
-      }
-      /* css classes on init load only? : */
-        /* show-sm, show-mm show-ml show-mxl
-        hide-sm hide-mm hide-ml hide-mxl  */
-
-    </style>
-  </head>
-
-  <body>
-
-    <div class="relative viewport-full scroll-auto">
-
-    <!-- flex-parents and grids defined in vertical and horizontal div wrappers; dynamic sizing via flex-childs and cols added to more semantic, core elements -->
+  <div class="relative viewport-full scroll-auto">
 
     <!-- main content wrapper (vertical)-->
-    <div class="flex-parent flex-parent--column h-full scroll-auto">
+    <div class="flex-parent flex-parent--column flex-parent--center-main bg-blue-dark scroll-auto">
 
-      <!-- header stays up top, takes up full width with col-12 -->
-      <header class="flex-child flex-child--no-shrink w-full hmin60 bg-red">
+      <!-- header stays up top, takes up full width -->
+      <header id="header" class="flex-child flex-child--no-shrink w-full my-green">
         <!-- inner horizontal wrapper -->
-        <div class="px6 py6 px12-mm py12-mm px18-ml py18-ml flex-parent flex-parent--center-cross grid bg-lighten10">
+        <div class="px6 py6 px12-mm px18-mxl flex-parent flex-parent--center-cross grid bg-lighten10">
           <!-- TITLE -->
           <div class="flex-child col col--12 color-darken75">
             <div class="flex-parent flex-parent--column flex-parent--center-main">
-              <h1 class="txt-h3 txt-h2-ml txt-h1-mxl txt-nowrap flex-child">Ecology along the rails:</h1>
-              <h2 class="txt-h5 txt-h4-mm txt-h3-mxl flex-child ml24 ml36-mm color-darken50">A visualization of the journeys implicit in passenger train travel within North America</h2>
+              <h1 id="title" class="txt-h4 txt-h3-mm txt-h2-ml flex-child mb-neg6 mt3 mt6-ml ml3 txt-nowrap">Ecology along the rails:</h1>
+              <h2 id="subtitle" class="txt-s txt-h5-mm txt-h4-ml flex-child pb6-ml ml18 ml24-mm ml36-ml color-darken50">A visualization of the journeys implicit in passenger train travel within North America</h2>
             </div>
           </div>
         </div>
       </header>
 
       <!-- grows vertically in the middle -->
-      <main class="flex-child flex-child--grow bg-gray-dark w-full">
+      <main class="flex-child flex-child--grow bg-darken75 relative">
 
         <!-- inner horizontal wrapper -->
-        <div class="flex-parent flex-parent--column flex-parent--row-ml w-full h-full bg-gray grid clearfix">
+        <div class="flex-parent flex-parent--column flex-parent--row-ml">
 
-          <!-- MAP PANE // always visible, stretches over up to 12 cols; col combined with flex-child--grow to ensure full width on small screens, but more dynamic/sidebar-content-driven sizing on larger ones -->
-          <section id="map-pane" class="flex-child flex-child--grow col col--12 col--8-ml col--9-mxl bg-gray grid relative">
+          <!-- map and dash pane -->
+          <section id="map-and-dash-pane" class="flex-child flex-child--grow scroll-hidden relative">
 
-            <div id="map" class="h-full w-full bg-darken20">
-              <!-- <img class="relative" src="http://via.placeholder.com/1080x800"/> -->
-            </div>
+            <!-- inner map and dash wrapper -->
+            <div class="flex-parent flex-parent--column flex-parent--center-main viewport-almost">
 
-            <!-- modal wrapper -->
-            <div class="flex-parent flex-parent--center-main flex-parent--center-cross grid">
-            <!-- or? <div class='fixed top right bottom left scroll-auto'></div>-->
+              <!-- map pane -->
+              <div id="mapplus" class="flex-child flex-child--grow scroll-hidden relative">
 
-              <!-- MODAL -->
-              <div id="modal" class='collapsible flex-child col col--8 col--offl2 col--offr2 bg-green z3' aria-hidden="false">
-                <!-- Form Wrapper // flex used only for ease of cross+main axis centering -->
-                <div class="flex-parent flex-parent--center-cross flex-parent--center-main grid bg-green-faint">
+                <!-- ui buttons -->
+                <div class="flex-parent flex-parent--center-main flex-parent--center-cross absolute top bottom right left">
 
-                  <!-- GET START/END FORM -->
-                  <form id="get-waypoints" action="get" class="flex-child col col--12">
-                    <!-- Form inner wrapper // flex only for ease of vertical alignment -->
-                    <div class="flex-parent flex-parent--center-cross grid grid--gut0">
-                      <!-- Form Header-->
-                      <legend class="flex-child col col--12 col--6-mm col--4-ml txt-fancy bg-green-light">Select a Route to Experience</legend>
-                      <!-- Fieldset wrapper-->
-                      <div class="flex-child col col--12 col--6-mm col--8-ml bg-green-dark">
-                        <!-- Get Start -->
-                        <fieldset class="relative w-full align-center bg-green-faint">
-                          <label for="start">Where have you come from?</label>
-                          <!-- default input (search box with matching) wrapper -->
-                          <div class='absolute flex-parent flex-parent--center-cross flex-parent--center-main w36 h36'>
-                            <svg class='icon'><use xlink:href='#icon-caret-right'></use></svg>
-                          </div>
-                          <input type="text" id="getStart" class="input pl36" name="start" value="Enter origin" list="startList" placeholder="You have to start somewhere" />
-                          <datalist id="startList">
-                            <label for="startSuggest">(Some possibilities:)</label>
-                            <!-- backup input box (dropdown) wrapper -->
-                            <div class="select-container">
-                              <!-- dropdown1 (start route) -->
-                              <select id="startSuggest" class="input select start-node" name="altStart">
-                                <option value="node#?">Start...</option>
-                                <option value="">Chicago</option>
-                                <!-- <option>etc</option> -->
-                              </select>
-                              <div class='select-arrow'></div>
-                            </div>
-                          </datalist>
-                        </fieldset>
-                        <!-- Get End -->
-                        <fieldset class="relative w-full align-center bg-green-faint">
-                          <label for="end">Where are you going?</label>
-                          <!-- default input (search box with matching) wrapper -->
-                          <div class='absolute flex-parent flex-parent--center-cross flex-parent--center-main w36 h36'>
-                            <svg class='icon fr'><use xlink:href='#icon-caret-right'></use></svg>
-                          </div>
-                          <input type="text" id="getEnd" class="input pl36" name="end" value="Enter destination" list="endList" placeholder="Everything ends" />
-                          <datalist id="endList">
-                            <label for="endSuggest">(Some possibilities:)</label>
-                            <!-- backup input box (dropdown) wrapper -->
-                            <div class="select-container">
-                              <!-- dropdown2 (end route) -->
-                              <select id="endSuggest" class="input select end-node" name="altEnd">
-                                <option value="node#?">...End</option>
-                                <option value="">Grand Junction</option>
-                                <!-- <option>etc</option> -->
-                              </select>
-                              <div class='select-arrow'></div>
-                            </div>
-                          </datalist>
-                        </fieldset>
-                      </div> <!-- end fieldset wrapper -->
-                      <!-- GO button -->
-                      <fieldset class="flex-child col col--12">
-                        <button id='go-btn' type="submit" class="w-full align-center btn round txt-fancy txt-spacing2" value="go" onclick="initNew()">
-                          <span id="go-txt">Let's Go</span>
-                        </button>
-                        <div class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top right bottom left bg-darken10 z5'>
-                          <span id="go-load" class="hide flex-child loading"></span>
-                        </div>
-                      </fieldset>
-                    </div> <!-- end form inner wrapper -->
-                  </form>
+                  <!-- UI Overlay Elements Wrapper -->
+                  <div id="overlay" class="flex-child z5">
 
-                </div> <!-- end modal inner wrapper -->
-              </div> <!-- end modal -->
-            </div>
+                    <!-- Custom Data UI Elements -->
+                    <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx3 my6 mx6-mxl my12-mxl txt-s txt-m-mm'>
+                      <button id="replay" class='btn round my-blue replay mx3 mx6-mxl px6 py3 py6-ml px12-ml'>Replay</button>
+                      <!-- keep route choice, reset counter, reset data reveal, begin again -->
+                      <button id="play-pause" class='btn round my-blue play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml'>Play/Pause</button>
+                        <!-- stop/init counter without data resets -->
+                      <button id="select-new" class='btn round my-blue reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml' onclick="selectNew()">Select New?</button>
+                        <!-- prompt user: do you wish to select a new route? + follow through -->
+                    </div>
 
-            <!-- UI Overlay Elements Wrapper -->
-            <div class="bg-gray col col--12">
+                    <!-- Basic/Expected Map Elements -->
+                    <div id="zoomplus" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute bottom right mx3 my6 mx6-mxl my12-mxl txt-xs color-gray-dark px3 txt-shadow-lighten25'>
+                      <!-- <button class="btn my-blue mx3 mx6-mxl px6 py3 py6-ml px12-mm round"> + | = </button> -->
+                      <!-- Attribution -->
+                      <span> Map data from ** |</span>
+                      <span>| Visualized with D3.js |</span>
+                      <span>| Routing via to Rome2Rio  </span>
+                    </div>
 
-              <!-- (static for now) Loader Bar (prepping route, loading animation) -->
-              <div class='h12 bg-darken10 relative round-full'>
-                <div class='absolute h12 bg-green-light round-full' style='width:50%;'></div>
+                    <!-- About/Info icon on small screens -->
+                    <label id="about-feature" for="toggle-about" class="expand info none-ml">
+                      <button class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-on-hover btn--transparent absolute top right px0 py0 py6-mm px6-mm round' onclick="feature('about')">
+                        <svg class='icon'>
+                          <use xlink:href='#icon-info'></use>
+                        </svg>
+                      </button>
+                    </label>
+
+                  </div> <!-- end of ui-overlay-group -->
+
+                </div>
+
+                <!-- modal, veil, loader -->
+                <div class="flex-parent flex-parent--center-main flex-parent--center-cross absolute top bottom right left">
+
+                  <!-- VEIL -->
+                  <div id="veil" class="flex-child bg-lighten50 h-full w-full z3"></div>
+
+                  <!-- MODAL -->
+                  <div id="modal" class='flex-child absolute z4 none'>
+
+                    <!-- inner modal wrapper -->
+                    <div class="flex-parent flex-parent--center-main flex-parent--center-cross">
+
+                      <div class="flex-child my-greener px12 py12 round mx36 relative">
+
+                        <label id="modal-close" for="toggle-modal" class="collapse close">
+                          <!-- close modal trigger -->
+                          <button class='btn color-gray color-blue-dark-on-active bg-transparent-on-hover color-blue-on-hover py0 my-neg2 px0 mx-neg2 absolute top right txt-s btn--transparent z5' onclick="xClose('modal')">
+                            <svg class='icon h18 w18'>
+                              <use xlink:href='#icon-close'></use>
+                            </svg>
+                          </button>
+                        </label>
+
+                        <!-- Form Wrapper // flex used only for ease of cross+main axis centering -->
+                        <div class="flex-parent flex-parent--center-main grid">
+
+                          <!-- GET START/END FORM -->
+                          <form id="getInitOptions" class="flex-child flex-child--grow col col--12 bg-lighten50">
+                            <!-- Form inner wrapper // flex only for ease of vertical alignment -->
+                            <div class="flex-parent flex-parent--center-cross grid">
+                              <!-- Form Header-->
+                              <legend class="flex-child col col--12 col--6-mm col--5-mxl my24 align-center px24 px12-ml color-darken90 txt-shadow-darken50">
+                                <h2 class="txt-h3 txt-fancy">Select a Route <br class="none inline-block-mm"/> to Experience</h2>
+                              </legend>
+                              <!-- Fieldset wrapper-->
+                              <div class="flex-child col col--12 col--6-mm col--7-mxl bg-lighten50 px12 py12">
+                                <!-- Get Start -->
+                                <fieldset class="relative w-full align-l py6">
+                                  <!-- default input (search box with matching) wrapper -->
+                                  <div class='absolute flex-parent flex-parent--center-cross w36 h36'>
+                                    <svg class='icon align-l'><use xlink:href='#icon-caret-right'></use></svg>
+                                  </div>
+                                  <input type="text" id="getOption0" class="input pl36" value="Enter origin" list="startList" placeholder="You have to start somewhere" required />
+                                  <datalist id="startList">
+                                    <label for="option0Suggest">(-- some possibilities --)</label>
+                                    <!-- backup input box (dropdown) wrapper -->
+                                    <div class="select-container">
+                                      <!-- dropdown1 (start route) -->
+                                      <select id="option0Suggest" class="input select start-node">
+                                        <!-- insert start options here: -->
+                                        <!-- <option value=${cityState} class=${country}>${cityState}</option> -->
+                                      </select>
+                                      <div class='select-arrow'></div>
+                                    </div>
+                                  </datalist>
+                                </fieldset>
+                                <!-- Get End -->
+                                <fieldset class="relative w-full align-l py6">
+                                  <!-- default input (search box with matching) wrapper -->
+                                  <div class='absolute flex-parent flex-parent--center-cross w36 h36'>
+                                    <svg class='icon align-l'><use xlink:href='#icon-caret-right'></use></svg>
+                                  </div>
+                                  <input type="text" id="getOption1" class="input pl36" value="Enter destination" list="endList" placeholder="Everything ends" required />
+                                  <datalist id="endList">
+                                    <label for="option1Suggest">(-- some possibilities --)</label>
+                                    <!-- backup input box (dropdown) wrapper -->
+                                    <div class="select-container">
+                                      <!-- dropdown2 (end route) -->
+                                      <select id="option1Suggest" class="input select end-node">
+                                        <!-- insert end options here: -->
+                                        <!-- <option value=${cityState} class=${country}>${cityState}</option> -->
+                                      </select>
+                                      <div class='select-arrow'></div>
+                                    </div>
+                                  </datalist>
+                                </fieldset>
+                              </div> <!-- end fieldset wrapper -->
+                              <!-- GO button -->
+                              <fieldset class="flex-child col col--12 h36">
+                                <button id="submit-btn" class="h-full w-full btn btn--darken50 unround txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main" onclick="onSubmit(this.form.getOption0.value,this.form.getOption1.value)">
+                                  <span id="submit-btn-txt" class="flex-child txt-l mt-neg3">LET'S GO</span>
+                                  <span id="submit-btn-load" class="flex-child loading loading--s loading--dark none"></span>
+                                </button>
+                              </fieldset>
+                            </div> <!-- end form inner wrapper -->
+                          </form>
+
+                        </div> <!-- end form wrapper -->
+
+                      </div>
+
+                    </div><!--modal inner wrapper -->
+
+                  </div> <!-- end modal -->
+
+                  <!-- (static for now) Loader Bar (prepping route, loading animation) -->
+                  <div id="map-init-load" class='flex-child absolute loading z5 none'></div>
+                    <!-- <label for="total">Total progress</label> -->
+                    <!-- <progress id="" max="100" value="40"></progress>bg-green-light mt18 h18 round-full style='width:50%' -->
+
+                </div>
+
+                <!-- map wrapper -->
+                <div class="flex-parent flex-parent--center-main flex-parent--center-cross">
+                  <!-- map  -->
+                  <div id="map"></div>
+                </div>
+
               </div>
 
-              <!-- Custom Data UI Elements -->
-              <div class='absolute top left mx6 my6'>
-                <button class='btn round my-blue replay mx3'>Replay</button>
-                <!-- keep route choice, reset counter, reset data reveal, begin again -->
-                <button class='btn round my-blue play-pause mx3'>Play/Pause</button>
-                  <!-- stop/init counter without data resets -->
-                <button type='reset' class='btn round my-blue reset-options mx3'>Select New?</button>
-                  <!-- prompt user: do you wish to select a new route? + follow through -->
-              </div>
+              <!-- dash pane -->
+              <div id="dashplus" class="flex-child w-full relative mb-neg6 mb0-ml none">
 
-              <!-- nav icon (holds space for one of several) -->
-              <nav class="absolute top right mx12 my12 color-gray">
-                <!-- question mark or i or equivalent // visible when small -->
-                <a target="_blank" href="#about">
-                  <button class='btn round-full btn--lighten10 more-info none-ml h36 w36'>i</button>
-                </a>
-                <!-- collapse icon // visible when big AND not collapsed (including on initial load)-->
-                <a target="_blank" href="#">
-                  <button class='btn none inline-block-ml round-full collapse btn--lighten10 more-info h36 w36'>&#8599;</button>
-                </a>
-                <!-- expand icon // visible when big ONLY after #sidebar#main content collapse -->
-                <a target="_blank" href="#">
-                  <button class='btn none round-full btn--lighten10 expand h36 w36'>&#8601;</button>
-                </a>
-              </nav>
+                <!-- dashboard and dashboard toggles/checkbox wrapper -->
+                <div class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main">
 
-              <!-- Basic/Expected Map Elements -->
-              <!-- <div class='absolute top right mx12 my6 bg-lighten75 px6 round'>
-                <!-- <span>[ + | - ]</span> -->
-                <!-- Attribution -->
-              <!-- </div> -->
+                  <!-- dashboard-expand triggers -->
+                  <label id="dashboard-expand" for="toggle-dash" class="flex-child expand z5 relative mb6-ml h0 my-green">
+                    <!-- dash expand triangle--u -->
+                    <button id="dashboard-expand-btn" class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-light-on-hover btn--transparent none' onclick="expand('dashboard','bottom')">
+                      <span class='icon triangle-l triangle-l--u absolute left right top'></span>
+                    </button>
+                  </label>
 
-              <!-- DASHBOARD -->
-              <label for="toggle-dash" class="toggle-trigger">
-                <span class='triangle-l triangle-l--r color-green inline-block'></span>
-                <span class='triangle-l triangle-l--r color-green inline-block'></span>
-              </label>
-              <input type="checkbox" id="toggle-dash" aria-expanded="false" aria-controls="dashboard">
-              <div id="dashboard" class="expandable absolute bottom left right bg-red txt-s txt-m-mm txt-l-mxl round-mm mx12-mm my12-mm">
-                <!-- inner dash wrapper -->
-                <div class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid h-full px12-mm hmin120 py12-mm bg-lighten10">
+                  <!-- dashboard-collapse triggers -->
+                  <label id="dashboard-collapse" for="toggle-dash" class="collapse flex-child z5 relative h12 h0-ml">
+                    <!-- dash collapse triangle--d -->
+                    <button id="dashboard-collapse-btn" class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-light-on-hover btn--transparent' onclick="collapse('dashboard','bottom')">
+                      <span class='icon triangle-l triangle-l--d absolute left right top'></span>
+                    </button>
+                  </label>
 
-                  <!-- Narration -->
-                  <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--4-ml bg-lighten10 bg-pink-dark-mm px12 pt12 pb6 py12-ml">
-                    <div class="bg-pink-dark round flex-parent flex-parent--column flex-parent--space-between-main h-full">
-                      <!-- header -->
-                      <div id="narration-header" class="flex-child flex-child--no-shrink hmin12 w-full py6 bg-darken25 color-lighten75">
-                        <h5 class="txt-em txt-fancy align-center">You are currently:</h5>
-                      </div>
-                      <div id="narration-txt" class="flex-child flex-child--grow px12 pb12-ml bg-lighten50">
-                        <div class="flex-parent flex-parent--row-reverse
-                        flex-parent--center-cross
-                        flex-parent--center-main flex-parent--column-reverse-ml">
-                          <div id="p3" class="flex-child flex-child--grow px12 py3">
-                            <p>Traversing special places</p>
+                  <!-- dashboard -->
+                  <div id="dashboard" class="flex-child bg-red txt-xs txt-s-mm txt-m-ml round-mm mx12-mm mb6-mm my12-ml align-center">
+
+                    <!-- inner dash wrapper -->
+                    <div class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid h-full px12-ml bg-lighten10 py12-ml">
+
+                      <!-- Narration -->
+                      <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--4-ml bg-lighten10 px12 pl12 pr6-ml pt12 pb6 py12-ml">
+
+                        <div class="h-full flex-parent flex-parent--column round flex-parent--center-main flex-parent--center-main">
+
+                          <!-- header -->
+                          <div id="narration-header" class="flex-child flex-child--no-shrink py6 bg-darken25 color-lighten75 round-tl round-tr">
+                            <h5 class="txt-fancy txt-em align-center">You are currently:</h5>
                           </div>
-                          <div id="p2" class="flex-child flex-child--grow px12 py3">
-                            <p>Encountering incredible things</p>
-                          </div>
-                          <div id="p1" class="flex-child flex-child--grow px12 py3">
-                            <p></p>
-                          </div>
-                        </div>
-                      </div>
-                      <div id="narration-footer" class="flex-child flex-child--no-shrink hmin6 bg-darken25 round-bl round-br"></div>
-                    </div>
-                  </div> <!-- end of narration -->
 
-                  <!-- Compass + -->
-                  <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--4-ml bg-lighten10 bg-pink-dark-mm pl12 pr6 pb12 pt6 pl6-ml pr12-ml py12-ml">
-                    <div class="bg-pink-dark h-full flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross">
-                      <!-- header -->
-                      <div id="compass-header" class="flex-child flex-child--no-shrink hmin6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
-                      <!-- compass content -->
-                      <div class="flex-child flex-child--grow bg-lighten50 scroll-auto px12 py6 grid">
-                        <div id="widgets" class="col col--12 grid clearfix">
-                          <span id="compass" class="col col--6">
-                            current bearing
-                          </span>
-                          <span id="elevation" class="col col--6 align-r fr">
-                            current elevation
-                          </span>
-                        </div>
-                        <div id="miles-in" class="col col--12 align-center">
-                          miles in
-                        </div>
-                        <div id="remaining" class="col col--12 grid clearfix">
-                          <span id="time" class="col col--6">time remaining</span>
-                          <span id="distance" class="col col--6 align-r fr">distance remaining</span>
-                        </div>
-                      </div>
-                      <!-- compass footer -->
-                      <div id="compass-footer" class="flex-child flex-child--no-shrink hmin6 bg-darken25 round-bl round-br"></div>
-                    </div>
-                  </div> <!-- end of compass+ -->
-
-                  <!-- Legend-Log SMALL // no display when big; occupies bottom right 2/3 of dashboard when small -->
-                  <div id="legend-log-small" class="flex-child flex-child--grow bg-lighten10 col col--7 col--4-ml pl6 pr12 pt6 pb12 py12-ml">
-                    <div class="bg-pink-dark h-full flex-parent flex-parent--column flex-parent--space-between-main h-full flex-parent--stretch-cross">
-                      <!-- header -->
-                      <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin12 bg-darken25 py3 color-lighten75 round-tl round-tr">
-                        <h4 class="align-center">Journey Log</h4>
-                      </div>
-                      <!-- main content / dynamically populated legend items  -->
-                      <div id="legend-log-content" class="flex-child flex-child--grow align-center h-full w-full bg-lighten50 scroll-auto px12 py6">
-                        <div class="flex-parent flex-parent--column">
-                          <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-t border-b border--dash">
-                            <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
-                              <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24">sym</span>
-                              <span id="log-name" class="flex-child flex-child--grow">name</span>
-                              <span id="log-count" class="flex-child flex-child--no-shrink wmin24">#</span>
+                          <div id="narration-txt" class="flex-child flex-child--grow px12 bg-lighten50">
+                            <div class="flex-parent flex-parent--row-reverse
+                            flex-parent--center-cross flex-parent--column-reverse-ml">
+                              <div id="p3" class="flex-child flex-child--grow">
+                                <p>Traversing special places</p>
+                              </div>
+                              <div id="p2" class="flex-child flex-child--grow">
+                                <p>Encountering incredible things</p>
+                              </div>
+                              <div id="p1" class="flex-child flex-child--grow"></div>
                             </div>
                           </div>
+
+                          <div id="narration-footer" class="flex-child flex-child--no-shrink hmin6 bg-darken25 round-bl round-br"></div>
+
                         </div>
-                      </div>
-                      <!-- legend-log footer -->
-                      <div id="legend-log-footer" class="flex-child flex-child--no-shrink hmin6 bg-darken25 round-bl round-br"></div>
-                    </div> <!-- end of legend-log-inner-wrapper -->
-                  </div> <!--end of legend-log-small -->
 
-                </div> <!-- end of dashbord-inner-wrapper -->
-              </div> <!-- end of dashboard-semantic -->
+                      </div> <!-- end of narration -->
 
-            </div> <!-- end of ui-overlay-group -->
+                      <!-- Compass + -->
+                      <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--4-ml bg-lighten10 pl12 pr6 pb12 pt6 px6-ml py12-ml">
+
+                        <div class="flex-parent--column h-full flex-parent round flex-parent--end-main">
+
+                          <!-- header -->
+                          <div id="compass-header" class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
+
+                          <!-- compass content -->
+                          <div class="flex-child flex-child--grow bg-lighten50 scroll-auto px12 py6 grid">
+                            <div id="widgets" class="col col--12 grid align-l clearfix">
+                              <span id="compass" class="col col--6">
+                                current bearing
+                              </span>
+                              <span id="elevation" class="col col--6 align-r fr">
+                                current elevation
+                              </span>
+                            </div>
+                            <div id="miles-in" class="col col--12 align-center">
+                              miles in
+                            </div>
+                            <div id="remaining" class="col col--12 grid align-l clearfix">
+                              <span id="time" class="col col--6">time remaining</span>
+                              <span id="distance" class="col col--6 align-r fr">distance remaining</span>
+                            </div>
+                          </div>
+
+                          <!-- compass footer -->
+                          <div id="compass-footer" class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
+
+                        </div>
+
+                      </div> <!-- end of compass+ -->
+
+                      <!-- Legend-Log -->
+                      <div id="legend-log" class="flex-child flex-child--grow bg-lighten10 col col--7 col--4-ml pl6 pr12 pt6 pb12 py12-ml">
+
+                        <div class="flex-parent flex-parent--column round flex-parent--space-between-main h-full flex-parent--stretch-cross">
+
+                          <!-- header -->
+                          <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin12 bg-darken25 py3 color-lighten75 round-tl round-tr">
+                            <h4 class="align-center txt-fancy txt-em">Journey Log</h4>
+                          </div>
+
+                          <!-- main content / dynamically populated legend items  -->
+                          <div id="legend-log-content" class="flex-child flex-child--grow align-center w-full bg-lighten50 scroll-auto px12 py6">
+                            <div class="flex-parent flex-parent--column">
+                              <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-t border-b border--dash">
+                                <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
+                                  <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24">sym</span>
+                                  <span id="log-name" class="flex-child flex-child--grow">name</span>
+                                  <span id="log-count" class="flex-child flex-child--no-shrink wmin24">#</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- legend-log footer -->
+                          <div id="legend-log-footer" class="flex-child flex-child--no-shrink hmin6 bg-darken25 round-bl round-br"></div>
+
+                        </div> <!-- end of legend-log-inner-wrapper -->
+
+                      </div> <!--end of legend-log-small -->
+
+                    </div> <!-- end of dashbord-inner-wrapper -->
+
+                  </div> <!-- end of dashboard -->
+
+                </div>
+
+              </div>
+
+            </div> <!-- end of map and dash wrapper -->
 
           </section> <!--end of map pane section -->
 
-          <!-- SIDEBAR / ASIDE -->
-          <aside id="sidebar" class="none flex-child flex-child--no-shrink col col--12 col--4-ml col--3-mxl bg-blue-dark fr relative px12-ml py12-ml">
+          <!-- ASIDE -->
+          <aside class='flex-child flex-child--no-shrink scroll-hidden relative'>
 
-            <!-- siderbar inner wrapper -->
-            <div class="flex-parent flex-parent--column-ml flex-parent--space-around flex-parent--stretch-cross grid">
-              <label for="toggle-about" class="toggle-trigger">
-                <span>❔</span>
-                <span>About</span>
-                <!-- when content collapsed, show expand trigger:  -->
-                <span class='expand-trigger hide-sm show-mm hide-mxl triangle-l triangle-l--d color-green inline-block'></span>
-                <!-- when content expanded, show collapse trigger: -->
-                <span class='collapse-trigger show-sm hide-mm show-mxl triangle-l triangle-l--l color-green-dark inline-block'></span>
-              </label>
-              <input type="checkbox" id="toggle-about" aria-controls="about">
-              <button class='absolute top right px12 py12'>
-                <svg class='icon link color-darken50'><use xlink:href='#icon-close'></use></svg>
-              </button>
+            <!-- About toggles and Sidebar wrapper/parent-->
+            <div class="flex-parent flex-parent--column flex-parent--row-ml viewport-almost-ml">
 
-              <!-- ABOUT -->
-              <div id="about" class="flex-child hmin0 col col--12">
-                <!-- flex-child extra shrink? be subsumed -->
-                <!-- inner vertical wrapper -->
-                <div class='flex-parent flex-parent--column flex-parent--stretch-cross'>
-                  <!-- About--Header -->
-                  <div class="round-tl-ml round-tr-ml flex-child flex-child-no-shrink hmin18 hmin0-ml bg-green align-center py6">
-                    <h3 class="txt-h3">About This Map</h3>
-                  </div> <!-- end of about-header -->
-                  <!-- About--Main -->
-                  <div class="flex-child flex-child-grow scroll-auto bg-green-light">
-                    <!-- inner content wrapper; flex used only for vertical alignment of child items -->
-                    <div class="flex-parent flex-parent--row flex-parent--column-ml flex-parent--stretch-cross px12 py6 grid">
-                      <!-- main about text, orientation, etc -->
-                      <div class='flex-child col col--12 col--6-mm col--12-ml'>
-                        <h4 class="txt-h4">Some words</h4>
-                        <p>This map visualizes ~~~~~~.</p>
-                      </div>
-                      <!-- data sources, sub-about, furthermore -->
-                      <div class='flex-child col col--12 col--6-mm col--12-ml align-r'>
-                        <h5 class='txt-h5'>Data sources etc</h5>
-                        <ul class="txt-ul">
-                          <li class="txt-li">
-                            <a target='_blank' class='link' href='#'>this is how i go</a>
-                            <!-- Nested levels of detail? Description, date accessed, processing approach, additional context etc -->
-                          </li>
-                          <li class="txt-li">
-                            <a target='_blank' class='link' href='#'>when i go</a>
-                          </li>
-                          <li class="txt-li">
-                            <a target='_blank' class='link' href='#'>like this</a>
-                          </li>
-                        </ul>
-                      </div>
-                    </div> <!-- end of about-main-content-inner-wrapper -->
-                  </div> <!-- end of about-main -->
-                  <!-- About--Footer -->
-                  <div class="flex-child flex-child-no-shrink hmin12 bg-green round-bl-ml round-br-ml"></div>
+              <!-- semantic grouping (toggles + sidebar) -->
+              <div id="about-plus" class="flex-child w-full">
 
-                </div> <!-- end of about-inner-wrapper-->
-              </div> <!-- end of about -->
+                <!-- toggles -->
+                <div class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main">
 
-              <!-- ALTERNATE / TO COMBINE WITH TOGGLE OPTIONS: -->
-              <div class='viewport-full relative scroll-hidden'>
-                <div class='bg-darken10 viewport-twothirds viewport-full-ml absolute top left right bottom'></div>
-                <div class='absolute top-ml left bottom z1 w-full w240-ml px12 py12-ml'>
-                  <div class='flex-parent flex-parent--column viewport-third h-auto-ml hmax-full bg-white round-ml shadow-darken10'>
-                    <div class='px12 py12 scroll-auto'>
-                      <h3 class='txt-m txt-bold mb6'>Title here</h3>
-                      <p>Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Aenean lacinia bibendum nulla sed consectetur. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.</p>
-                    </div>
-                    <footer class='px12 py12 bg-gray-faint round-b-ml txt-s'>
-                      Footer content here
-                    </footer>
-                  </div>
+                  <!-- Sidebar expand triggers -->
+                  <label id="sidebar-expand" for="toggle-about" class="flex-child expand z5 h0-ml w-full-ml relative none">
+
+                    <!-- sidebar expand triangle--u -->
+                    <button class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-light-on-hover btn--transparent pt24 pb0 none-ml z5' onclick="expand('sidebar','bottom')">
+                      <span class='icon triangle-l triangle-l--u none-ml absolute left right bottom z5'></span>
+                    </button>
+
+                    <!-- sidebar expand triangle--l -->
+                    <button class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-light-on-hover btn--transparent none viewport-almost inline-block-ml z5' onclick="expand('sidebar','right')">
+                      <span class='icon triangle-l triangle-l--l none inline-block-ml absolute left z5'></span>
+                    </button>
+
+                  </label>
+
+                  <!-- sidebar-collapse triggers -->
+                  <label id="sidebar-collapse" for="toggle-about" class="flex-child collapse z5 h12 h0-ml w-full-ml relative mt6">
+
+                    <!-- sidebar collapse triangle--d -->
+                    <button class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-light-on-hover btn--transparent pt24 pb0 none-ml z5' onclick="collapse('sidebar','bottom')">
+                      <span class='icon triangle-l triangle-l--d none-ml absolute left right top z5'></span>
+                    </button>
+
+                    <!-- sidebar collapse triangle--r -->
+                    <button class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-light-on-hover btn--transparent none viewport-almost inline-block-ml z5' onclick="collapse('sidebar','right')">
+                      <span class='icon triangle-l triangle-l--r none inline-block-ml absolute left z5'></span>
+                    </button>
+
+                  </label>
+
+                  <!-- about close-icon on small screens -->
+                  <label id="about-close" for="toggle-about" class="collapse close none-ml none">
+
+                    <!-- about info-close on small screens -->
+                    <button class='btn color-gray-faint color-blue-dark-on-active bg-transparent-on-hover color-blue-on-hover py12 px12 absolute top right txt-s btn--transparent z5' onclick="unfeature('about')">
+                      <svg class='icon h36 w36'><use xlink:href='#icon-close'></use></svg>
+                    </button>
+
+                  </label>
+
                 </div>
-              </div>
 
-            </div>
+                <!-- Sidebar wrapper -->
+                <div class="flex-parent flex-parent--column flex-parent--row-ml">
 
-          </aside> <!-- end of sidebar section -->
+                  <div id="sidebar" class="flex-child w300-ml w360-mxl txt-s txt-m-mm scroll-hidden">
+
+                    <!-- about wrapper / sidebar inner wrapper -->
+                    <div id="about-wrapper" class='flex-parent flex-parent--column-ml px12-mm pb12-mm pb18-ml pt6-ml viewport-third viewport-almost-ml'>
+
+                      <!-- about -->
+                      <div id="about" class='flex-child bg-lighten25 round-mm h-full shadow-darken10 px12 py12 scroll-auto'>
+
+                        <!-- inner vertical wrapper -->
+                        <div class='flex-parent h-full flex-parent--column'>
+
+                          <!-- About--Header -->
+                          <div class="round-tl round-tr flex-child flex-child-no-shrink hmin18 bg-lighten25 align-center py12">
+                            <h3 class='txt-l txt-bold'>About This Map</h3>
+                          </div><!-- end of about-header -->
+
+                          <!-- About--Main -->
+                          <div class="flex-child h-full flex-child-grow scroll-auto bg-lighten50">
+                            <!-- inner content wrapper; flex used mainly for vertical alignment of child items -->
+                            <div class="flex-parent flex-parent--stretch-cross h-full flex-parent--space-between-main px12 py12 grid">
+                              <!-- main about text, orientation, etc -->
+                              <div class='flex-child col col--12 col--6-mm col--12-ml px3 pt6 pb12 mt-neg6'>
+                                <!-- <h4 class="txt-h4 txt-em py6">Some words</h4> -->
+                                <p>This map visualizes ~~~~~~.</p>
+                                <p>Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum. Aenean lacinia bibendum nulla sed consectetur. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                              </div>
+                              <!-- data sources, sub-about, furthermore -->
+                              <div class='flex-child col col--12 col--6-mm col--12-ml align-r px3 pt6 pb12'>
+                                <h5>Data sources etc</h5>
+                                <ul class="txt-ul">
+                                  <li class="txt-li">
+                                    <a target='_blank' class='link' href='#'>this is how i go</a>
+                                    <!-- Nested levels of detail? Description, date accessed, processing approach, additional context etc -->
+                                  </li>
+                                  <li class="txt-li">
+                                    <a target='_blank' class='link' href='#'>when i go</a>
+                                  </li>
+                                  <li class="txt-li">
+                                    <a target='_blank' class='link' href='#'>like this</a>
+                                  </li>
+                                </ul>
+                              </div>
+                            </div> <!-- end of about-main-content-inner-wrapper -->
+                          </div> <!-- end of about-main -->
+
+                          <!-- About--Footer -->
+                          <footer class='flex-child flex-child-no-shrink h6 bg-lighten25 round-bl round-br'></footer>
+
+                        </div> <!-- end of about inner wrapper -->
+
+                      </div> <!-- end of about -->
+
+                    </div> <!-- end of inner sidebar wrapper -->
+
+                  </div> <!-- end of sidebar -->
+
+                </div> <!-- end of sidebar parent wrapper -->
+
+              </div> <!-- end of toggles/sidebar semantic grouping -->
+
+            </div> <!-- end of inner parent wrapper -->
+
+          </aside>
 
         </div> <!-- end of main-innerwrapper -->
-      </main> <!-- end of main -->
+
+      </main>
 
       <!-- footer stays on the bottom at full width -->
-      <footer class="flex-child flex-child--no-shrink txt-s txt-m-mxl hmin18 w-full bg-blue-dark">
+      <footer id="footer" class="flex-child flex-child--no-shrink txt-xs txt-s-mm txt-m-mxl hmin18 w-full bg-blue-dark">
         <!-- inner horizontal grid wrapper; flex used only for vertical alignment -->
-        <div class='px18 flex-parent flex-parent--wrap flex-parent--center-cross flex-parent--space-between-main grid py6 bg-darken50 color-lighten50'>
+        <div class='px6 px12-mm px18-ml flex-parent flex-parent--wrap flex-parent--center-cross flex-parent--space-between-main grid py6 bg-darken50 color-lighten50'>
           <!-- author name, NMP link? -->
-          <div class='flex-child'>
-            <p class='align-r'>Map authored by
+          <div class='flex-child mx6'>
+            <p class='align-r mx6'>Map authored by
               <a target='_blank' class='link' href='https://kafunk.github.io'>Katrina Funk</a> <br class="none-mm"/>for MAP 673 // <a target='_blank' class='link' href='https://newmapsplus.uky.edu'> New Maps Plus</a>.
             </p>
           </div>
           <!-- break/divider icon -->
           <div class="flex-child">
-            <div id='compass-icon' class="none block-sm align-center">
+            <div id='compass-icon' class="none block-mm align-center">
               <img style="border-radius:50%" src="http://via.placeholder.com/40x40"/>
             </div>
           </div>
           <!-- social media --> <!-- TODO ADD REAL LINKS-->
           <div class="flex-child">
             <!-- change to flex-parent inline for clarity?? -->
-            <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross w-full"
+            <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross w-full">
               <a target="_blank" href="#">
-                <svg class='mx6 icon flex-child inline-block h24 w24 mb-neg3' alt="collapse"><use xlink:href='#icon-github'/></svg>
+                <svg class='mx6 icon flex-child inline-block h24 w24 mb-neg6' alt="collapse"><use xlink:href='#icon-github'/></svg>
               </a>
               <a target="_blank" href="#">
                 <svg class='mx6 icon flex-child inline-block h24 w24 mb-neg6' alt="collapse"><use xlink:href='#icon-twitter'/></svg>
               </a>
               <a target="_blank" href="#">
-                <svg class='mx6 icon flex-child inline-block h30 w30 mb-neg6' alt="collapse"><use xlink:href='#icon-mail'/></svg>
+                <svg class='mx6 icon flex-child inline-block h24 w24 mb-neg6' alt="collapse"><use xlink:href='#icon-mail'/></svg>
               </a>
               <!-- Spotify,Instagram,Pinterest,Dribbble,LinkedIn? -->
             </div>
@@ -467,46 +491,55 @@
 
     </div>  <!-- end body inner wrapper -->
 
+  </div> <!-- end of body inner wrapper -->
 
 <!---~~~=== JAVASCRIPT ===~~~--->
 
   <!-- load Assembly -->
   <script async defer src='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.js'></script>
+
   <!-- load MapboxGL -->
-  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script>
+  <!-- <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script> -->
+
   <!-- load Turf.js -->
   <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+
   <!-- load Simple Statistics -->
-  <script src="https://unpkg.com/simple-statistics@6.0.1/dist/simple-statistics.min.js"></script>
+  <!-- <script src="https://unpkg.com/simple-statistics@6.0.1/dist/simple-statistics.min.js"></script> -->
+
+  <!-- load GraphHopper -->
+   <!-- <script src="https://cdn.jsdelivr.net/npm/graphhopper-js-api-client/dist/graphhopper-client.js"></script> -->
+
   <!-- load D3 -->
   <script src="https://d3js.org/d3.v5.js"></script>
   <script src="https://unpkg.com/topojson@3"></script>
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
-  <!-- HERE Routing API -->
-  <script src="http://js.api.here.com/v3/3.0/mapsjs-core.js"></script>
-  <script src="http://js.api.here.com/v3/3.0/mapsjs-service.js"></script>
-  <!-- load custom script -->
-  <script src="js/app.js"></script>
+  <script src="https://d3js.org/d3-array.v1.min.js"></script>
+  <script src="https://d3js.org/d3-collection.v1.min.js"></script>
+  <script src="https://d3js.org/d3-color.v1.min.js"></script>
+  <script src="https://d3js.org/d3-format.v1.min.js"></script>
+  <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+  <script src="https://d3js.org/d3-time.v1.min.js"></script>
+  <script src="https://d3js.org/d3-time-format.v2.min.js"></script>
+  <script src="https://d3js.org/d3-scale.v2.min.js"></script>
+
+  <!-- Testing FileSaver -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script> -->
+
+  <!-- GeoTIFF -->
+  <!-- <script src="https://unpkg.com/geotiff@1.0.0-beta.6/dist/geotiff.bundle.min.js"></script> -->
+
+  <!-- from local Vendor folder -->
+  <!-- Mapbox Polyline.js -->
+  <script src='vendor/mapbox/polyline/src/polyline.js'></script>
+
+  <!-- load custom scripts -->
+  <!-- <script src="js/scales.js"></script>
+  <script src="js/classes.js"></script> -->
+  <!-- main -->
+  <script src="js/main.js"></script>
+  <!-- <script src="js/bundle.js"></script> -->
 
 </body>
 </html>
-
-<!-- TODO: -->
-<!-- make consistent use of single of double quotes within markup -->
-<!--
-        <svg class='icon link color-darken50'><use xlink:href='#icon-close'></use></svg>
-        <svg class='icon link color-darken50'><use xlink:href='#icon-info'></use></svg>
-        plus / minus
-        menu
-        question
-        rotate => transform (rotate! 90deg left )
-        chevron-right (once normal, once translated?)
-        caret-right -->
-<!-- play with mix-blend-mode, filters: sepia(),blur(),drop-shadow(),grayscale() -->
-<!--backdrop-filters? (not much browser compatability right now) -->
-<!--svg-filters! <filter id="<idName>"> <feGaussianBlur in="SourceGraphic" stdDeviation="5"/> </filter>
-
-  // active inactive, input class, icon/btn classes
-
-  // FORM: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
