@@ -29,7 +29,7 @@ label[for="toggle-about"], label[for="toggle-dash"] { font-size: 2rem; }
 /* padding-bottom: 12px; } */
 #sidebar h2 { padding-top:6px; }
 
-fieldset
+/* fieldset */
 /* #about p {
   color: #3d3d3d;
   margin: 3px 24px 12px 30px;
@@ -82,7 +82,7 @@ fieldset
 
 .my-blue { background: #849ab5; }
 .my-green { background: #b3b365; }
-.my-greener { background: #8ea956; }
+.my-pink { background: #f1d3cb; }
 
 .rotateneg45 {
   transform: rotate(-45deg);
