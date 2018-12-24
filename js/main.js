@@ -2429,7 +2429,7 @@
       // g.interrupt()?
       if (experience.animating) {
         let pauseMatrix = g.select("#train-point").node().transform.animVal[0].matrix,
-                pausePt = [transformMatrix.e, transformMatrix.f];
+                pausePt = [pauseMatrix.e, pauseMatrix.f];
         experience.animating = false;
         pauseTrain(pausePt);
       }
