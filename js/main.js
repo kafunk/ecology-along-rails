@@ -200,22 +200,22 @@
     // more: pois incl bridges, tunnels, iNat
 
     // background/reference
-      var admin0 = d3.json("../data/final/admin0.json"),
-          admin1 = d3.json("../data/final/admin1.json"),
-      // terrain = d3.buffer("../data/final/terrain.tif"),
-       hydroBase = d3.json("../data/final/hydro_base.json"),
-       urbanBase = d3.json("../data/final/urban_areas.json"), // add major roads?
+      var admin0 = d3.json("data/final/admin0.json"),
+          admin1 = d3.json("data/final/admin1.json"),
+      // terrain = d3.buffer("data/final/terrain.tif"),
+       hydroBase = d3.json("data/final/hydro_base.json"),
+       urbanBase = d3.json("data/final/urban_areas.json"), // add major roads?
     // rail
-        railBase = d3.json("../data/final/railways.json"),
-        // passRail = d3.json("../data/final/pass_railways.json"),
-        railStns = d3.json("../data/final/na_main_rr_stns.json"),
-       // prBuffers = d3.json("../data/final/pass_rail_buffers.json");
+        railBase = d3.json("data/final/railways.json"),
+        // passRail = d3.json("data/final/pass_railways.json"),
+        railStns = d3.json("data/final/na_main_rr_stns.json"),
+       // prBuffers = d3.json("data/final/pass_rail_buffers.json");
     // merged enrich data
-       // enrichPolys = d3.json("../data/final/enrich_polys.json"),
-       // enrichPolys = d3.json("../data/final/enrich_polys_slimmed.json"),
-       // enrichLines = d3.json("../data/final/enrich_lines.json"),
-       // enrichLines = d3.json("../data/final/enrich_lines_slimmed.json"),
-       enrichPts = d3.json("../data/final/enrich_pts.json");
+       // enrichPolys = d3.json("data/final/enrich_polys.json"),
+       // enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
+       // enrichLines = d3.json("data/final/enrich_lines.json"),
+       // enrichLines = d3.json("data/final/enrich_lines_slimmed.json"),
+       enrichPts = d3.json("data/final/enrich_pts.json");
 
   // SET BOUNDING BOX
     Promise.all([admin0])
