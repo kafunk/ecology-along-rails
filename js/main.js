@@ -674,9 +674,6 @@
         function processReceived(data) {
           var parsed = parseReceived(data),
             enriched = enrichRoute(parsed);
-            //  attuned = attuneRoute(parsed),
-            // enriched = enrichRoute(attuned);
-
           return enriched;
         }
 
@@ -784,21 +781,25 @@
         let sT = 2400; // standard transition time
 
         // zoom to bounds of chosen route
-        let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString))),
-                     k0 = routeBounds.k,
-               centerPt = turf.center(turf.explode(chosen.lineString)),
-              identity0 = getIdentity(centerTransform(projection(centerPt.geometry.coordinates),k0));
+        let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString),extent0,0.4));
+              //        k0 = routeBounds.k,
+              //  centerPt = turf.center(turf.explode(chosen.lineString)),
+              // identity0 = getIdentity(centerTransform(projection(centerPt.geometry.coordinates),k0));
+
+        // console.log(routeBounds)
+        // console.log("vs")
+        // console.log(identity0)
 
         // control timing with transition start/end events
         svg.transition().duration(sT*2).ease(d3.easeCubicIn)
-          .call(zoom.transform, identity0) //routeBounds)
+          .call(zoom.transform, routeBounds)
           .on("start", () => {
             drawRoute(chosen,sT);
           })
           .on("end", () => {
             // confirm g transform where it should be
-            g.attr("transform",identity0.toString()) //routeBounds.toString())
-            // pause (offer route overview here?) then zoom to firstFrame
+            g.attr("transform", routeBounds.toString())
+            // pause **(offer route overview here?)** then initiate animation (incl zoom to firstFrame)
             d3.timeout(() => {
               initAnimation(chosen);
             }, sT);
@@ -936,24 +937,27 @@
           // .attr("fill","slateblue")
           // .attr("stroke","black")
 
-        let enriched = Promise.all([/*enrichPolys,enrichLines,*/enrichPts]).then(filterEnriching,onError);
+        // filterAndJoin returns enriched route object
+        let enriched = Promise.all([/*enrichPolys,enrichLines,*/enrichPts]).then(filterAndJoin,onError);
 
         return enriched;
 
-        function filterEnriching(data) {
+        function filterAndJoin(data) {
 
           // console.log(data)
 
           // let allPolys = topojson.feature(data[0], data[0].objects.enrichPolys),
-          // let allLines = topojson.feature(data[1], data[1].objects.enrichLines),
-          // allPts = topojson.feature(data[2], data[2].objects.enrichPts);
+          //     allLines = topojson.feature(data[1], data[1].objects.enrichLines),
+          //       allPts = topojson.feature(data[2], data[2].objects.enrichPts);
 
+          // POINTS
           let allPts = topojson.feature(data[0], data[0].objects.enrichPts);
 
           let filteredPts = allPts.features.filter(d => {
             return turf.booleanPointInPolygon(d.geometry,bufferedRoute);
           });
 
+          // LINES
           // let singleLines = allLines.features.filter(d => {
           //   return d.geometry.type === "LineString" && turf.booleanCrosses(d.geometry,bufferedRoute);
           // });
@@ -987,7 +991,7 @@
           // // combine all intersecting initial lines and intersecting multiline segments
           // let filteredLines = singleLines.concat(moreLines);
 
-        // POLYGONS
+          // POLYGONS
           // let singlePolys = allPolys.features.filter(d => {
           //   console.log(d)
           //   return d.geometry !== null && d.geometry.type === "Polygon" && turf.booleanOverlap(d.geometry,bufferedRoute);
@@ -1032,14 +1036,15 @@
           // tag all filtered features with type spec id
           // eg, id: i.toFixed().padStart(3,'0')
 
-          // add filtered enrich data to <defs> with full geometry, relevant properties, and type-spec id for triggerPt crosswalk
+          // ADD ALL FILTERED ENRICH DATA TO <DEFS> ELEMENTS
+          // include full geometry, relevant properties, and type-spec id for triggerPt crosswalk
           populateDefs(filteredPts/*,filteredLines,filteredPolys*/)
 
-          // get specific trigger intersection pts for spatial search algorithm
+          // NARROW FULL GEOMETRIES DOWN TO SPECIFIC TRIGGER/INTERSECTION PTS FOR SPATIAL SEARCH ALGORITHM
           // let triggerPts = getTriggerPts(filteredPts,filteredLines,filteredPolys,chosen.lineString,bufferedRoute)
-          // temporary while polys/lines out of this
-          let triggerPts = filteredPts;
+          let triggerPts = filteredPts;  // temporary while polys/lines out of this
 
+          // ADD ENRICH DATA TO CHOSEN ROUTE OBJ & RETURN
           chosen.enrichData = {
             triggerPts: triggerPts,
           withinBuffer: bufferedRoute
@@ -1054,10 +1059,10 @@
         // append overlay data to svg <defs> element
         function populateDefs(pts/*,lines,polys*/) {
 
-          var overlayers = defs.append("g")
-            .attr("class","overlay overlayers")
+          var enrichLayer = defs.append("g")
+            .attr("id","enrich-layer")
 
-          // var enrichPolys = overlayers.append("g")
+          // var enrichPolys = enrichLayer.append("g")
           //     .attr("id", "enrich-polygons")
           //     .attr("class", "enrich polys extract overlay group")
           //   .selectAll("path")
@@ -1070,7 +1075,7 @@
           //     .style("stroke", "none")
           //    // .on("intersected", highlightPoly)
           //
-          // var enrichLines = overlayers.append("g")
+          // var enrichLines = enrichLayer.append("g")
           //     .attr("id", "enrich-lines")
           //     .attr("class", "enrich lines extract overlay group")
           //   .selectAll("path")
@@ -1084,7 +1089,7 @@
           //     .style("fill", "none")
           //    // .on("intersected", highlightLine)
 
-          var enrichPoints = overlayers.append("g")
+          var enrichPoints = enrichLayer.append("g")
             .attr("id", "enrich-pts")
             // .attr("class", "enrich points extract overlay group")
             .selectAll(".enrich-pt")
@@ -1101,7 +1106,7 @@
              // .on("intersected", highlightPt)
 
           console.log(pts)
-          console.log(overlayers.node())
+          console.log(enrichLayer.node())
           console.log(enrichPoints.nodes())
           console.log(g.node())
 
@@ -1407,7 +1412,7 @@
 
     // UPDATE DATA LANDSCAPE / STRUCTURE
       // add new data layers to svg <defs>
-        function storeNew(overlayers) { }
+        // function storeNew(overlayers) { }
       // update map object with source content?
       // update event listeners?
     // UPDATE PRIMARY VISUAL        <=== I.E., RENDER A MAP OF RELEVANCE
@@ -1880,10 +1885,9 @@
 
       // COMBAK
 
-      console.log(train.node())
-      console.log(path.node())
-      console.log(tprm)
-      console.log(quadtree)
+      // console.log(train.node())
+      // console.log(path.node())
+      // console.log(tprm)
 
       // as train moves along line, loop to continually check present position ::bufferedQueryPt:: against quadtree enrich data
         // trains: reveal as soon as buffer intersects
@@ -1930,7 +1934,7 @@
 
       // scale of initial view
       let firstFrame = projPath.bounds(turf.lineString(firstThree)),
-      firstTransform = getIdentity(getTransform(firstFrame,extent0,0.6)),
+      firstTransform = getIdentity(getTransform(firstFrame,extent0,0.4)),
                scale = firstTransform.k;
 
       // calc first and last zoomIdentity based on stable k
@@ -2039,6 +2043,11 @@
 
           bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
 
+          console.log(currentLngLat)
+          console.log(bufferExtent)
+          console.log(turf.point(currentLngLat),0.5,{units: "degrees"});
+          console.log(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+
         // moving forward, translate initial bufferExtent along with train point
         } else {
           bufferExtent = shifted(prevExtent,prevLocation,currentLocation);
@@ -2065,6 +2074,9 @@
                          .style("stroke","whitesmoke")
                          .style("stroke-width","0.2px")
                          .style("opacity", 0.4)
+
+        // these buffers appear much bigger served from githubPages than from my local atom liveserver..  problem solving this
+        console.log(bufferVis.node())
 
         bufferVis // .lower()
             .transition().duration(750)
