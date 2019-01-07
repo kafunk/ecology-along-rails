@@ -36,10 +36,15 @@
        line = d3.line().curve(d3.curveCardinal.tension(0)),
           t = 12000;  // default
 
+  // var padX = -72,
+  //     padY = -24;
   var padX = 0,
       padY = 0;
 
   var parentWindow = d3.select("#map-and-dash-pane").node(),
+            // margin = { top: 0, bottom: 0, left: 0, right: 0},
+            // height = parentWindow.clientHeight - margin.top - margin.bottom,
+            //  width = parentWindow.clientWidth - margin.left - margin.right;
             height = parentWindow.clientHeight,
              width = parentWindow.clientWidth;
 
@@ -47,11 +52,10 @@
 
   var extent0 = [[-width/2, -height/2],[width/2, height/2]];
 
-  var translate0 = [(width - padX)/2, (height + padY)/2];
+  var translate0 = [(width + padX)/2, (height + padY)/2];
 
-  var scale0 = 1;
+  var scale0 = 0.9 //1;
 
-  // let currentView, currentBounds;
   let currentView = {
       scale: scale0
     },
@@ -98,7 +102,8 @@
   var nullPath = d3.geoPath().projection(null);
 
   // go-to path generator
-  var path = d3.geoPath().projection(projection);
+  // var path = d3.geoPath().projection(projection);
+  var projPath = d3.geoPath().projection(projection);
 
   // pre-projected path generator
   var ppPath = d3.geoPath().projection(identity);
@@ -110,7 +115,8 @@
   var active = d3.select(null);
 
   var zoom = d3.zoom()
-    .translateExtent(paddedBounds(extent0).coordinates)
+    // .translateExtent(paddedBounds(extent0).coordinates)
+    .translateExtent(extent0)
     .scaleExtent([scale0*0.5, scale0*64])
     .on("zoom", zoomed)
 
@@ -165,8 +171,8 @@
       .attr("offset", function(d,i) { return i/(linearGradientScale.range().length-1); })
       .attr("stop-color", d => { return d });
 
-  // append radial color gradient to new svg <defs> element
-	var radialGradient = svg.append("defs").append("radialGradient")
+  // append radial color gradient to <defs> element
+	var radialGradient = defs.append("radialGradient")
 		.attr("id", "radial-gradient")
 		.attr("cx", "50%")
 		.attr("cy", "50%")
@@ -284,7 +290,7 @@
     // FILLED MESH
     // var continent =
     adminBase.append("path")
-      .attr("d", path(continentMesh))
+      .attr("d", projPath(continentMesh))
       .style("stroke","darkslategray")
       .style("stroke-width",0.2)
       .style("stroke-opacity",0.8)
@@ -293,7 +299,7 @@
     // var lakeMesh =
     hydroBase.append("path")
       .attr("id", "lake-mesh")
-      .attr("d", path(lakeMesh))
+      .attr("d", projPath(lakeMesh))
       .style("fill","cyan")
       .style("stroke","teal")
       .style("stroke-width",0.1)
@@ -303,7 +309,7 @@
     // var urbanAreas =
     urbanBase.append("path")
       .attr("id", "urban-areas")
-      .attr("d", path(urbanMesh))
+      .attr("d", projPath(urbanMesh))
       .attr("stroke","silver")
       .attr("fill","gainsboro")
       .style("stroke-width",0.1)
@@ -313,7 +319,7 @@
     // var countryBorders =
     adminBase.append("path")
       .attr("id","country-borders")
-      .attr("d", path(countriesMesh))
+      .attr("d", projPath(countriesMesh))
       .style("fill","none")
       .style("stroke","yellowgreen")
       .style("stroke-width",0.6)
@@ -321,7 +327,7 @@
     // var stateBorders =
     adminBase.append("path")
       .attr("id","state-borders")
-      .attr("d", path(statesMesh))
+      .attr("d", projPath(statesMesh))
       .style("fill","none")
       .style("stroke","magenta")
       .style("stroke-width",0.4)
@@ -330,7 +336,7 @@
     // var passRailways =
     // railBase.append("path")
     //   .attr("id","pass-railways")
-    //   .attr("d", path(passRailMesh))
+    //   .attr("d", projPath(passRailMesh))
     //   .style("fill","none")
     //   .style("stroke","lightsteelblue")
     //   .style("stroke-width",0.6)
@@ -343,7 +349,7 @@
       .selectAll("path")
       .data(sourceData.hydroLines.gj.features.filter(d => { return d.properties.strokeweig !== null }))
       .enter().append("path")
-        .attr("d", path)
+        .attr("d", projPath)
         .style("fill","none")
         .style("stroke","teal")
         .style("stroke-width", d => { return d.properties.strokeweig })
@@ -354,7 +360,7 @@
       .selectAll("path")
       .data(sourceData.railways.gj.features)
       .enter().append("path")
-        .attr("d", path)
+        .attr("d", projPath)
         .attr("stroke-width", d => { return (8/(d.properties.scalerank * 4)) }) // 10/(d.properties.scalerank ** 2)
         .attr("stroke","lightslategray")
         .style("fill", "none")
@@ -701,7 +707,7 @@
             gj: gj,
             getPath() { return g.select("#full-route").attr("d"); },
             getPathLength() { return this.getPath().node().getTotalLength(); },
-            getBounds() { return path.bounds(this.lineString); },
+            // getBounds() { return projPath.bounds(this.lineString); },
             // getProjectedGj() {
             //   let segments = this.segments;
             //   let projectedSegments = [];
@@ -810,14 +816,38 @@
 
         // zoomTo padded bounds of chosen route
         let routeCoords = chosen.lineString.geometry.coordinates;
-        let routeBounds = getIdentity(getTransform(path.bounds(paddedBounds(routeCoords)))),
+        // let routeBounds = getIdentity(getTransform(projPath.bounds(paddedBounds(routeCoords)))),
+        let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString))),
                      k0 = routeBounds.k,
                 centerPt = turf.center(turf.explode(chosen.lineString)),
               identity0 = getIdentity(centerTransform(projection(centerPt.geometry.coordinates),k0));
 
-        console.log(routeBounds)
-        console.log("vs")
-        console.log(identity0)
+        // console.log(routeCoords)
+        // console.log(paddedBounds(routeCoords))
+        // console.log(projPath.bounds(paddedBounds(routeCoords)))
+        // console.log(getTransform(projPath.bounds(paddedBounds(routeCoords))))
+        // console.log(getIdentity(getTransform(projPath.bounds(paddedBounds(routeCoords)))))
+        //
+        // console.log(paddedBounds(routeCoords))
+        // let test = [projection(paddedBounds(routeCoords).coordinates[0]),projection(paddedBounds(routeCoords).coordinates[1])]
+        // console.log(test)
+        // console.log(getTransform(test))
+        // console.log(getIdentity(getTransform(test)))
+        //
+        // let testRouteBounds = getIdentity(getTransform(test)),
+        //                  k1 = testRouteBounds.k,
+        //       testIdentity0 = getIdentity(centerTransform(projection(centerPt.geometry.coordinates),k1));
+
+        // console.log(routeBounds)
+        // console.log("vs")
+        // console.log(identity0)
+        //
+        // console.log(testRouteBounds)
+        // console.log("vs")
+        // console.log(testIdentity0)
+        //
+        // console.log(k0)
+        // console.log(k1)
 
         // control timing with transition start/end events
         svg.transition().duration(sT*2).ease(d3.easeCubicIn)
@@ -850,8 +880,8 @@
           .on("end", hide)
 
         // d3.select("#dashplus").transition()
-        //   // .delay(sT/2)
-        //   // .duration(sT * 2)
+        //   .delay(sT/2)
+        //   .duration(sT * 2)
         //   .style("opacity", 1)
         //   .on("end", show)
 
@@ -1075,7 +1105,7 @@
           withinBuffer: bufferedRoute
           }
 
-          console.log(chosen)
+          // console.log(chosen)
 
           return chosen;
 
@@ -1093,7 +1123,7 @@
           //   .selectAll("path")
           //   .data(polys)
           //   .enter().append("path")
-          //     .attr("d", path)
+          //     .attr("d", projPath)
           //     .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
           //     .classed("enrich poly waiting", true)
           //     .style("fill", d => { return d3.interpolateSinebow(Math.random()); })
@@ -1106,7 +1136,7 @@
           //   .selectAll("path")
           //   .data(lines)
           //   .enter().append("path")
-          //     .attr("d", path)
+          //     .attr("d", projPath)
           //     .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
           //     .classed("enrich line waiting", true)
           //     .style("stroke", d => { return d3.interpolateWarm(Math.random()); })
@@ -1115,22 +1145,25 @@
           //    // .on("intersected", highlightLine)
 
           var enrichPoints = overlayers.append("g")
-            .attr("id", "enrich-points")
+            .attr("id", "enrich-pts")
             // .attr("class", "enrich points extract overlay group")
-            .selectAll("circle")
+            .selectAll(".enrich-pt")
             .data(pts)
             .enter().append("circle")
+              .classed("enrich-pt waiting", true)
               .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
               .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
               .attr("r", 1)
-              .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
-              .classed("enrich point waiting", true)
+              .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY + " " + d.properties.TYPE})
               .style("fill", d => { return d3.interpolateCool(Math.random()); })
               .style("stroke", d => { return d3.interpolateGreys(Math.random()); })
-              .style("stroke-width", 0.4)
+              .style("stroke-width", "0.4px")
              // .on("intersected", highlightPt)
 
-          // console.log(enrichPoints.node())
+          console.log(pts)
+          console.log(overlayers.node())
+          console.log(enrichPoints.nodes())
+          console.log(g.node())
 
         }
 
@@ -1175,13 +1208,20 @@
         // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
 
         // get projected bounding box of chosen route
-        let pathBox = path.bounds(bufferedRoute)
+        let pathBox = projPath.bounds(bufferedRoute),
+        // if projPath.bounds returning infinity, -infinity:
+        //  let pB = paddedBounds(bufferedRoute.geometry.coordinates[0]),
+        //     pB0 = projection(pB.coordinates[0]),
+        //     pB1 = projection(pB.coordinates[1]),
+        // pathBox = [[pB0[0],pB1[1]],[pB1[0],pB0[1]]],
                  x0 = pathBox[0][0], // xmin
                  y0 = pathBox[0][1], // ymin
                  x1 = pathBox[1][0], // xmax
                  y1 = pathBox[1][1]; // ymax
                  // rx = x1 - x0,       // box width
                  // ry = y1 - y0;       // box height
+
+        console.log(pathBox)
 
         // initiate quadtree with specified x and y functions
         const projectX = d => { return projection(d.geometry.coordinates)[0] },
@@ -1190,8 +1230,11 @@
         quadtree = d3.quadtree(triggerData,projectX,projectY)
                      .extent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
 
+        projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+        identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+
         let grid = g.append("g")
-                    .attr("id","nodes")
+                    .attr("id","quadnodes")
                     .selectAll(".quadnode")
                     .data(nodes(quadtree))
                     .enter().append("rect")
@@ -1201,6 +1244,10 @@
                       .attr("width", function(d) { return d.y1 - d.y0; })
                       .attr("height", function(d) { return d.x1 - d.x0; })
                       .style("fill","none")
+                      // .style("fill","tomato")
+                      // .style("stroke","whitesmoke")
+                      // .style("stroke-width","0.2px")
+                      // .style("opacity","0.4")
 
         let triggerPts = g.append("g")
                           .attr("id","trigger-pts")
@@ -1276,6 +1323,10 @@
         let simpOptions = {tolerance: 1, highQuality: false, mutate: true},
                fullSimp = turf.simplify(routeObj.lineString,simpOptions);
 
+        // // add precise to/from coordinates to simplified line for routeBounds consistency
+        // fullSimp.geometry.coordinates.unshift([routeObj.from.lng,routeObj.from.lat])
+        // fullSimp.geometry.coordinates.push([routeObj.to.lng,routeObj.to.lat])
+
         let simpSlice,
             firstLast,
             simpLength = Math.floor(turf.length(fullSimp, {units: "miles"}));
@@ -1310,7 +1361,7 @@
           .style("stroke","none")
           // uncomment below for visual of zoomArc
             // .style("stroke", "rebeccapurple")
-            // .style("stroke-width",2)
+            // .style("stroke-width",1)
 
         // tprm hard coded as goal of animated ms per route mile;
         // tpsm is based on same, calculated per simplified miles
@@ -1384,10 +1435,86 @@
 
       // receives unprojected coords, finds bbox of three received coords and pads returned bbox to ensure all three remain well within zoom frame
       function paddedBounds(ptArray) {
-        let bbox = turf.bbox(turf.lineString(ptArray))
+
+        // let bbox = turf.bbox(turf.lineString(ptArray))
+        let bbox = turf.bbox(turf.featureCollection(ptArray.map(pt => { return turf.point(pt); })))
+
         // 2% SVG padding (adjusted for y reflection)
-        let padded = [[bbox[0]*1.02,bbox[1]*0.98], [bbox[2]*0.98,bbox[3]].map(pt => pt*1.02)],
-          paddedGj = turf.lineString(padded);
+        // let padded = [[bbox[0]*1.02,bbox[1]*0.98], [bbox[2]*0.98,bbox[3]].map(pt => pt*1.02)];
+        let padded = [[bbox[0]*1.02,bbox[1]*0.98], [bbox[2]*0.98,bbox[3]*1.02]];
+        // console.log(padded)
+
+        // let alt = [[bbox[0]*1.02,bbox[1]*0.98], [bbox[2]*0.98,bbox[3]*1.02]];
+        // console.log(alt)
+
+        // let alt2 = [[bbox[0]*0.98,bbox[1]*1.02], [bbox[2]*1.02,bbox[3]*0.98]];
+        // console.log(alt2)
+
+        // let alt3 = [[bbox[0]*1.02,bbox[1]*1.02], [bbox[2]*1.02,bbox[3]*1.02]];
+        // console.log(alt3)
+
+        // let alt4 = [[bbox[0]*0.98,bbox[1]*1.02], [bbox[2]*1.02,bbox[3]*1.02]];
+        // console.log(alt4)
+
+        let paddedGj = turf.lineString(padded); // padded
+
+        g.append("rect")
+          .datum(padded)
+          .attr("x", d => { return d[0][0]; })
+          .attr("y", d => { return d[0][1]; })
+          .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+          .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+          .style("fill","white")
+          .style("stroke","whitesmoke")
+          .style("stroke-width","0.4px")
+          .style("opacity", 0.5)
+
+        console.log(paddedGj)
+
+        // g.append("rect")
+        //   .datum(alt)
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .style("fill","tomato")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.4px")
+        //   .style("opacity", 0.5)
+        //
+        // g.append("rect")
+        //   .datum(alt2)
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .style("fill","yellow")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.4px")
+        //   .style("opacity", 0.5)
+        //
+        // g.append("rect")
+        //   .datum(alt3)
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .style("fill","slategray")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.4px")
+        //   .style("opacity", 0.5)
+        //
+        // g.append("rect")
+        //   .datum(alt4)
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .style("fill","cyan")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.4px")
+        //   .style("opacity", 0.5)
+
         return paddedGj.geometry;  // returns GJ with padded, unprojected bounding coordinates
       }
 
@@ -1417,11 +1544,11 @@
             // calculate translate necessary to center data within extent
             let tx = -k * p.x + width/2,
                 ty = -k * p.y + height/2;
-            // clip projected data to minimize shift/render calculations?
-            let clipExtent = [[-tx, -ty], [tx, ty]];
+            // // clip projected data to minimize shift/render calculations?
+            // // let clipExtent = [[-tx/7, -ty/7], [tx/7, ty/7]];
             // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
-            identity.clipExtent(clipExtent)
-            projection.clipExtent(clipExtent)
+            // identity.clipExtent(clipExtent)
+            // projection.clipExtent(clipExtent)
             return "translate(" + tx + "," + ty + ") scale(" + k + ")";
           }
         }
@@ -1570,11 +1697,11 @@
     function redraw(layerGroupSelector){
       d3.selectAll(`g${layerGroupSelector}`) // could be # or .
         .selectAll("path")
-          .attr("d",path)
+          .attr("d",projPath)
     }
     function redrawMap() {
-      g.selectAll("path.rendered.projectedOTF").attr("d", path);
-      g.selectAll("path.rendered").attr("d", path);
+      g.selectAll("path.rendered.projectedOTF").attr("d", projPath);
+      g.selectAll("path.rendered").attr("d", projPath);
     }
     function rerender(content = "map") {
       // select content from DOM
@@ -1702,34 +1829,30 @@
 
       active = d3.select(this).classed("active", true);
 
-      zoomTo(path.bounds(d))
+      zoomTo(projPath.bounds(d))
         // make sure upper-most (clickable) layer is in accordance with path function, or adjust bounds() caller accordingly
 
     }
 
     function zoomed() {
 
-      var transform = d3.zoomTransform(this)
+      var transform = d3.zoomTransform(this) // .scale(0.8);
 
-      let scale = transform.k,
-            e00 = transform.x,
-            e11 = transform.y;
+      let k = transform.k,
+         tx = transform.x,
+         ty = transform.y;
 
-      let translate = [e00, e11],
-         clipExtent = [[-(e00 ** 2), -(e11 ** 2)], [e00 ** 2, e11 ** 2]]; // extended for leeway around edges
+      let abs = v => { return Math.abs(v) },
+        clipExtent = [[-abs(tx), -abs(ty)], [abs(tx), abs(ty)]];
+
+      // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
 
       identity.clipExtent(clipExtent)
       projection.clipExtent(clipExtent)
 
-      g.style("stroke-width", 1 / (scale*scale) + "px");
+      g.style("stroke-width", 1 / (k*k) + "px");
 
-      g.attr("transform", "translate(" + translate[0] + "," + translate[1] + ") scale(" + scale + ")");
-
-      // currentView = {
-      //   translate: translate,
-      //   scale: scale,
-      //   extent: clipExtent
-      // };
+      g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + k + ")");
 
     }
 
@@ -1760,11 +1883,11 @@
 
     }
 
-    function getTransform(bounds, extent = extent0) {
+    function getTransform(bounds, extent = extent0, padding = 0.1) {
 
       let b0,b1;
 
-      // accept bbox, path.bounds(), or SVG bbox
+      // accept bbox, projPath.bounds(), or SVG bbox
       if (bounds.length === 4) {
         b0 = [bounds[0],bounds[1]],
         b1 = [bounds[2],bounds[3]]
@@ -1778,7 +1901,7 @@
        width = extent[1][0] - extent[0][0],  // range x (output)
       height = extent[1][1] - extent[0][1];  // range y (output)
 
-      let k = 0.9 / Math.max(dx / width, dy / height),
+      let k = (1 - padding) / Math.max(dx / width, dy / height),
                              // aka the m in y = mx + b
                              // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
                              // 0.9 provides 10% built-in padding
@@ -1789,7 +1912,7 @@
       let tx = (width - k * x) / 2,
           ty = (height - k * y) / 2;
 
-      let transform = { k: k, x: tx, y: ty, extent: extent };
+      let transform = { k: k, x: tx, y: ty };
 
       return transform;
 
@@ -2078,8 +2201,13 @@
     }
 
     function getIntersecting(train,path,tprm,quadtree) {
-      // console.log(train.node())
-      // console.log(path.node())
+
+      // COMBAK
+
+      console.log(train.node())
+      console.log(path.node())
+      console.log(tprm)
+      console.log(quadtree)
 
       // as train moves along line, loop to continually check present position ::bufferedQueryPt:: against quadtree enrich data
         // trains: reveal as soon as buffer intersects
@@ -2112,7 +2240,8 @@
       //     // return "translate(" + tx + "," + ty + ") scale(" + k + ")";
       //   }
       // }
-      console.log(l)
+
+      // console.log(l)
 
       console.log(quadtree)
 
@@ -2124,9 +2253,15 @@
     function goTrain(point,fullPath,simpPath,tprm,tpsm,simpDistance,[firstThree,lastThree],enrichData) {
 
       // scale of initial view
-      let firstFrame = path.bounds(paddedBounds(firstThree)),
-      firstTransform = getIdentity(getTransform(firstFrame)),
-               scale = firstTransform.k;
+      let firstFrame = projPath.bounds(turf.lineString(firstThree));
+
+      // // b/c above occasionally returning infinity, -infinity:
+      // let pB0 = projection(paddedBounds(firstThree).coordinates[0]),
+      //     pB1 = projection(paddedBounds(firstThree).coordinates[1]);
+      // let firstFrame = [[pB0[0],pB1[1]],[pB1[0],pB0[1]]],
+
+      let firstTransform = getIdentity(getTransform(firstFrame,extent0,0.6)),
+                   scale = firstTransform.k;
 
       // calc first and last zoomIdentity based on stable k
       let firstIdentity = getIdentity(centerTransform(projection(firstThree[1]),scale)),
@@ -2137,6 +2272,24 @@
          tDelay = (simpDistance > 300) ? tprm * 100 : tprm * 0,      // delay zoomFollow until train hits mm 100 (of fullSimp) IF route long enough
            tMid = tFull - (tDelay*2),  // tDelay doubled to account for stopping 100m from end
            tEnd = 3000;           // arbitrary time to zoom to start frame
+
+      let x0 = firstFrame[0][0], // xmin
+          y0 = firstFrame[0][1], // ymin
+          x1 = firstFrame[1][0], // xmax
+          y1 = firstFrame[1][1]; // ymax
+
+      // console.log(x0)
+      // console.log(y0)
+      // console.log(x1)
+      // console.log(y1)
+
+      // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+      // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+
+      // console.log(firstFrame)
+      // console.log(firstTransform)
+      // console.log(scale)
+      // console.log(firstIdentity)
 
       // zoom to First frame
       svg.transition().duration(tEnd*2) // .ease(d3.easeBounceIn)
@@ -2149,7 +2302,7 @@
             makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
             d3.timeout(() => {
               // if (confirm("Ready?")) {
-                d3.timerFlush()
+                // d3.timerFlush()
                 // disable free zooming
                 svg.on('.zoom',null)
                 // call initial point transition
@@ -2182,7 +2335,7 @@
                 })
             }
             // follow along checking for intersecting encounters
-            // getIntersecting(point,fullPath,tprm,quadtree)
+            getIntersecting(point,fullPath,tprm,quadtree)
           })
          .on("end", () => {
            // inform d3 zoom behavior of final transform value and reenable free zooming
@@ -2229,7 +2382,14 @@
         // use LngLat coords to calculate bufferExtent given radius in degrees ONE TIME ONLY
         if (!prevExtent) {
           let currentLngLat = projection.invert(currentLocation);
-          bufferExtent = path.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+
+          bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+
+          // // while projPath.bounds returning infinity, -infinity
+          // let bufferBounds =  paddedBounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}).geometry.coordinates[0]);
+          //
+          // bufferExtent = [projection(bufferBounds.coordinates[0]), projection(bufferBounds.coordinates[1])]
+
         // moving forward, translate initial bufferExtent along with train point
         } else {
           bufferExtent = shifted(prevExtent,prevLocation,currentLocation);
@@ -2238,7 +2398,7 @@
         prevLocation = currentLocation,
           prevExtent = bufferExtent;
 
-        function shifted(extent,previousPt,currentPt){
+        function shifted(extent,previousPt,currentPt) {
           let tx = currentPt[0] - previousPt[0],
               ty = currentPt[1] - previousPt[1];
           return extent.map(d => { return [d[0]+tx, d[1]+ty]; })
@@ -2256,7 +2416,7 @@
                          .style("stroke-width","0.2px")
                          .style("opacity", 0.4)
 
-        bufferVis.lower()
+        bufferVis // .lower()
             .transition().duration(750)
             .style("opacity","0.6")
             .on("end", () => {
@@ -2264,7 +2424,8 @@
                 .style("opacity","0")
                 .on("end", () => {
                   bufferVis.classed("none",true)
-                  bufferVis.exit().remove()
+                  // bufferVis.exit().remove() // doesn't work
+                  bufferVis.remove()           // no need for exit() bc datum was appended, not joined?
                 })
             })
 
