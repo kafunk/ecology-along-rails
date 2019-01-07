@@ -54,7 +54,7 @@
 
   var translate0 = [(width + padX)/2, (height + padY)/2];
 
-  var scale0 = 0.9 //1;
+  var scale0 = 0.9 // 1;
 
   let currentView = {
       scale: scale0
@@ -115,7 +115,6 @@
   var active = d3.select(null);
 
   var zoom = d3.zoom()
-    // .translateExtent(paddedBounds(extent0).coordinates)
     .translateExtent(extent0)
     .scaleExtent([scale0*0.5, scale0*64])
     .on("zoom", zoomed)
@@ -130,7 +129,6 @@
 
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
-     // .on("wheel.zoom", null)
 
 // SET UP CUSTOM DISPATCH BEHAVIOR
 
@@ -701,26 +699,11 @@
             mileMarkers() { return this.getMileMarkers(); },
             arcPts() { return getArcPts(this.lineString,this.totalDistance); },
             ticks: {},
-            // queryChunks: newFeatureCollection(),
-            // quadtree: d3.quadtree(),
             overallBearing: turf.bearing([places[0].lng,places[0].lat],[places[1].lng,places[1].lat]),
             gj: gj,
             getPath() { return g.select("#full-route").attr("d"); },
             getPathLength() { return this.getPath().node().getTotalLength(); },
             // getBounds() { return projPath.bounds(this.lineString); },
-            // getProjectedGj() {
-            //   let segments = this.segments;
-            //   let projectedSegments = [];
-            //   for (var i = 0; i < segments.length; i++) {
-            //     let wgsCoords = segments[i].lineString.coordinates,
-            //       projectedCoords = [];
-            //     wgsCoords.forEach(coord => {
-            //       projectedCoords.push(projection(coord));
-            //     });
-            //     projectedSegments = projectedSegments.concat(projectedCoords);
-            //   }
-            //   return turf.lineString(projectedSegments);
-            // },
             // PATH NODES / SEGMENTS (to interpolate b/t orig and destination at regular, arbitrary intervals)
             getMileMarkers() {
               let miles = Math.floor(this.totalDistance);
@@ -728,20 +711,6 @@
               return this.mileMarkers;
             }
           }
-
-          // PATH NODES / SEGMENTS (to interpolate b/t orig and destination at regular, arbitrary intervals)
-          // let miles = Math.floor(thisRoute.totalDistance);
-          // thisRoute.mileMarkers = [...getBreaks(thisRoute.lineString,thisRoute.totalDistance,miles)].map(point => projection(point));
-
-          // OVERLAPPING BBOX CHUNKS (in order)
-          // let queryChunks = 5,
-          //     chunkBreaks = [...getBreaks(thisRoute.lineString,thisRoute.totalDistance,queryChunks)].map(point => projection(point));
-          // for (var i = 0; i < chunkBreaks.length-1; i ++) {
-          //   let line = turf.lineString([chunkBreaks[i],chunkBreaks[i+1]]);
-          //   let bbox = turf.bbox(line);
-          //   let bboxPolygon = turf.bboxPolygon(bbox);
-          //   thisRoute.queryChunks.features.push(bboxPolygon);
-          // }
 
           // ALL STOPS
           route.segments.forEach(segment => {
@@ -814,40 +783,11 @@
 
         let sT = 2400; // standard transition time
 
-        // zoomTo padded bounds of chosen route
-        let routeCoords = chosen.lineString.geometry.coordinates;
-        // let routeBounds = getIdentity(getTransform(projPath.bounds(paddedBounds(routeCoords)))),
+        // zoom to bounds of chosen route
         let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString))),
                      k0 = routeBounds.k,
-                centerPt = turf.center(turf.explode(chosen.lineString)),
+               centerPt = turf.center(turf.explode(chosen.lineString)),
               identity0 = getIdentity(centerTransform(projection(centerPt.geometry.coordinates),k0));
-
-        // console.log(routeCoords)
-        // console.log(paddedBounds(routeCoords))
-        // console.log(projPath.bounds(paddedBounds(routeCoords)))
-        // console.log(getTransform(projPath.bounds(paddedBounds(routeCoords))))
-        // console.log(getIdentity(getTransform(projPath.bounds(paddedBounds(routeCoords)))))
-        //
-        // console.log(paddedBounds(routeCoords))
-        // let test = [projection(paddedBounds(routeCoords).coordinates[0]),projection(paddedBounds(routeCoords).coordinates[1])]
-        // console.log(test)
-        // console.log(getTransform(test))
-        // console.log(getIdentity(getTransform(test)))
-        //
-        // let testRouteBounds = getIdentity(getTransform(test)),
-        //                  k1 = testRouteBounds.k,
-        //       testIdentity0 = getIdentity(centerTransform(projection(centerPt.geometry.coordinates),k1));
-
-        // console.log(routeBounds)
-        // console.log("vs")
-        // console.log(identity0)
-        //
-        // console.log(testRouteBounds)
-        // console.log("vs")
-        // console.log(testIdentity0)
-        //
-        // console.log(k0)
-        // console.log(k1)
 
         // control timing with transition start/end events
         svg.transition().duration(sT*2).ease(d3.easeCubicIn)
@@ -887,7 +827,7 @@
 
         // draw faint stroke along returned route
         var journey = g.append("g")
-          // .classed("overlayers overlay rail route experience journey current", true)
+          // .classed("experience current", true)
           .attr("id", "journey")
 
         var places = journey.append("g")
@@ -912,6 +852,7 @@
           stnsEnRoute.add(segment.arriving);
         });
 
+        // keep relevant station points
         let relevantStns = places.selectAll("circle")
           .data([...stnsEnRoute])
           .enter().append("circle")
@@ -935,7 +876,6 @@
           })
 
         let arcPts = received.arcPts();
-            // mileMarkers = received.mileMarkers;
 
         // LINE/ROUTE
         // faint underlying solid
@@ -1209,19 +1149,12 @@
 
         // get projected bounding box of chosen route
         let pathBox = projPath.bounds(bufferedRoute),
-        // if projPath.bounds returning infinity, -infinity:
-        //  let pB = paddedBounds(bufferedRoute.geometry.coordinates[0]),
-        //     pB0 = projection(pB.coordinates[0]),
-        //     pB1 = projection(pB.coordinates[1]),
-        // pathBox = [[pB0[0],pB1[1]],[pB1[0],pB0[1]]],
                  x0 = pathBox[0][0], // xmin
                  y0 = pathBox[0][1], // ymin
                  x1 = pathBox[1][0], // xmax
                  y1 = pathBox[1][1]; // ymax
-                 // rx = x1 - x0,       // box width
-                 // ry = y1 - y0;       // box height
 
-        console.log(pathBox)
+        // console.log(pathBox)
 
         // initiate quadtree with specified x and y functions
         const projectX = d => { return projection(d.geometry.coordinates)[0] },
@@ -1230,8 +1163,8 @@
         quadtree = d3.quadtree(triggerData,projectX,projectY)
                      .extent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
 
-        projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-        identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+        // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+        // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
 
         let grid = g.append("g")
                     .attr("id","quadnodes")
@@ -1244,10 +1177,11 @@
                       .attr("width", function(d) { return d.y1 - d.y0; })
                       .attr("height", function(d) { return d.x1 - d.x0; })
                       .style("fill","none")
-                      // .style("fill","tomato")
-                      // .style("stroke","whitesmoke")
-                      // .style("stroke-width","0.2px")
-                      // .style("opacity","0.4")
+                      // uncomment for visual of grid
+                        // .style("fill","tomato")
+                        // .style("stroke","whitesmoke")
+                        // .style("stroke-width","0.2px")
+                        // .style("opacity","0.4")
 
         let triggerPts = g.append("g")
                           .attr("id","trigger-pts")
@@ -1284,21 +1218,21 @@
 
       function useDefs() {
 
-          defs.append("use")
-              .attr("xlink:href", "#watersheds");
-          // svg.append("use")
-          //   .attr("xlink:href", "#watersheds")
-          g.append("use")
-            .attr("id", "enrich-pool")
-            .attr("xlink:href", "#watersheds")
-            // .attr("d",path)
-            // .attr("class", "stroke")
-            // .attr("stroke-dasharray", "1 1")
-            // .attr("stroke-width", 1.6)
-            // .attr("stroke", "teal")
-            // FILTER
+        defs.append("use")
+            .attr("xlink:href", "#watersheds");
+        // svg.append("use")
+        //   .attr("xlink:href", "#watersheds")
+        g.append("use")
+          .attr("id", "enrich-pool")
+          .attr("xlink:href", "#watersheds")
+          // .attr("d",path)
+          // .attr("class", "stroke")
+          // .attr("stroke-dasharray", "1 1")
+          // .attr("stroke-width", 1.6)
+          // .attr("stroke", "teal")
+          // FILTER
 
-          // console.log(d3.select("#enrich-pool"))
+        // console.log(d3.select("#enrich-pool"))
 
       }
 
@@ -1322,10 +1256,6 @@
 
         let simpOptions = {tolerance: 1, highQuality: false, mutate: true},
                fullSimp = turf.simplify(routeObj.lineString,simpOptions);
-
-        // // add precise to/from coordinates to simplified line for routeBounds consistency
-        // fullSimp.geometry.coordinates.unshift([routeObj.from.lng,routeObj.from.lat])
-        // fullSimp.geometry.coordinates.push([routeObj.to.lng,routeObj.to.lat])
 
         let simpSlice,
             firstLast,
@@ -1433,91 +1363,6 @@
         return {x: tx, y: ty, k: scale};
       }
 
-      // receives unprojected coords, finds bbox of three received coords and pads returned bbox to ensure all three remain well within zoom frame
-      function paddedBounds(ptArray) {
-
-        // let bbox = turf.bbox(turf.lineString(ptArray))
-        let bbox = turf.bbox(turf.featureCollection(ptArray.map(pt => { return turf.point(pt); })))
-
-        // 2% SVG padding (adjusted for y reflection)
-        // let padded = [[bbox[0]*1.02,bbox[1]*0.98], [bbox[2]*0.98,bbox[3]].map(pt => pt*1.02)];
-        let padded = [[bbox[0]*1.02,bbox[1]*0.98], [bbox[2]*0.98,bbox[3]*1.02]];
-        // console.log(padded)
-
-        // let alt = [[bbox[0]*1.02,bbox[1]*0.98], [bbox[2]*0.98,bbox[3]*1.02]];
-        // console.log(alt)
-
-        // let alt2 = [[bbox[0]*0.98,bbox[1]*1.02], [bbox[2]*1.02,bbox[3]*0.98]];
-        // console.log(alt2)
-
-        // let alt3 = [[bbox[0]*1.02,bbox[1]*1.02], [bbox[2]*1.02,bbox[3]*1.02]];
-        // console.log(alt3)
-
-        // let alt4 = [[bbox[0]*0.98,bbox[1]*1.02], [bbox[2]*1.02,bbox[3]*1.02]];
-        // console.log(alt4)
-
-        let paddedGj = turf.lineString(padded); // padded
-
-        g.append("rect")
-          .datum(padded)
-          .attr("x", d => { return d[0][0]; })
-          .attr("y", d => { return d[0][1]; })
-          .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-          .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-          .style("fill","white")
-          .style("stroke","whitesmoke")
-          .style("stroke-width","0.4px")
-          .style("opacity", 0.5)
-
-        console.log(paddedGj)
-
-        // g.append("rect")
-        //   .datum(alt)
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .style("fill","tomato")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.4px")
-        //   .style("opacity", 0.5)
-        //
-        // g.append("rect")
-        //   .datum(alt2)
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .style("fill","yellow")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.4px")
-        //   .style("opacity", 0.5)
-        //
-        // g.append("rect")
-        //   .datum(alt3)
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .style("fill","slategray")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.4px")
-        //   .style("opacity", 0.5)
-        //
-        // g.append("rect")
-        //   .datum(alt4)
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .style("fill","cyan")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.4px")
-        //   .style("opacity", 0.5)
-
-        return paddedGj.geometry;  // returns GJ with padded, unprojected bounding coordinates
-      }
-
       // returns three points along route; origin | trailing corner, zoom focus, leading corner | destination
       function threePts(fullLine,int,i = 0) {
         let miles = { units: 'miles' }; // turf unit options
@@ -1529,11 +1374,6 @@
         return [pt0.map(d => +d.toFixed(5)),pt1.map(d => +d.toFixed(5)),pt2.map(d => +d.toFixed(5))];
       }
 
-      // if explicitly using d3.interpolateZoom, will need:
-      // function getCenterWidth(bounds,center) {
-      //   return [center[0],center[1],Math.abs(bounds[1][0]-bounds[0][0])];
-      // }
-
       // TRANSLATE ONLY
       function zoomAlong(path,k = currentView.scale) {
         var l = path.node().getTotalLength();
@@ -1544,11 +1384,10 @@
             // calculate translate necessary to center data within extent
             let tx = -k * p.x + width/2,
                 ty = -k * p.y + height/2;
-            // // clip projected data to minimize shift/render calculations?
-            // // let clipExtent = [[-tx/7, -ty/7], [tx/7, ty/7]];
-            // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
-            // identity.clipExtent(clipExtent)
-            // projection.clipExtent(clipExtent)
+            // clip projected data to minimize shift/render calculations?
+            let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
+            identity.clipExtent(clipExtent)
+            projection.clipExtent(clipExtent)
             return "translate(" + tx + "," + ty + ") scale(" + k + ")";
           }
         }
@@ -1586,97 +1425,7 @@
           function removeExcess() { }
     // UPDATE SECONDAY VISUALS (WIDGETS, ETC)
 
-      function updateTooltip() { }
-      function getTooltipContent(d) {
-        // var content = '<span class="category">Facility Name: </span>' +
-        // '<span class="align-r">' + titleCase(d.Facility_Name) + '</span>' +
-        // '<br /><span class="category">Location: </span>' +
-        // '<span class="align-r">' + titleCase(d.City) + ', ' + d.State + '</span>' +
-        // '<br /><span class="category">2018 Percent Voter Turnout: </span>' +
-        // '<span class="align-r">' + Math.floor(d.Total).toLocaleString() +
-        // ' metric tons</span>'
-        // return content;
-      }
 
-      // PIZAZZ: TOOLTIPS
-        // function makeTooltip() {
-        //   // Create new html div element to house the tooltip and give it a class so css can hide with opacity
-        //   var tooltip = d3.select("body").append("div")
-        //     .attr("class", "tooltip")
-        //
-        //   var tooltipInfo = getTooltip(props,percentVal,currentYear);
-        //
-        //   // call drawLegend function
-        //   drawLegend(svg, width, height)
-        //
-        // }
-
-        function bindTooltip(parent){
-          // bind a tooltip to the layer with geography-specific information
-          parent.bindTooltip(tooltipInfo, {
-            // sticky property so tooltip follows the mouse
-            sticky: true,
-            tooltipAnchor: [200, 200]
-          });
-
-          parent.on('mouseover', function(e) {
-            e.target.setStyle({
-              color: 'greenyellow',
-              fillColor: 'honeydew',
-              fillOpacity: 0.7
-            }).bringToFront()
-            .openTooltip();
-          });
-
-          parent.on('mouseout', function(e) {
-            dataLayer.resetStyle(e.target);
-            e.target.setStyle({
-              fillColor: colorize(percentVal)
-            }).closeTooltip();
-          });
-
-          parent.on("mouseover", onMouseover())
-
-        }
-
-        function onMouseover() {
-          d3.select(this).classed("hover", true).raise();
-          tooltip.style("opacity",1).html(getTooltipContent(d))
-        }
-        function onMouseout() {
-          d3.select(this).classed("hover", false) // remove the class
-          tooltip.style("opacity", 0)  // hide the element
-        }
-        function positionTooltip(event) {
-          // update the position of the tooltip relative to location of mouse event (offset 10,-30)
-          tooltip.style("left", (d3.event.pageX + 10) + "px")
-            .style("top", (d3.event.pageY - 30) + "px");
-        }
-        // PIZAZZ: COLOR
-        // PIZAZZ: TRANSITIONS
-
-      // Map animation, experience, encounters, triggers
-
-        // spur data refresh?, start/end/midpoint?
-        // on.("encountered", output(encounter)) // FIXME PSEUDOCODE
-          // temp popups/tooltips fade in/out
-          // legend-log populated
-          // dashboard/trackers updated
-          //
-
-        function flashName(e) { }
-        //   .on("mouseover", function raiseTooltip(d,i,e) {
-        //     console.log(d)
-        //     console.log(i)
-        //     console.log(e)
-        //     // div.transition()
-        //     //     .duration(200)
-        //     //     .style("opacity", .9);
-        //     // div	.html(formatTime(d.date) + "<br/>"  + d.close)
-        //     //     .style("left", (d3.event.pageX) + "px")
-        //     //     .style("top", (d3.event.pageY - 28) + "px");
-        //     // })
-        // }
 
   // AWAIT USER INTERACTION or OTHER NEW INFO
     // UPON RECEIPT...                            ===>  LOOP TO (*)(*)(*)
@@ -1707,13 +1456,7 @@
       // select content from DOM
       // parse as necessary
       // redraw(content)
-
-      // svg.transition().duration(750)
-      //   .call(zoom.transform, zoom1)
-      // g.style("stroke-width", 1 / (scale*scale));
-      // // g.style("stroke-width", 1 / (scale*scale) + "px");
-      //
-      // g.attr("transform", "translate(" + translate[0] + "," + translate[1] + ") scale(" + scale + ")");
+        // g.style / transform attr..
     }
 
     // RASTER & CANVAS
@@ -1842,10 +1585,10 @@
          tx = transform.x,
          ty = transform.y;
 
-      let abs = v => { return Math.abs(v) },
-        clipExtent = [[-abs(tx), -abs(ty)], [abs(tx), abs(ty)]];
+      // let abs = v => { return Math.abs(v) },
+      //   clipExtent = [[-abs(tx), -abs(ty)], [abs(tx), abs(ty)]];
 
-      // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
+      let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
 
       identity.clipExtent(clipExtent)
       projection.clipExtent(clipExtent)
@@ -1853,20 +1596,6 @@
       g.style("stroke-width", 1 / (k*k) + "px");
 
       g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + k + ")");
-
-    }
-
-    function scaleOnly(k) {
-
-      let cTx = +/translate\((.*?),/.exec(g.attr("transform"))[1],
-          cTy = +/,(.*?)\)/.exec(g.attr("transform"))[1];
-
-      let scaled = d3.zoomIdentity
-        .translate(cTx,cTy)
-        .scale(k)
-
-      svg.transition().duration(750)
-        .call(zoom.transform, scaled)
 
     }
 
@@ -1917,16 +1646,6 @@
       return transform;
 
     }
-
-    // function makeBounds(centerPt,h,w) {
-    //   console.log(centerPt)
-    //   console.log(h)
-    //   console.log(w)
-    //   let x = centerPt[0],
-    //       y = centerPt[1];
-    //   // returns svg rect with top,left and bottom,right coords
-    //   return [[x - w/2, y + h/2],[x + w/2, y - h/2]];
-    // }
 
     function resetZoom() {
       active.classed("active", false);
@@ -2026,31 +1745,10 @@
 
   // PROJECTIONS & PATHS
 
-    function identityTransform(coordArr) {
-      let k = identity.scale(),
-         tx = identity.translate()[0],
-         ty = identity.translate()[1],
-         transformedArr = [];
-      while (coordArr.length > 0) {
-        let coord = coordArr.shift(),
-        transformed = [coord[0] * k + tx, -coord[1] * k + ty];
-        transformedArr.push(transformed.slice());
-      }
-      return transformedArr;
-    }
-    function projectionTransform(coordArr) {
-      let transformedArr = [];
-      while (coordArr.length > 0) {
-        let coord = coordArr.shift(),
-        transformed = projection(coord);
-        transformedArr.push(transformed.slice());
-      }
-      return transformedArr;
-    }
-    function setPPBounding([wgsJson,ppJson], crs = "preprojected") {
-      setBounding(ppJson, crs);
-      return [wgsJson,ppJson];
-    }
+    // function setPPBounding([wgsJson,ppJson], crs = "preprojected") {
+    //   setBounding(ppJson, crs);
+    //   return [wgsJson,ppJson];
+    // }
     function setBounding(received, crs = "wgs84") {
       let data;
       (Array.isArray(received)) ? data = received[0] : data = received;
@@ -2097,17 +1795,7 @@
       }
       return gj;
     }
-    function gj2tj(data) {
-      let tj = topojson.topology(data.features,1e5);
-      let objArr = Object.values(tj.objects);
-      tj.objects = {
-        countries: {
-          type: "GeometryCollection",
-          geometries: objArr
-        }
-      }
-      return tj;
-    }
+
     // converting from TopoJSON
     function getGj(source,key){
       return topojson.feature(source.tj, source.tj.objects[key]);
@@ -2188,18 +1876,6 @@
       return breaks;
     }
 
-    function bbox2ProjBounds(bbox) {
-      return [projection([bbox[0],bbox[1]]),projection([bbox[2],bbox[3]])];
-    }
-
-    function totalDistance(segments){
-      let t = 0;
-      for (var i = 0; i < segments.length; i ++) {
-        t += segments[i].distance;
-      }
-      return t;
-    }
-
     function getIntersecting(train,path,tprm,quadtree) {
 
       // COMBAK
@@ -2253,15 +1929,9 @@
     function goTrain(point,fullPath,simpPath,tprm,tpsm,simpDistance,[firstThree,lastThree],enrichData) {
 
       // scale of initial view
-      let firstFrame = projPath.bounds(turf.lineString(firstThree));
-
-      // // b/c above occasionally returning infinity, -infinity:
-      // let pB0 = projection(paddedBounds(firstThree).coordinates[0]),
-      //     pB1 = projection(paddedBounds(firstThree).coordinates[1]);
-      // let firstFrame = [[pB0[0],pB1[1]],[pB1[0],pB0[1]]],
-
-      let firstTransform = getIdentity(getTransform(firstFrame,extent0,0.6)),
-                   scale = firstTransform.k;
+      let firstFrame = projPath.bounds(turf.lineString(firstThree)),
+      firstTransform = getIdentity(getTransform(firstFrame,extent0,0.6)),
+               scale = firstTransform.k;
 
       // calc first and last zoomIdentity based on stable k
       let firstIdentity = getIdentity(centerTransform(projection(firstThree[1]),scale)),
@@ -2278,18 +1948,8 @@
           x1 = firstFrame[1][0], // xmax
           y1 = firstFrame[1][1]; // ymax
 
-      // console.log(x0)
-      // console.log(y0)
-      // console.log(x1)
-      // console.log(y1)
-
       // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
       // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-
-      // console.log(firstFrame)
-      // console.log(firstTransform)
-      // console.log(scale)
-      // console.log(firstIdentity)
 
       // zoom to First frame
       svg.transition().duration(tEnd*2) // .ease(d3.easeBounceIn)
@@ -2302,7 +1962,7 @@
             makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
             d3.timeout(() => {
               // if (confirm("Ready?")) {
-                // d3.timerFlush()
+                // d3.timerFlush() // necessary?
                 // disable free zooming
                 svg.on('.zoom',null)
                 // call initial point transition
@@ -2370,12 +2030,6 @@
     let triggerPts = g.select("#trigger-pts").selectAll(".trigger-pt");
     function trainMoved() { // point,elapsed) {
 
-    // alt trainMoved()
-    // function trainMoved(mutationsList,observer) {
-      // for (var mutation of mutationsList) {
-
-        // accessing translate values this way slightly more efficient than using point.attr("transform") + regex parser
-        // let transformMatrix = mutation.target.transform.animVal[0].matrix,
         let transformMatrix = this.node().transform.animVal[0].matrix,
             currentLocation = [transformMatrix.e, transformMatrix.f];
 
@@ -2384,11 +2038,6 @@
           let currentLngLat = projection.invert(currentLocation);
 
           bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
-
-          // // while projPath.bounds returning infinity, -infinity
-          // let bufferBounds =  paddedBounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}).geometry.coordinates[0]);
-          //
-          // bufferExtent = [projection(bufferBounds.coordinates[0]), projection(bufferBounds.coordinates[1])]
 
         // moving forward, translate initial bufferExtent along with train point
         } else {
@@ -2404,6 +2053,7 @@
           return extent.map(d => { return [d[0]+tx, d[1]+ty]; })
         }
 
+        // temporary visual of train buffer that will eventually trigger unveiling of eco encounters en route
         let bufferVis = g.append("rect")
                          .datum(bufferExtent)
                          .classed("momentary-buffer-vis",true)
@@ -2424,8 +2074,7 @@
                 .style("opacity","0")
                 .on("end", () => {
                   bufferVis.classed("none",true)
-                  // bufferVis.exit().remove() // doesn't work
-                  bufferVis.remove()           // no need for exit() bc datum was appended, not joined?
+                  bufferVis.remove() // no need for exit() bc datum was appended, not joined?
                 })
             })
 
@@ -2630,7 +2279,7 @@
 
 //// OTHER EVENT LISTENERS & VISUAL AFFORDANCES
 
-  // (always passed e event allowing access to e.target)
+  // (can be passed e event allowing access to e.target (type?))
 
     // initial call to action
     thisWindow.on("load", function () {
@@ -2646,17 +2295,6 @@
 
     d3.select("#getInitOptions").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
                                 .on("blur", function (e) { e.target.style.background = "#fafafa" })
-
-  // Other mouseover
-  //   Tooltips (post-animation?)
-  //   .on("mouseenter", function(d) {
-  //     d3.select(this).classed("hover", true).raise();
-  //     tooltip.style("opacity", 1).html(d.name)  // eventually getTooltipContent(d)
-  //   })
-  //   .on("mouseout", function() {
-  //     d3.select(this).classed("hover", false)
-  //     tooltip.style("opacity", 0)
-  //   })
 
     d3.select("#play-pause").on("click", playPause(experience.animating))
 
@@ -2682,106 +2320,69 @@
       tooltipAnchor: [200, 200]
     });
 
-    parent.on('mouseover', function(e) {
-      e.target.setStyle({
-        color: 'greenyellow',
-        fillColor: 'honeydew',
-        fillOpacity: 0.7
-      }).bringToFront()
-      .openTooltip();
-    });
-
-    parent.on('mouseout', function(e) {
-      dataLayer.resetStyle(e.target);
-      e.target.setStyle({
-        fillColor: colorize(percentVal)
-      }).closeTooltip();
-    });
+    parent.on("mouseenter", function(d) {
+    //     d3.select(this).classed("hover", true).raise();
+    //     tooltip.style("opacity", 1).html(d.name)  // eventually getTooltipContent(d)
+    //   })
+    })
 
     parent.on("mouseover", onMouseover())
+    // parent.on('mouseover', function(e) {
+    //   e.target.setStyle({
+    //     color: 'greenyellow',
+    //     fillColor: 'honeydew',
+    //     fillOpacity: 0.7
+    //   }).bringToFront()
+    //   .openTooltip();
+    // });
+      function onMouseover() {
+        d3.select(this).classed("hover", true).raise();
+        tooltip.style("opacity",1).html(getTooltipContent(d))
+      }
 
+    parent.on("mouseout", onMouseout())
+    // parent.on('mouseout', function(e) {
+    //   d3.select(this).classed("hover", false)
+    //   //     tooltip.style("opacity", 0)
+    //   dataLayer.resetStyle(e.target);
+    //   e.target.setStyle({
+    //     // fillColor: colorize(percentVal)
+    //   }).closeTooltip();
+    // });
+      function onMouseout() {
+        d3.select(this).classed("hover", false) // remove the class
+        tooltip.style("opacity", 0)  // hide the element
+      }
   }
 
-  function onMouseover() {
-    d3.select(this).classed("hover", true).raise();
-    tooltip.style("opacity",1).html(getTooltipContent(d))
-  }
-  function onMouseout() {
-    d3.select(this).classed("hover", false) // remove the class
-    tooltip.style("opacity", 0)  // hide the element
+  function updateTooltip() { }
+  function getTooltipContent(d) {
+    // var content = '<span class="category">Facility Name: </span>' +
+    // '<span class="align-r">' + titleCase(d.Facility_Name) + '</span>' +
+    // '<br /><span class="category">Location: </span>' +
+    // '<span class="align-r">' + titleCase(d.City) + ', ' + d.State + '</span>' +
+    // '<br /><span class="category">2018 Percent Voter Turnout: </span>' +
+    // '<span class="align-r">' + Math.floor(d.Total).toLocaleString() +
+    // ' metric tons</span>'
+    // return content;
   }
   function positionTooltip(event) {
     // update the position of the tooltip relative to location of mouse event (offset 10,-30)
     tooltip.style("left", (d3.event.pageX + 10) + "px")
       .style("top", (d3.event.pageY - 30) + "px");
   }
-
-  // PIZAZZ: TOOLTIPS
-    // function makeTooltip() {
-    //   // Create new html div element to house the tooltip and give it a class so css can hide with opacity
-    //   var tooltip = d3.select("body").append("div")
-    //     .attr("class", "tooltip")
-    //
-    //   var tooltipInfo = getTooltip(props,percentVal,currentYear);
-    //
-    //   // call drawLegend function
-    //   drawLegend(svg, width, height)
-    //
-    // }
-
-    function bindTooltip(parent){
-      // bind a tooltip to the layer with geography-specific information
-      parent.bindTooltip(tooltipInfo, {
-        // sticky property so tooltip follows the mouse
-        sticky: true,
-        tooltipAnchor: [200, 200]
-      });
-
-      parent.on('mouseover', function(e) {
-        e.target.setStyle({
-          color: 'greenyellow',
-          fillColor: 'honeydew',
-          fillOpacity: 0.7
-        }).bringToFront()
-        .openTooltip();
-      });
-
-      parent.on('mouseout', function(e) {
-        dataLayer.resetStyle(e.target);
-        e.target.setStyle({
-          fillColor: colorize(percentVal)
-        }).closeTooltip();
-      });
-
-      parent.on("mouseover", onMouseover())
-
-    }
-
-    function onMouseover() {
-      d3.select(this).classed("hover", true).raise();
-      tooltip.style("opacity",1).html(getTooltipContent(d))
-    }
-    function onMouseout() {
-      d3.select(this).classed("hover", false) // remove the class
-      tooltip.style("opacity", 0)  // hide the element
-    }
-    function positionTooltip(event) {
-      // update the position of the tooltip relative to location of mouse event (offset 10,-30)
-      tooltip.style("left", (d3.event.pageX + 10) + "px")
-        .style("top", (d3.event.pageY - 30) + "px");
-    }
-    // function raiseTooltip(d,i,e) {
-    //     console.log(d)
-    //     console.log(i)
-    //     console.log(e)
-    //     // div.transition()
-    //     //     .duration(200)
-    //     //     .style("opacity", .9);
-    //     // div	.html(formatTime(d.date) + "<br/>"  + d.close)
-    //     //     .style("left", (d3.event.pageX) + "px")
-    //     //     .style("top", (d3.event.pageY - 28) + "px");
-    //     // })
-    // }
+  // function raiseTooltip(d,i,e) {
+  //     console.log(d)
+  //     console.log(i)
+  //     console.log(e)
+  //     // div.transition()
+  //     //     .duration(200)
+  //     //     .style("opacity", .9);
+  //     // div	.html(formatTime(d.date) + "<br/>"  + d.close)
+  //     //     .style("left", (d3.event.pageX) + "px")
+  //     //     .style("top", (d3.event.pageY - 28) + "px");
+  //     // })
+  // }
 
 // PIZAZZ: COLOR
 
@@ -2812,21 +2413,6 @@
       (angle > 90) ? angle -= 90 : angle += 90;
       return angle;
     }
-    // function bearing(a,b) {
-    //   let atan = Math.atan(slope(a,b));
-    //   let bearing = 90 - atan;         // convert to N as 0 degrees
-    //   if (Math.sign(bearing) == -1) {  // if bearing is negative
-    //     bearing +=360
-    //   }
-    //   return bearing;
-    // }
-    function slope(a,b) {
-      let slope,
-          dx = b[0]-a[0],
-          dy = b[1]-a[1];
-      (dy === 0) ? slope = 0 : slope = dy/dx;
-      return slope;
-    }
 
   // RESET, RESIZE, REDRAW
     function clearDOM() { }
@@ -2856,16 +2442,16 @@
       let commaFree = string.replace(/\s*,\s*|\s+,/g, '%2C');
       return commaFree;
     }
-    function sortDesc(compared) {
-      return this.sort(function(a,b) {
-        return b[compared] - a[compared];
-      });
-    }
-    function sortAsc(compared) {
-      return this.sort(function(a,b) {
-        return a[compared] - b[compared];
-      });
-    }
+    // function sortDesc(compared) {
+    //   return this.sort(function(a,b) {
+    //     return b[compared] - a[compared];
+    //   });
+    // }
+    // function sortAsc(compared) {
+    //   return this.sort(function(a,b) {
+    //     return a[compared] - b[compared];
+    //   });
+    // }
     function titleCase(str) {
       return str.toLowerCase().split(' ').map(function(word) {
         // TODO create titleCase exceptions for LLCs, US, initials, words in paretheses
@@ -2883,20 +2469,20 @@
     }
 
   // BROADLY APPLICABLE OR NOT AT ALL
-    function store(val){
-      let bigVVal = capitalize(val);
-      var element = d3.select(`#get${bigVVal}`);
-      localStorage.setItem(val, element.value);
-      var stored = localStorage.getItem(val);
-      return stored;
-    }
-    function perfCheck(fx,params) {
-      let t0 = performance.now();
-      fx(params)
-      let t1 = performance.now();
-      let elapsed = t1 - t0;
-      console.log(`${fx}-ing to ${params} took ${elapsed} milliseconds`)
-    }
+    // function store(val){
+    //   let bigVVal = capitalize(val);
+    //   var element = d3.select(`#get${bigVVal}`);
+    //   localStorage.setItem(val, element.value);
+    //   var stored = localStorage.getItem(val);
+    //   return stored;
+    // }
+    // function perfCheck(fx,params) {
+    //   let t0 = performance.now();
+    //   fx(params)
+    //   let t1 = performance.now();
+    //   let elapsed = t1 - t0;
+    //   console.log(`${fx}-ing to ${params} took ${elapsed} milliseconds`)
+    // }
 
   // ERRORS
     function onError(error) {
