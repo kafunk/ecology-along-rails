@@ -135,13 +135,15 @@
 
 // SET UP CUSTOM DISPATCH BEHAVIOR
 
-  let dispatch = d3.dispatch("ready","depart","move","arrive")
+  let dispatch = d3.dispatch("ready","depart","move","encounter","arrive")
                    .on("depart.train", departed)
                    .on("move.train", trainMoved)
+                   .on("encounter.trigger", encountered)
+                   .on("arrive.train", arrived)
 
 // DECLARE (BUT DON'T DEFINE) CERTAIN VARIABLES FOR LATER ACCESS
 
-  let timer, quadtree;
+  let timer, observer, quadtree;
 
 // COLORS
 
@@ -761,8 +763,6 @@
               // getOrientation() // cardinal
               // getElevation()
               // getIntersecting()
-              // scanned
-              // selected
             }
           }
 
@@ -1075,8 +1075,6 @@
           withinBuffer: bufferedRoute
           }
 
-          // console.log(chosen)
-
           return chosen;
 
         }
@@ -1130,10 +1128,9 @@
               .style("stroke-width", "0.4px")
              // .on("intersected", highlightPt)
 
-          console.log(pts)
           console.log(enrichLayer.node())
           console.log(enrichPoints.nodes())
-          console.log(g.node())
+          // console.log(g.node())
 
         }
 
@@ -1754,8 +1751,7 @@
       }
 
       function goOnNow(scale,tpm,lastIdentity,simpPath) {
-        // start at pt 0
-        dispatch.call("depart", this, tFull) // depart.train?
+        dispatch.call("depart", this) // , tFull) // all three arguments necessary
         // set up transition along entire route
       	point.transition().delay(tEnd).duration(tFull).ease(d3.easeSinInOut)
     		 .attrTween("transform", translateAlong(fullPath))
@@ -1779,33 +1775,29 @@
          .on("end", () => {
            // ensure final alignment
            g.attr("transform",lastIdentity.toString())
+           // dispatch custom "arrive" event
+           dispatch.call("arrive", this)
            // inform d3 zoom behavior of final transform value and reenable free zooming
            svg.call(zoom.transform, lastIdentity)
            svg.call(zoom)
          });
       }
 
-      let mostRecent;
       function animate(elapsed) {
-
         // dispatch another move event
-        dispatch.call("move", point, elapsed) // pass point @ elapsed
-
-        // if train has stopped moving, stop timer
-        if (mostRecent === point.attr("transform")) timer.stop() // {
-        //   timer.stop();
-        //   observer.disconnect();
-        // }
-
-        mostRecent = point.attr("transform");
+        dispatch.call("move", point)
       }
+
     }
 
-    let train = d3.select("#train-point");
-    function departed(t) {
-      console.log("train departing @ " + t)
+    function departed() {
+      console.log("train departing @ " + performance.now())
       d3.timerFlush() // necessary?
-      train.dispatch("depart")
+    }
+    function arrived() {
+      console.log("train arrived @ " + performance.now())
+      timer.stop()
+      observer.disconnect()
     }
 
     let prevLocation, bufferExtent, prevExtent;
@@ -1849,7 +1841,7 @@
                          .style("stroke-width","0.2px")
                          .style("opacity", 0.6)
 
-        train.raise(); // keep train on top of bufferVis
+        d3.select("#train-point").raise(); // keep train on top of bufferVis
 
         bufferVis.transition().duration(tPause)
                   .style("opacity",0)
@@ -1858,19 +1850,22 @@
                     bufferVis.remove() // no need for exit() bc datum was appended, not joined?
                   })
 
-        // FIND ALL TRIGGER PTS WITHIN CURRENT BUFFER EXTENT
+        // console.log(triggerPts)
+        // console.log(quadtree)
 
-        triggerPts.each( d => {
-          d.scanned = d.selected = false; });  // resets all scanned/selected on every event
-
+        // SEARCH QUADTREE FOR ALL TRIGGER PTS INTERSECTING CURRENT BUFFER EXTENT
         searchQuadtree(quadtree, bufferExtent[0][0], bufferExtent[0][1], bufferExtent[1][0], bufferExtent[1][1]);
 
-        triggerPts.classed("trigger-pt--scanned", d => { return d.scanned; });
-        triggerPts.classed("trigger-pt--selected", d => { return d.selected; });
+        triggerPts.classed("trigger-pt--selected", d => {
+          console.log(d); // ensure DOM trigger pts match up somehow with quadtree nodes
+          return d.selected; });  // class change should initiate triggerEncounter(event)
 
-        // find nearest trigger pt
-        // let p = quadtree.find(currentLocation[0],currentLocation[1]);
-        // triggerPts.classed("trigger-pt--nearest", d => { return d === p; })
+        // REMOVE NEWLY SELECTED TRIGGER PTS FROM QUADTREE POOL?
+
+        // IF MULTIPLE WITHIN CURRENT BUFFER, QUEUE BY NEAREST?
+          // find nearest trigger pt
+          // let p = quadtree.find(currentLocation[0],currentLocation[1]);
+          // triggerPts.classed("trigger-pt--nearest", d => { return d === p; })
     }
 
 //// QUADTREE / DEFS / DATA/INTERSECT QUERIES
@@ -1885,8 +1880,6 @@
                x1 = pathBox[1][0], // xmax
                y1 = pathBox[1][1]; // ymax
 
-      // console.log(pathBox)
-
       // initiate quadtree with specified x and y functions
       const projectX = d => { return projection(d.geometry.coordinates)[0] },
             projectY = d => { return projection(d.geometry.coordinates)[1] };
@@ -1900,48 +1893,66 @@
       ///// QUADTREE / TRIGGER NODES ADDED TO DOM
          // FULL GEOMETRIES WAITING IN DEFS (TO BE ACCESSED UPON TRIGGER)
       let grid = g.append("g")
-                  .attr("id","quadnodes")
-                  .selectAll(".quadnode")
-                  .data(nodes(quadtree))
-                  .enter().append("rect")
-                    .classed("quadnode", true)
-                    .attr("x", function(d) { return d.x0; })
-                    .attr("y", function(d) { return d.y0; })
-                    .attr("width", function(d) { return d.y1 - d.y0; })
-                    .attr("height", function(d) { return d.x1 - d.x0; })
-                    .style("fill","none")
-                    // uncomment for visual of grid
-                      // .style("fill","tomato")
-                      // .style("stroke","whitesmoke")
-                      // .style("stroke-width","0.2px")
-                      // .style("opacity","0.4")
+                  .attr("id","quadtree")
+
+      grid.selectAll(".quadnode")
+          .data(nodes(quadtree))
+          .enter().append("rect")
+            .classed("quadnode", true)
+            .attr("x", function(d) { return d.x0; })
+            .attr("y", function(d) { return d.y0; })
+            .attr("width", function(d) { return d.y1 - d.y0; })
+            .attr("height", function(d) { return d.x1 - d.x0; })
+            .style("fill","none")
+            // uncomment for visual of grid
+              // .style("fill","tomato")
+              // .style("stroke","whitesmoke")
+              // .style("stroke-width","0.2px")
+              // .style("opacity","0.4")
 
       let triggerPts = g.append("g")
                         .attr("id","trigger-pts")
-                        .selectAll(".trigger-pt")
-                        .data(triggerData)
-                        .enter().append("circle")
-                          .classed("trigger-pt", true)
-                          .classed("trigger-pt--scanned trigger-pt--selected", false) // for now
-                          .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-                          .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-                          // temporary visual
-                          .attr("r", 0.8)
-                          .style("fill","chartreuse")
-                          .style("stroke","goldenrod")
-                          .style("stroke-width","0.1px")
 
-                          // .on("encountered", triggerEncounter(e)) // FIXME PSEUDOCODE (on "selected"?)
+      triggerPts.selectAll(".trigger-pt")
+                .data(triggerData)
+                .enter().append("circle")
+                  .classed("trigger-pt", true)
+                  .classed("trigger-pt--selected", false) // for now
+                  .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
+                  .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+                  // temporary visual
+                  .attr("r", 0.2)
+                  .style("fill","chartreuse")
+                  .style("stroke","goldenrod")
+                  .style("stroke-width","0.1px")
+                  // .on("encounter", encountered) // "encountered" as custom event dispatched upon quadtree selection
 
-      function triggerEncounter(e) {
-        // called by triggerPt upon selection by quadtree
+      // use mutationObserver to watch for class changes on triggerPts group
+      awaitTrigger(triggerPts)
 
-        // FIND associated full geometry/props in <defs>
-        // VISUALIZE element
-        // OUTPUT encounter
-          // temp popups/tooltips fade in/out
-          // legend-log populated
-          // dashboard/trackers updated
+      function awaitTrigger(triggerPts) {
+
+        observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.attributeName === "class") {
+              // store most recent class addition
+              let trigger = mutation.target;
+              console.log(trigger)
+              var newlyClassed = trigger.classList[trigger.classList.length - 1];
+              if (newlyClassed === "trigger-pt--selected") {
+                // dispatch custom "encounter" event
+                dispatch.call("encounter", trigger)
+                // trigger.dispatch("encounter")
+              }
+            }
+          });
+        });
+
+        observer.observe(triggerPts.node(), {
+          attributes: true,
+          subtree: true     // extend observation to children of group
+        });
+
       }
 
       // Collapse the quadtree into an array of rectangles.
@@ -1961,14 +1972,25 @@
     function getIntersecting(train,path,tprm,quadtree) {
 
       // COMBAK
+        // portions of this function have been addressed elsewhere,
+        // but searchQuadtree still not successfully registering intersections with bufferExtent // updating class on interested triggerPts; ADDRESS THIS FIRST
+        // then transition actual point encounters into view
+        // finally, work on bringing in lines and polygons
+      // OTHER ISSUES
+        // consistent reload at very begin
+        // stilted zoom (especially toward end and from routeBounds->firstFrame)
+        // abq -> vancouver overshot
+        // other problem cities (denver, etc; plus need to reintergrate/fix several already removed)
+        // promptRoute form blur/focus not right
+        // getStart/End form padding jolted upon submit-click in certain views
 
       // console.log(train.node())
       // console.log(path.node())
       // console.log(tprm)
 
       // as train moves along line, loop to continually check present position ::bufferedQueryPt:: against quadtree enrich data
-        // trains: reveal as soon as buffer intersects
-        // lines and polygons: once buffer intersects, query for actual intersect pts; if they don't exist, return nearestPointOnLine
+        // points: reveal as soon as buffer intersects
+        // lines and polygons: once buffer intersects, query for actual route intersect pts; if they don't exist, return nearestPointOnLine
 
       // as data returned (booleanIntersects), get geometry type and immediately pass specifics onto transition makers ("reveal" function)
 
@@ -2000,9 +2022,9 @@
 
       // console.log(l)
 
-      console.log(quadtree)
-
-      console.log(defs.node())
+      // console.log(quadtree)
+      //
+      // console.log(defs.node())
 
     }
 
@@ -2010,13 +2032,19 @@
       // console.log(x0, y0)
       // console.log(x3, y3)
       quadtree.visit(function(node, x1, y1, x2, y2) {
-        if (!node.length) {
+        if (!node.length) { // if node is not an array of nodes (i.e. has content)
+          // console.log(node)
           // console.log(x1, y1)
           // console.log(x2, y2)
           do {
-            var d = node.data;
-            d.scanned = true;
-            d.selected = (d[0] >= x0) && (d[0] < x3) && (d[1] >= y0) && (d[1] < y3);
+            let d = node.data;
+            // d.scanned = true;  // no need to mark scanned nodes
+            // console.log(d[0])  // culprit! returning undefined!
+            // d.selected = (d[0] >= x0) && (d[0] < x3) && (d[1] >= y0) && (d[1] < y3);
+            let d0 = projection(d.geometry.coordinates)[0],
+                d1 = projection(d.geometry.coordinates)[1];
+            d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
+            if (d.selected) { console.log("SELECTION MADE HURRAYYY")}
           } while (node = node.next);
         }
         return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
@@ -2043,6 +2071,19 @@
 
     }
 
+    function encountered() {
+      console.log("encountered!")
+      console.log(this)
+      // called by triggerPt upon selection by quadtree
+
+      // FIND associated full geometry/props in <defs>
+      // VISUALIZE element
+      // OUTPUT encounter
+        // temp popups/tooltips fade in/out
+        // legend-log populated
+        // dashboard/trackers updated
+    }
+
 //// OUTPUT AND ALERT incl DASHBOARD
 
     function dashUpdate(current) {
@@ -2057,6 +2098,17 @@
     }
 
 //// HTML/CSS VISIBILITY MANAGEMENT
+
+    // TODO: add functionality to info icon, which appears only on small screens
+    function feature(element) {
+      // passed 'about'
+      // have sidebar content expand upward (from about text at bottom of screen) into modal
+    }
+    function unfeature(element) {
+      // passed 'about'
+      // collapse sidebar content downward
+    }
+
     d3.selectAll(".expand-trigger").on("click", e=> {
       expand(e.target.for); // controls?
       hide(e.target);  // hide the icon that prompted expansion, once expansion is attained
