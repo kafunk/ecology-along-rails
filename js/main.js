@@ -54,7 +54,10 @@
 
   var translate0 = [(width + padX)/2, (height + padY)/2];
 
-  var scale0 = 0.9 // 1;
+  var scale0 = 0.95, // 1; // initial overview scale
+      scale1 = 12;        // standard scale during animation (and maximum routeBounds)
+
+  var tPause = 2400;      // standard pause/transition time
 
   let currentView = {
       scale: scale0
@@ -595,9 +598,10 @@
             Promise.all([processed]).then(function(newData) {
               if (!experience.initiated) {
                 initExp(newData[0])
-              } else {
-                updateMap(newData[0])
               }
+              // } else {
+              //   updateMap(newData[0])
+              // }
 
             }, onError);
 
@@ -778,16 +782,23 @@
 
         experience.initiated = true;
 
-        let sT = 2400; // standard transition time
-
         // zoom to bounds of chosen route
-        let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString),extent0,0.4));
+        let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString)));
+
+        // if routeBounds overly zoomed in
+        if (routeBounds.k > scale1) {
+          let simpOptions = {tolerance: 1, highQuality: false, mutate: false},
+                simpRoute = turf.simplify(chosen.lineString, simpOptions),
+               simpLength = Math.floor(turf.length(simpRoute, {units: "miles"})),
+                    midPt = turf.along(simpRoute,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2));
+          routeBounds = getIdentity(centerTransform(projection(midPt),scale1));
+        }
 
         // control timing with transition start/end events
-        svg.transition().duration(sT*2).ease(d3.easeCubicIn)
+        svg.transition().duration(tPause*2).ease(d3.easeCubicIn)
           .call(zoom.transform, routeBounds)
           .on("start", () => {
-            drawRoute(chosen,sT);
+            drawRoute(chosen, tPause);
             prepareEnvironment();
           })
           .on("end", () => {
@@ -796,8 +807,8 @@
             // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
             prepareUser();
             d3.timeout(() => {
-              initAnimation(chosen);
-            }, sT);
+              initAnimation(chosen,routeBounds);
+            }, tPause);
           })
 
         function prepareEnvironment() {
@@ -819,6 +830,7 @@
 
           // e.g. 'You have chosen to travel from {ptA} to {ptB} on {railCompany}'s {lineName} line. IRL, this route would take you about {travelTime} to complete, but we are going to more a little more quickly. Keep your eye on the dashboard and journey log for more details as the journey unfolds in {countdown?... until data loads?}'
         }
+      }
 
       function drawRoute(received,sT) {
 
@@ -1162,7 +1174,7 @@
 
       }
 
-      function initAnimation(routeObj) {
+      function initAnimation(routeObj,routeBounds) {
 
         // SETUP
         let point = g.select("#train-point"),
@@ -1170,15 +1182,11 @@
 
         // get zoomFollow object including simplified zoomArc, pace, and first/last zoom frames
         let zoomFollow = getZoomFollow();  // pass routeObj, optional focus int (default = 100)
-          // arcSlice
-          // firstFrame
-          // lastFrame
-          // pace
 
         // bind zoomArc to DOM for tracking only (not visible)
         let zoomArc = g.append("path")
           .attr("id", "zoom-arc")
-          .datum(zoomFollow.arcSlice.geometry.coordinates.map(d => projection(d)))
+          .datum(zoomFollow.arc.map(d => projection(d)))
           .attr("d", line)
           .style("fill","none")
           .style("stroke","none")
@@ -1189,57 +1197,69 @@
         // final user prompt/countdown??
         // if (confirm("Ready?")) {
           experience.animating = true;  // global flag that experience in process
-          goTrain(point,path,zoomArc,tprm,tpsm,simpLength,firstLast,routeObj.enrichData);
+          goTrain(point,path,zoomFollow,zoomArc,routeObj.enrichData,routeBounds); // initiate movement!
         // }
 
         function getZoomFollow(int = 100) { // also requires access to routeObj
                                             // int = miles in/out to focus view, start/stop zoomFollow
 
+          // *TODO* extract route simplification into separate function call (currently repeated elsewhere)
+          let simpOptions = {tolerance: 1, highQuality: false, mutate: false};
+
           let zoomFollow = {
-            arcSlice: [],
-            firstFrame: [],
-            lastFrame: [],
+            necessary: true, // default
+            arc: [],
+            firstThree: [],
+            lastThree: [],
             pace: {
               tpm: 20,  // time per mile; hard-coded as goal of animated ms per route mile (more == slower)
-              tpsm: getTpsm()  // based on tpm, calculated per simplified miles
+              tpsm() {  // based on tpm, calculated per simplified miles
+                let result = this.pace.tpm * Math.floor(routeObj.totalDistance) / this.simpLength;
+                this.tpsm = result;
+                return result;
+              }
+            },
+            simpSlice: [],
+            fullSimp: turf.simplify(routeObj.lineString, simpOptions),
+            simpLength() {
+              let result = Math.floor(turf.length(this.fullSimp, {units: "miles"}));
+              this.simpLength = result;
+              return result;
             }
           }
 
-          let fullLength = Math.floor(routeObj.totalDistance),
-             simpOptions = {tolerance: 1, highQuality: false, mutate: true},
-                fullSimp = turf.simplify(routeObj.lineString, simpOptions);
+          if (zoomFollow.simpLength() > 300) {
 
-          let simpSlice,
-              firstLast,
-              simpLength = Math.floor(turf.length(fullSimp, {units: "miles"}));
+            let firstLast = getFirstLast(zoomFollow.fullSimp,int);
 
-          if (simpLength > 300) {
-            firstLast = getFirstLast(fullSimp,int);
+            zoomFollow.firstThree = firstLast[0],
+             zoomFollow.lastThree = firstLast[1],
+             zoomFollow.simpSlice = turf.lineSlice(zoomFollow.firstThree[1],zoomFollow.lastThree[1],zoomFollow.fullSimp).geometry.coordinates;
 
-            simpSlice = turf.lineSlice(firstLast[0][1],firstLast[1][1],fullSimp);
+            // update firstLast with exact 100in/100out focus coordinates (prevents stutter at moment of zoomAlong "takeoff")
+            zoomFollow.firstThree[1] = zoomFollow.simpSlice[0],
+             zoomFollow.lastThree[1] = zoomFollow.simpSlice[zoomFollow.simpSlice.length-1];
 
-            // update firstLast with exact 100in/100out focus coordinates
-            firstLast[0][1] = simpSlice.geometry.coordinates[0],
-            firstLast[1][1] = simpSlice.geometry.coordinates[simpSlice.geometry.coordinates.length-1];
+            zoomFollow.arc = zoomFollow.simpSlice;
 
           } else {
 
-            let both = [fullSimp.geometry.coordinates[0],turf.along(fullSimp,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2)),fullSimp.geometry.coordinates[fullSimp.geometry.coordinates.length - 1]];
-            // aka first, middle, last
+            console.log("short route (< 300 miles -- specifically, " + zoomFollow.simpLength + ". first/last frames identical; no zoomAlong necessary.")
 
-            // console.log("short route (< 300 miles). start/end zoom identical.")
-            // console.log([both,both])
+            zoomFollow.necessary = false,
+                  zoomFollow.arc = zoomFollow.fullSimp.geometry.coordinates.slice();
 
-            simpSlice = fullSimp,
-            firstLast = [both,both];
+            // save start, mid, and end points as onlyThree
+            let onlyThree = [zoomFollow.fullSimp.geometry.coordinates[0],turf.along(zoomFollow.fullSimp,zoomFollow.simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2)),zoomFollow.fullSimp.geometry.coordinates[zoomFollow.fullSimp.geometry.coordinates.length - 1]];
+
+            zoomFollow.firstThree = onlyThree,
+             zoomFollow.lastThree = onlyThree;
 
           }
+
+          console.log(zoomFollow)
 
           return zoomFollow;
-
-          function getTpsm() {
-            return zoomFollow.pace.tpm * fullLength / simpLength;
-          }
 
           function getFirstLast(fullLine,int) {
 
@@ -1270,37 +1290,6 @@
 
       }
 
-      function getIdentity(atTransform,k) {
-        let identity = d3.zoomIdentity
-          .translate(atTransform.x,atTransform.y)
-          .scale(k || atTransform.k)  // if (k), k || (keep k constant?)
-        return identity;
-      }
-
-      function centerTransform(pt,scale) {
-        let tx = -scale * pt[0] + width/2,
-            ty = -scale * pt[1] + height/2;
-        return {x: tx, y: ty, k: scale};
-      }
-
-      // TRANSLATE ONLY
-      function zoomAlong(path,k = currentView.scale) {
-        var l = path.node().getTotalLength();
-        return function(d, i, a) {
-          return function(t) {
-            // KEEP NODE P IN CENTER OF FRAME
-            var p = path.node().getPointAtLength(t * l);
-            // calculate translate necessary to center data within extent
-            let tx = -k * p.x + width/2,
-                ty = -k * p.y + height/2;
-            // clip projected data to minimize shift/render calculations?
-            let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
-            identity.clipExtent(clipExtent)
-            projection.clipExtent(clipExtent)
-            return "translate(" + tx + "," + ty + ") scale(" + k + ")";
-          }
-        }
-      }
 
     // UPDATE DATA LANDSCAPE / STRUCTURE
       // add new data layers to svg <defs>
@@ -1308,21 +1297,18 @@
       // update map object with source content?
       // update event listeners?
     // UPDATE PRIMARY VISUAL        <=== I.E., RENDER A MAP OF RELEVANCE
-      function updateMap(newData) { }   // <=== GENERAL UPDATE PATTERN STARTS HERE
+      // function updateMap(newData) { }   // <=== GENERAL UPDATE PATTERN STARTS HERE
       // ADD NEW CONTENT
         // create new selections & data joins as necessary
           // function addLayer() { }
           // // from <defs>?
-          //   function useDef(*) { }           *****COMBAK****
       // UPDATE PERSISTING VISUAL
-        function highlightRelevant(data) { }
+        // function highlightRelevant(data) { }
         // function zoomTo(bounds) { } // elsewhere
       // REMOVE BLOAT
         // exit excessive DOM nodes
-          function removeExcess() { }
+          // function removeExcess() { }
     // UPDATE SECONDAY VISUALS (WIDGETS, ETC)
-
-
 
   // AWAIT USER INTERACTION or OTHER NEW INFO
     // UPON RECEIPT...                            ===>  LOOP TO (*)(*)(*)
@@ -1334,139 +1320,21 @@
 
 //// SVG
 
-  // MAP DATA
-
-    // QUADTREE / DEFS / SEARCH INTERSECTING
-    function makeQuadtree(triggerData,bufferedRoute) {
-      // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
-
-      // get projected bounding box of chosen route
-      let pathBox = projPath.bounds(bufferedRoute),
-               x0 = pathBox[0][0], // xmin
-               y0 = pathBox[0][1], // ymin
-               x1 = pathBox[1][0], // xmax
-               y1 = pathBox[1][1]; // ymax
-
-      // console.log(pathBox)
-
-      // initiate quadtree with specified x and y functions
-      const projectX = d => { return projection(d.geometry.coordinates)[0] },
-            projectY = d => { return projection(d.geometry.coordinates)[1] };
-
-      quadtree = d3.quadtree(triggerData,projectX,projectY)
-                   .extent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-
-      // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-      // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-
-      ///// QUADTREE / TRIGGER NODES ADDED TO DOM
-         // FULL GEOMETRIES WAITING IN DEFS (TO BE ACCESSED UPON TRIGGER)
-      let grid = g.append("g")
-                  .attr("id","quadnodes")
-                  .selectAll(".quadnode")
-                  .data(nodes(quadtree))
-                  .enter().append("rect")
-                    .classed("quadnode", true)
-                    .attr("x", function(d) { return d.x0; })
-                    .attr("y", function(d) { return d.y0; })
-                    .attr("width", function(d) { return d.y1 - d.y0; })
-                    .attr("height", function(d) { return d.x1 - d.x0; })
-                    .style("fill","none")
-                    // uncomment for visual of grid
-                      // .style("fill","tomato")
-                      // .style("stroke","whitesmoke")
-                      // .style("stroke-width","0.2px")
-                      // .style("opacity","0.4")
-
-      let triggerPts = g.append("g")
-                        .attr("id","trigger-pts")
-                        .selectAll(".trigger-pt")
-                        .data(triggerData)
-                        .enter().append("circle")
-                          .classed("trigger-pt", true)
-                          .classed("trigger-pt--scanned trigger-pt--selected", false) // for now
-                          .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-                          .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-                          // temporary visual
-                          .attr("r", 0.8)
-                          .style("fill","chartreuse")
-                          .style("stroke","goldenrod")
-                          .style("stroke-width","0.1px")
-
-      // Collapse the quadtree into an array of rectangles.
-      function nodes(quadtree) {
-        var nodes = [];
-        quadtree.visit(function(node, x0, y0, x1, y1) {
-          node.x0 = x0, node.y0 = y0;
-          node.x1 = x1, node.y1 = y1;
-          nodes.push(node);
-        });
-        return nodes;
-      }
-
-      return quadtree;
-    }
-
-    function intersectingDefs(all) {
-
-    }
-
-    function useDefs() {
-
-      defs.append("use")
-          .attr("xlink:href", "#watersheds");
-      // svg.append("use")
-      //   .attr("xlink:href", "#watersheds")
-      g.append("use")
-        .attr("id", "enrich-pool")
-        .attr("xlink:href", "#watersheds")
-        // .attr("d",path)
-        // .attr("class", "stroke")
-        // .attr("stroke-dasharray", "1 1")
-        // .attr("stroke-width", 1.6)
-        // .attr("stroke", "teal")
-        // FILTER
-
-      // console.log(d3.select("#enrich-pool"))
-
-    }
-
-    // OTF RENDERING
-    // function dynamicallySimplify() {
-    //   minZ = 1 / scale * scale;
-    //   // minZi, minZp
-    // }
-    function redraw(layerGroupSelector){
-      d3.selectAll(`g${layerGroupSelector}`) // could be # or .
-        .selectAll("path")
-          .attr("d",projPath)
-    }
-    function redrawMap() {
-      g.selectAll("path.rendered.projectedOTF").attr("d", projPath);
-      g.selectAll("path.rendered").attr("d", projPath);
-    }
-    function rerender(content = "map") {
-      // select content from DOM
-      // parse as necessary
-      // redraw(content)
-        // g.style / transform attr..
-    }
-
   // ZOOM BEHAVIOR
-    function dblclicked(d,i) {
-
-      if (active.node() === this) return resetZoom();
-
-      if (d3.event.defaultPrevented) return; // panning, not zooming
-
-      active.classed("active", false);
-
-      active = d3.select(this).classed("active", true);
-
-      zoomTo(projPath.bounds(d))
-        // make sure upper-most (clickable) layer is in accordance with path function, or adjust bounds() caller accordingly
-
-    }
+    // function dblclicked(d,i) {
+    //
+    //   if (active.node() === this) return resetZoom();
+    //
+    //   if (d3.event.defaultPrevented) return; // panning, not zooming
+    //
+    //   active.classed("active", false);
+    //
+    //   active = d3.select(this).classed("active", true);
+    //
+    //   zoomTo(projPath.bounds(d))
+    //     // make sure upper-most (clickable) layer is in accordance with path function, or adjust bounds() caller accordingly
+    //
+    // }
 
     function zoomed() {
 
@@ -1490,20 +1358,34 @@
 
     }
 
-    function zoomTo(bounds,k) {
+    // function zoomTo(bounds,k) {
+    //
+    //   let transform = getTransform(bounds);
+    //
+    //   let zoom1 = d3.zoomIdentity
+    //     .translate(transform.x,transform.y)
+    //     .scale(k || transform.k)
+    //
+    //   svg.transition().duration(750)
+    //     .call(zoom.transform, zoom1)
+    //
+    // }
 
-      let transform = getTransform(bounds);
-
-      let zoom1 = d3.zoomIdentity
-        .translate(transform.x,transform.y)
-        .scale(k || transform.k)
-
-      svg.transition().duration(750)
-        .call(zoom.transform, zoom1)
-
+    function getIdentity(atTransform,k) {
+      let identity = d3.zoomIdentity
+        .translate(atTransform.x,atTransform.y)
+        .scale(k || atTransform.k)  // if (k), k || (keep k constant?)
+      return identity;
+    }
+    function centerTransform(pt,scale) {
+      let tx = -scale * pt[0] + width/2,
+          ty = -scale * pt[1] + height/2;
+      return {x: tx, y: ty, k: scale};
     }
 
     function getTransform(bounds, extent = extent0, padding = 0.1) {
+
+      // COMBAK rework double default parameters;
 
       let b0,b1;
 
@@ -1559,6 +1441,28 @@
       var l = this.getTotalLength(),
           i = d3.interpolateString(l + ",0", "0," + l);
       return function(t) { return i(t); };
+    }
+
+    // TRANSLATE ONLY
+    function zoomAlong(path,k = currentView.scale) {
+      var l = path.node().getTotalLength();
+      return function(d, i, a) {
+        return function(t) {
+          // KEEP NODE P IN CENTER OF FRAME
+          var p = path.node().getPointAtLength(t * l);
+          // calculate translate necessary to center data within extent
+          let tx = -k * p.x + width/2,
+              ty = -k * p.y + height/2;
+
+          // ????
+          // clip projected data to minimize shift/render calculations?
+          let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
+          identity.clipExtent(clipExtent)
+          projection.clipExtent(clipExtent)
+
+          return "translate(" + tx + "," + ty + ") scale(" + k + ")";
+        }
+      }
     }
 
     // function returns value for translating point along path
@@ -1644,34 +1548,34 @@
       let data;
       (Array.isArray(received)) ? data = received[0] : data = received;
       let boundingGJ = tj2gj(data); // includes fallback if data already gj
-      if (crs === "preprojected") {
-        console.log("fitting geoIdentity to given PP GJ")
-        fitToExtent(identity,boundingGJ)
-      } else {    // assume crs === "wgs84"
-        console.log("fitting projection to given WGS GJ")
+      // if (crs === "preprojected") {
+      //   console.log("fitting geoIdentity to given PP GJ")
+      //   fitToExtent(identity,boundingGJ)
+      // } else {    // assume crs === "wgs84"
+        console.log("fitting projection to given data") // WGS GJ")
         fitToExtent(projection,boundingGJ)
-      }
+      // }
       return received;
     }
     function fitToExtent(fx,data,extent = extent0) {
       fx.fitExtent(extent,data);
     }
-    function fitted(data,fx,extent = extent0) { // fitGJtoExtentUsingFX
-      fx.fitExtent(extent,data);
-      let fittedObj = {
-        extent: extent,
-        // bbox: nullPath.bounds(data),
-        // center: nullPath.centroid(data),
-        transform: getTransform(nullPath.bounds(data),extent)
-        // scale: transform.k,
-        // translate: getTranslate()
-      };
-      return fittedObj;
-    };
+    // function fitted(data,fx,extent = extent0) { // fitGJtoExtentUsingFX
+    //   fx.fitExtent(extent,data);
+    //   let fittedObj = {
+    //     extent: extent,
+    //     // bbox: nullPath.bounds(data),
+    //     // center: nullPath.centroid(data),
+    //     transform: getTransform(nullPath.bounds(data),extent)
+    //     // scale: transform.k,
+    //     // translate: getTranslate()
+    //   };
+    //   return fittedObj;
+    // };
 
-    function getScaleAtZoomLevel(zoomLevel, tileSize = 256) {
-      return tileSize * 0.5 / Math.PI * Math.pow(2, zoomLevel);
-    }
+    // function getScaleAtZoomLevel(zoomLevel, tileSize = 256) {
+    //   return tileSize * 0.5 / Math.PI * Math.pow(2, zoomLevel);
+    // }
 
 
 //// GEOJSON + TOPOJSON HELPERS
@@ -1767,6 +1671,293 @@
       return breaks;
     }
 
+//// ANIMATION
+    function goTrain(point,fullPath,zoomFollow,zoomArc,enrichData,routeBounds) {
+
+      let tDelay,tMid;
+
+      let simpDistance = Math.floor(turf.length(zoomFollow.fullSimp, {units: "miles"})),
+                 scale = g.node().transform.animVal[1].matrix.a,  // default to current
+                   tpm = zoomFollow.pace.tpm; // shorthand
+
+      // tFull is based on ms/simplified mile for later tDelay calc reasons
+      let tFull = Math.max(tpm * simpDistance, tPause) // effective ms per simp mile * simp miles, or tPause value if former less than latter
+           tEnd = 0;                  // default 0 in case no difference between routeBounds and firstFrame
+
+      if (!zoomFollow.necessary) {
+
+        // no more zooming; make quadtree since view/data pts will remain consistent
+        quadtree =
+        makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
+        // pause, then start train movement
+        d3.timeout(() => {
+          // if (confirm("Ready?")) {
+            // d3.timerFlush() // necessary?
+            // disable free zooming
+            svg.on('.zoom',null)
+            // call initial point transition
+            goOnNow(scale,tpm,routeBounds) // pass routeBounds as lastIdentity
+          // }
+        }, tPause)
+
+      } else {  // calculate transforms and timing from firstFrame to lastFrame
+
+        // // calculate scale of initial view
+        // let firstFrame = projPath.bounds(turf.lineString(zoomFollow.firstThree)),
+        //      lastFrame = projPath.bounds(turf.lineString(zoomFollow.lastThree));
+        //
+        // let kPad = 0.6,
+        //   firstTransform = getIdentity(getTransform(firstFrame,extent0,kPad)),
+        //    lastTransform = getIdentity(getTransform(lastFrame,extent0,kPad));
+
+        // // calculate first and last zoomIdentity based on stable scale (the more conservative of first/last transform) to ensure steady zoom level across entire route
+        // scale = Math.min(firstTransform.k,lastTransform.k);
+
+        // SCRATCH THAT; pass hard coded scale that seems to be widely appropriate given constant bufferExtent
+        scale = scale1;
+
+        let firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),scale)),
+             lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),scale));
+
+        tDelay = (simpDistance > 300) ? tpm * 100 : tpm * 0,      // delay zoomFollow until train hits mm 100 (of fullSimp) IF route long enough
+          tMid = tFull - (tDelay*2),  // tDelay doubled to account for stopping 100m from end
+          tEnd = tPause;              // arbitrary time to zoom to start frame
+
+        // helpful??
+        // let x0 = firstFrame[0][0], // xmin
+        //     y0 = firstFrame[0][1], // ymin
+        //     x1 = firstFrame[1][0], // xmax
+        //     y1 = firstFrame[1][1]; // ymax
+        // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+        // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+
+        // zoom to First frame
+        svg.transition().duration(tEnd*2) // .ease(d3.easeBounceIn)
+          .call(zoom.transform, firstIdentity)
+            .on("end", () => {
+              // confirm g exactly in alignment for next transition
+              g.attr("transform",firstIdentity.toString())
+              // make quadtree (now that view/data pts will remain consistent)
+              quadtree =
+              makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
+              d3.timeout(() => {
+                // if (confirm("Ready?")) {
+                  // d3.timerFlush() // necessary?
+                  // disable free zooming
+                  svg.on('.zoom',null)
+                  // call initial point transition, passing simplified path
+                  goOnNow(scale,tpm,lastIdentity,zoomArc)
+                // }
+              }, tEnd)
+            })
+
+      }
+
+      function goOnNow(scale,tpm,lastIdentity,simpPath) {
+        // start at pt 0
+        dispatch.call("depart", this, tFull) // depart.train?
+        // set up transition along entire route
+      	point.transition().delay(tEnd).duration(tFull).ease(d3.easeSinInOut)
+    		 .attrTween("transform", translateAlong(fullPath))
+         // point transition triggers additional elements
+         .on("start", () => {
+           // kick off global timer!
+           timer = d3.timer(animate)
+           // animateSolid(fullPath,tFull)
+           fullPath.style("opacity", 0.6)
+              .transition().duration(tFull).ease(d3.easeSinInOut)
+                .styleTween("stroke-dasharray",tweenDash)
+           // zoomFollow if necessary
+           if (simpPath) { // (firstThree[1] !== lastThree[1]) {
+             g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
+              .attrTween("transform", zoomAlong(simpPath,scale))
+            }
+            // RETURN HERE****
+            // follow along checking for intersecting encounters
+            // getIntersecting(point,fullPath,tpm,quadtree)
+          })
+         .on("end", () => {
+           // ensure final alignment
+           g.attr("transform",lastIdentity.toString())
+           // inform d3 zoom behavior of final transform value and reenable free zooming
+           svg.call(zoom.transform, lastIdentity)
+           svg.call(zoom)
+         });
+      }
+
+      let mostRecent;
+      function animate(elapsed) {
+
+        // dispatch another move event
+        dispatch.call("move", point, elapsed) // pass point @ elapsed
+
+        // if train has stopped moving, stop timer
+        if (mostRecent === point.attr("transform")) timer.stop() // {
+        //   timer.stop();
+        //   observer.disconnect();
+        // }
+
+        mostRecent = point.attr("transform");
+      }
+    }
+
+    let train = d3.select("#train-point");
+    function departed(t) {
+      console.log("train departing @ " + t)
+      d3.timerFlush() // necessary?
+      train.dispatch("depart")
+    }
+
+    let prevLocation, bufferExtent, prevExtent;
+    let triggerPts = g.select("#trigger-pts").selectAll(".trigger-pt");
+    function trainMoved() {
+
+        let transformMatrix = this.node().transform.animVal[0].matrix,
+            currentLocation = [transformMatrix.e, transformMatrix.f];
+
+        if (!prevExtent) {  // runs first time only
+
+          // use lngLat coords to calculate bufferExtent given radius in degrees
+          let currentLngLat = projection.invert(currentLocation);
+
+          bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+
+        } else {  // translate initial bufferExtent along with train point
+          bufferExtent = shifted(prevExtent,prevLocation,currentLocation);
+        }
+
+        // store determined values as baseline for next transform
+        prevLocation = currentLocation,
+          prevExtent = bufferExtent;
+
+        function shifted(extent,previousPt,currentPt) {
+          let tx = currentPt[0] - previousPt[0],
+              ty = currentPt[1] - previousPt[1];
+          return extent.map(d => { return [d[0]+tx, d[1]+ty]; })
+        }
+
+        // temporary visual of train buffer that will eventually trigger unveiling of eco encounters en route
+        let bufferVis = g.select("#route").append("rect")
+                         .datum(bufferExtent)
+                         .classed("momentary-buffer-vis",true)
+                         .attr("x", d => { return d[0][0]; })
+                         .attr("y", d => { return d[0][1]; })
+                         .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+                         .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+                         .style("fill","steelblue")
+                         .style("stroke","whitesmoke")
+                         .style("stroke-width","0.2px")
+                         .style("opacity", 0.6)
+
+        train.raise(); // keep train on top of bufferVis
+
+        bufferVis.transition().duration(tPause)
+                  .style("opacity",0)
+                  .on("end", () => {
+                    bufferVis.classed("none",true)
+                    bufferVis.remove() // no need for exit() bc datum was appended, not joined?
+                  })
+
+        // FIND ALL TRIGGER PTS WITHIN CURRENT BUFFER EXTENT
+
+        triggerPts.each( d => {
+          d.scanned = d.selected = false; });  // resets all scanned/selected on every event
+
+        searchQuadtree(quadtree, bufferExtent[0][0], bufferExtent[0][1], bufferExtent[1][0], bufferExtent[1][1]);
+
+        triggerPts.classed("trigger-pt--scanned", d => { return d.scanned; });
+        triggerPts.classed("trigger-pt--selected", d => { return d.selected; });
+
+        // find nearest trigger pt
+        // let p = quadtree.find(currentLocation[0],currentLocation[1]);
+        // triggerPts.classed("trigger-pt--nearest", d => { return d === p; })
+    }
+
+//// QUADTREE / DEFS / DATA/INTERSECT QUERIES
+
+    function makeQuadtree(triggerData,bufferedRoute) {
+      // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
+
+      // get projected bounding box of chosen route
+      let pathBox = projPath.bounds(bufferedRoute),
+               x0 = pathBox[0][0], // xmin
+               y0 = pathBox[0][1], // ymin
+               x1 = pathBox[1][0], // xmax
+               y1 = pathBox[1][1]; // ymax
+
+      // console.log(pathBox)
+
+      // initiate quadtree with specified x and y functions
+      const projectX = d => { return projection(d.geometry.coordinates)[0] },
+            projectY = d => { return projection(d.geometry.coordinates)[1] };
+
+      quadtree = d3.quadtree(triggerData,projectX,projectY)
+                   .extent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+
+      // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+      // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+
+      ///// QUADTREE / TRIGGER NODES ADDED TO DOM
+         // FULL GEOMETRIES WAITING IN DEFS (TO BE ACCESSED UPON TRIGGER)
+      let grid = g.append("g")
+                  .attr("id","quadnodes")
+                  .selectAll(".quadnode")
+                  .data(nodes(quadtree))
+                  .enter().append("rect")
+                    .classed("quadnode", true)
+                    .attr("x", function(d) { return d.x0; })
+                    .attr("y", function(d) { return d.y0; })
+                    .attr("width", function(d) { return d.y1 - d.y0; })
+                    .attr("height", function(d) { return d.x1 - d.x0; })
+                    .style("fill","none")
+                    // uncomment for visual of grid
+                      // .style("fill","tomato")
+                      // .style("stroke","whitesmoke")
+                      // .style("stroke-width","0.2px")
+                      // .style("opacity","0.4")
+
+      let triggerPts = g.append("g")
+                        .attr("id","trigger-pts")
+                        .selectAll(".trigger-pt")
+                        .data(triggerData)
+                        .enter().append("circle")
+                          .classed("trigger-pt", true)
+                          .classed("trigger-pt--scanned trigger-pt--selected", false) // for now
+                          .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
+                          .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+                          // temporary visual
+                          .attr("r", 0.8)
+                          .style("fill","chartreuse")
+                          .style("stroke","goldenrod")
+                          .style("stroke-width","0.1px")
+
+                          // .on("encountered", triggerEncounter(e)) // FIXME PSEUDOCODE (on "selected"?)
+
+      function triggerEncounter(e) {
+        // called by triggerPt upon selection by quadtree
+
+        // FIND associated full geometry/props in <defs>
+        // VISUALIZE element
+        // OUTPUT encounter
+          // temp popups/tooltips fade in/out
+          // legend-log populated
+          // dashboard/trackers updated
+      }
+
+      // Collapse the quadtree into an array of rectangles.
+      function nodes(quadtree) {
+        var nodes = [];
+        quadtree.visit(function(node, x0, y0, x1, y1) {
+          node.x0 = x0, node.y0 = y0;
+          node.x1 = x1, node.y1 = y1;
+          nodes.push(node);
+        });
+        return nodes;
+      }
+
+      return quadtree;
+    }
+
     function getIntersecting(train,path,tprm,quadtree) {
 
       // COMBAK
@@ -1815,186 +2006,6 @@
 
     }
 
-//// ANIMATION
-    function goTrain(point,fullPath,simpPath,tprm,tpsm,simpDistance,[firstThree,lastThree],enrichData) {
-
-      // scale of initial view
-      let firstFrame = projPath.bounds(turf.lineString(firstThree)),
-      firstTransform = getIdentity(getTransform(firstFrame,extent0,0.4)),
-               scale = firstTransform.k;
-
-      // calc first and last zoomIdentity based on stable k
-      let firstIdentity = getIdentity(centerTransform(projection(firstThree[1]),scale)),
-           lastIdentity = getIdentity(centerTransform(projection(lastThree[1]),scale));
-
-      // tFull is based on ms/simplified mile for tDelay calc reasons
-      let tFull = tprm * simpDistance, // effective ms per simp mile * simp miles
-         tDelay = (simpDistance > 300) ? tprm * 100 : tprm * 0,      // delay zoomFollow until train hits mm 100 (of fullSimp) IF route long enough
-           tMid = tFull - (tDelay*2),  // tDelay doubled to account for stopping 100m from end
-           tEnd = 3000;           // arbitrary time to zoom to start frame
-
-      let x0 = firstFrame[0][0], // xmin
-          y0 = firstFrame[0][1], // ymin
-          x1 = firstFrame[1][0], // xmax
-          y1 = firstFrame[1][1]; // ymax
-
-      // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-      // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-
-      // zoom to First frame
-      svg.transition().duration(tEnd*2) // .ease(d3.easeBounceIn)
-        .call(zoom.transform, firstIdentity)
-          .on("end", () => {
-            // confirm g exactly in alignment for next transition
-            g.attr("transform",firstIdentity.toString())
-            // make quadtree (now that view/data pts will remain consistent)
-            quadtree =
-            makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
-            d3.timeout(() => {
-              // if (confirm("Ready?")) {
-                // d3.timerFlush() // necessary?
-                // disable free zooming
-                svg.on('.zoom',null)
-                // call initial point transition
-                goOnNow()
-              // }
-            }, 3000)
-          })
-
-      function goOnNow() {
-        // start at pt 0
-        dispatch.call("depart", this, tFull) // depart.train?
-        // set up transition along entire route
-      	point.transition().delay(tEnd).duration(tFull).ease(d3.easeSinInOut)
-    		 .attrTween("transform", translateAlong(fullPath))
-         // point transition triggers additional elements
-         .on("start", () => {
-           // kick off global timer!
-           timer = d3.timer(animate)
-           // animateSolid(fullPath,tFull)
-           fullPath.style("opacity", 0.6)
-              .transition().duration(tFull).ease(d3.easeSinInOut)
-                .styleTween("stroke-dasharray",tweenDash)
-           // zoomFollow if necessary
-           if (firstThree[1] !== lastThree[1]) {
-             g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
-              .attrTween("transform", zoomAlong(simpPath,scale))
-                .on("end", () => {
-                  // ensure final alignment
-                  g.attr("transform",lastIdentity.toString())
-                })
-            }
-            // follow along checking for intersecting encounters
-            getIntersecting(point,fullPath,tprm,quadtree)
-          })
-         .on("end", () => {
-           // inform d3 zoom behavior of final transform value and reenable free zooming
-           svg.call(zoom.transform, lastIdentity)
-           svg.call(zoom)
-         });
-      }
-      let mostRecent;
-      function animate(elapsed) {
-
-        // dispatch another move event
-        dispatch.call("move", point, elapsed) // pass point @ elapsed
-
-        // if train has stopped moving, stop timer
-        if (mostRecent === point.attr("transform")) timer.stop() // {
-        //   timer.stop();
-        //   observer.disconnect();
-        // }
-
-        mostRecent = point.attr("transform");
-      }
-    }
-
-    let train = d3.select("#train-point");
-    function departed(t) {
-      console.log("train departing @ " + t)
-      d3.timerFlush() // necessary?
-      train.dispatch("depart")
-    }
-
-    let prevLocation, bufferExtent, prevExtent;
-    let triggerPts = g.select("#trigger-pts").selectAll(".trigger-pt");
-    function trainMoved() { // point,elapsed) {
-
-        let transformMatrix = this.node().transform.animVal[0].matrix,
-            currentLocation = [transformMatrix.e, transformMatrix.f];
-
-        // use LngLat coords to calculate bufferExtent given radius in degrees ONE TIME ONLY
-        if (!prevExtent) {
-          let currentLngLat = projection.invert(currentLocation);
-
-          bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
-
-          console.log(currentLngLat)
-          console.log(bufferExtent)
-          console.log(turf.point(currentLngLat),0.5,{units: "degrees"});
-          console.log(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
-
-        // moving forward, translate initial bufferExtent along with train point
-        } else {
-          bufferExtent = shifted(prevExtent,prevLocation,currentLocation);
-        }
-        // regardless, store determined values as baseline for next transform
-        prevLocation = currentLocation,
-          prevExtent = bufferExtent;
-
-        function shifted(extent,previousPt,currentPt) {
-          let tx = currentPt[0] - previousPt[0],
-              ty = currentPt[1] - previousPt[1];
-          return extent.map(d => { return [d[0]+tx, d[1]+ty]; })
-        }
-
-        // temporary visual of train buffer that will eventually trigger unveiling of eco encounters en route
-        let bufferVis = g.append("rect")
-                         .datum(bufferExtent)
-                         .classed("momentary-buffer-vis",true)
-                         .attr("x", d => { return d[0][0]; })
-                         .attr("y", d => { return d[0][1]; })
-                         .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-                         .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-                         .style("fill","steelblue")
-                         .style("stroke","whitesmoke")
-                         .style("stroke-width","0.2px")
-                         .style("opacity", 0.4)
-
-        // these buffers appear much bigger served from githubPages than from my local atom liveserver..  problem solving this
-        console.log(bufferVis.node())
-
-        bufferVis // .lower()
-            .transition().duration(750)
-            .style("opacity","0.6")
-            .on("end", () => {
-              bufferVis.transition().duration(750)
-                .style("opacity","0")
-                .on("end", () => {
-                  bufferVis.classed("none",true)
-                  bufferVis.remove() // no need for exit() bc datum was appended, not joined?
-                })
-            })
-
-        // this.raise()
-
-        // find all within buffer extent
-        triggerPts.each( d => {
-          d.scanned = d.selected = false; });  // resets all scanned/selected on every event
-
-        searchQuadtree(quadtree, bufferExtent[0][0], bufferExtent[0][1], bufferExtent[1][0], bufferExtent[1][1]);
-        triggerPts.classed("trigger-pt--scanned", d => { return d.scanned; });
-        triggerPts.classed("trigger-pt--selected", d => { return d.selected; });
-
-        // find nearest
-        // let p = quadtree.find(currentLocation[0],currentLocation[1]);
-        // triggerPts.classed("trigger-pt--nearest", d => { return d === p; })
-
-      // }
-    }
-
-//// QUADTREE and DATA/INTERSECT QUERIES
-
     function searchQuadtree(quadtree, x0, y0, x3, y3) {
       // console.log(x0, y0)
       // console.log(x3, y3)
@@ -2010,6 +2021,26 @@
         }
         return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
       });
+    }
+
+    function useDefs() {
+
+      defs.append("use")
+          .attr("xlink:href", "#watersheds");
+      // svg.append("use")
+      //   .attr("xlink:href", "#watersheds")
+      g.append("use")
+        .attr("id", "enrich-pool")
+        .attr("xlink:href", "#watersheds")
+        // .attr("d",path)
+        // .attr("class", "stroke")
+        // .attr("stroke-dasharray", "1 1")
+        // .attr("stroke-width", 1.6)
+        // .attr("stroke", "teal")
+        // FILTER
+
+      // console.log(d3.select("#enrich-pool"))
+
     }
 
 //// OUTPUT AND ALERT incl DASHBOARD
@@ -2133,10 +2164,10 @@
   function selectNew() {
     // if mid-animation, pause and confirm user intent
     if (experience.animating) {
-      pauseAnimation() // remoteControl.pause()
+      // pauseAnimation() // remoteControl.pause()
       let confirmed = confirm('Do you wish to select a new route?');
       if (!confirmed) {
-        resumeAnimation(); // remoteControl.play()
+        // resumeAnimation(); // remoteControl.play()
         return;
       }
     }
@@ -2171,8 +2202,7 @@
 
     // d3.select("#play-pause").on("click", remoteControl.playPause(e))
 
-
-// PIZAZZ: TOOLTIPS
+// PIZAZZ: TOOLTIPS // CURRENTLY A COPY-PASTED MESS
   // function makeTooltip() {
   //   // Create new html div element to house the tooltip and give it a class so css can hide with opacity
   //   var tooltip = d3.select("body").append("div")
@@ -2261,31 +2291,23 @@
 
 // PIZAZZ: TRANSITIONS
 
-// Map animation, experience, encounters, triggers
-
-  // spur data refresh?, start/end/midpoint?
-  // on.("encountered", output(encounter)) // FIXME PSEUDOCODE
-    // temp popups/tooltips fade in/out
-    // legend-log populated
-    // dashboard/trackers updated
-    //
 
 //// OTHER HELPER FUNCTIONS
 
   // MATHS
-    function avg(numArr, i){
-      if (!(i === undefined)) {
-        numArr = numArr.map(a => a[i]);
-      }
-      return numArr.reduce((a,b) => a+b) / numArr.length;
-    }
-    function floor(k) {
-      return Math.pow(2, Math.floor(Math.log(k) / Math.LN2));
-    }
-    function perpendicular(angle) {
-      (angle > 90) ? angle -= 90 : angle += 90;
-      return angle;
-    }
+    // function avg(numArr, i){
+    //   if (!(i === undefined)) {
+    //     numArr = numArr.map(a => a[i]);
+    //   }
+    //   return numArr.reduce((a,b) => a+b) / numArr.length;
+    // }
+    // function floor(k) {
+    //   return Math.pow(2, Math.floor(Math.log(k) / Math.LN2));
+    // }
+    // function perpendicular(angle) {
+    //   (angle > 90) ? angle -= 90 : angle += 90;
+    //   return angle;
+    // }
 
   // RESET, RESIZE, REDRAW
     function clearDOM() { }
@@ -2298,6 +2320,25 @@
       svg.attr("width", width)
          .attr("height", height)
       rerender()
+    }
+    function redraw(layerGroupSelector){
+      d3.selectAll(`g${layerGroupSelector}`) // could be # or .
+        .selectAll("path")
+          .attr("d",projPath)
+    }
+    function redrawMap() {
+      g.selectAll("path.rendered.projectedOTF").attr("d", projPath);
+      g.selectAll("path.rendered").attr("d", projPath);
+    }
+    function rerender(content = "map") {
+      // select content from DOM
+      // parse as necessary
+      // redraw(content)
+        // g.style / transform attr..
+    }
+    function dynamicallySimplify() {
+      minZ = 1 / scale * scale;
+      // minZi, minZp
     }
 
   // DEFAULT PREVENTION
