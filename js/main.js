@@ -1801,71 +1801,69 @@
     }
 
     let prevLocation, bufferExtent, prevExtent;
-    let triggerPts = g.select("#trigger-pts").selectAll(".trigger-pt");
     function trainMoved() {
 
-        let transformMatrix = this.node().transform.animVal[0].matrix,
-            currentLocation = [transformMatrix.e, transformMatrix.f];
+      let transformMatrix = this.node().transform.animVal[0].matrix,
+          currentLocation = [transformMatrix.e, transformMatrix.f];
 
-        if (!prevExtent) {  // runs first time only
+      if (!prevExtent) {  // runs first time only
 
-          // use lngLat coords to calculate bufferExtent given radius in degrees
-          let currentLngLat = projection.invert(currentLocation);
+        // use lngLat coords to calculate bufferExtent given radius in degrees
+        let currentLngLat = projection.invert(currentLocation);
 
-          bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+        bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
 
-        } else {  // translate initial bufferExtent along with train point
-          bufferExtent = shifted(prevExtent,prevLocation,currentLocation);
-        }
+      } else {  // translate initial bufferExtent along with train point
+        bufferExtent = shifted(prevExtent,prevLocation,currentLocation);
+      }
 
-        // store determined values as baseline for next transform
-        prevLocation = currentLocation,
-          prevExtent = bufferExtent;
+      // store determined values as baseline for next transform
+      prevLocation = currentLocation,
+        prevExtent = bufferExtent;
 
-        function shifted(extent,previousPt,currentPt) {
-          let tx = currentPt[0] - previousPt[0],
-              ty = currentPt[1] - previousPt[1];
-          return extent.map(d => { return [d[0]+tx, d[1]+ty]; })
-        }
+      function shifted(extent,previousPt,currentPt) {
+        let tx = currentPt[0] - previousPt[0],
+            ty = currentPt[1] - previousPt[1];
+        return extent.map(d => { return [d[0]+tx, d[1]+ty]; })
+      }
 
-        // temporary visual of train buffer that will eventually trigger unveiling of eco encounters en route
-        let bufferVis = g.select("#route").append("rect")
-                         .datum(bufferExtent)
-                         .classed("momentary-buffer-vis",true)
-                         .attr("x", d => { return d[0][0]; })
-                         .attr("y", d => { return d[0][1]; })
-                         .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-                         .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-                         .style("fill","steelblue")
-                         .style("stroke","whitesmoke")
-                         .style("stroke-width","0.2px")
-                         .style("opacity", 0.6)
+      // temporary visual of train buffer that will eventually trigger unveiling of eco encounters en route
+      let bufferVis = g.select("#route").append("rect")
+                       .datum(bufferExtent)
+                       .classed("momentary-buffer-vis",true)
+                       .attr("x", d => { return d[0][0]; })
+                       .attr("y", d => { return d[0][1]; })
+                       .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+                       .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+                       .style("fill","steelblue")
+                       .style("stroke","whitesmoke")
+                       .style("stroke-width","0.2px")
+                       .style("opacity", 0.6)
 
-        d3.select("#train-point").raise(); // keep train on top of bufferVis
+      d3.select("#train-point").raise(); // keep train on top of bufferVis
 
-        bufferVis.transition().duration(tPause)
-                  .style("opacity",0)
-                  .on("end", () => {
-                    bufferVis.classed("none",true)
-                    bufferVis.remove() // no need for exit() bc datum was appended, not joined?
-                  })
+      bufferVis.transition().duration(tPause)
+                .style("opacity",0)
+                .on("end", () => {
+                  bufferVis.classed("none",true)
+                  bufferVis.remove() // no need for exit() bc datum was appended, not joined?
+                })
 
-        // console.log(triggerPts)
-        // console.log(quadtree)
+      // SEARCH QUADTREE FOR ALL TRIGGER PTS INTERSECTING CURRENT BUFFER EXTENT
+      let newlyEncountered = searchQuadtree(quadtree, bufferExtent[0][0], bufferExtent[0][1], bufferExtent[1][0], bufferExtent[1][1]);
 
-        // SEARCH QUADTREE FOR ALL TRIGGER PTS INTERSECTING CURRENT BUFFER EXTENT
-        searchQuadtree(quadtree, bufferExtent[0][0], bufferExtent[0][1], bufferExtent[1][0], bufferExtent[1][1]);
-
-        triggerPts.classed("trigger-pt--selected", d => {
-          console.log(d); // ensure DOM trigger pts match up somehow with quadtree nodes
-          return d.selected; });  // class change should initiate triggerEncounter(event)
-
+      // in case of interesecting triggerPts
+      if (newlyEncountered.length) {
         // REMOVE NEWLY SELECTED TRIGGER PTS FROM QUADTREE POOL?
+        quadtree.removeAll(newlyEncountered)
+        // CLASS RESPECTIVE DOM NODES AS trigger-pt--selected
+          // will trigger encountered()
+        g.select("#trigger-pts")
+         .selectAll(".trigger-pt")
+         .filter(d => { return newlyEncountered.includes(d); })
+         .classed("trigger-pt--selected",true)
+      }
 
-        // IF MULTIPLE WITHIN CURRENT BUFFER, QUEUE BY NEAREST?
-          // find nearest trigger pt
-          // let p = quadtree.find(currentLocation[0],currentLocation[1]);
-          // triggerPts.classed("trigger-pt--nearest", d => { return d === p; })
     }
 
 //// QUADTREE / DEFS / DATA/INTERSECT QUERIES
@@ -1920,11 +1918,18 @@
                   .classed("trigger-pt--selected", false) // for now
                   .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
                   .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+                  // properties
+                  // .property("id", d => {return d.properties.id; })
+                  .property("name", d => { return d.properties.NAME; })
+                  .property("category", d => { return d.properties.CATEGORY; })
+                  .property("subtype", d => { return d.properties.TYPE; })
+                  .property("details", d => { return d.properties.MORE_INFO; })
                   // temporary visual
-                  .attr("r", 0.2)
-                  .style("fill","chartreuse")
+                  .attr("r", 0)
+                  .style("fill","tomato")
                   .style("stroke","goldenrod")
                   .style("stroke-width","0.1px")
+                  .style("opacity", 0.1)
                   // .on("encounter", encountered) // "encountered" as custom event dispatched upon quadtree selection
 
       // use mutationObserver to watch for class changes on triggerPts group
@@ -1937,7 +1942,7 @@
             if (mutation.attributeName === "class") {
               // store most recent class addition
               let trigger = mutation.target;
-              console.log(trigger)
+              // console.log(trigger)
               var newlyClassed = trigger.classList[trigger.classList.length - 1];
               if (newlyClassed === "trigger-pt--selected") {
                 // dispatch custom "encounter" event
@@ -2031,6 +2036,7 @@
     function searchQuadtree(quadtree, x0, y0, x3, y3) {
       // console.log(x0, y0)
       // console.log(x3, y3)
+      let selected = [];
       quadtree.visit(function(node, x1, y1, x2, y2) {
         if (!node.length) { // if node is not an array of nodes (i.e. has content)
           // console.log(node)
@@ -2044,11 +2050,25 @@
             let d0 = projection(d.geometry.coordinates)[0],
                 d1 = projection(d.geometry.coordinates)[1];
             d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
-            if (d.selected) { console.log("SELECTION MADE HURRAYYY")}
+            if (d.selected) {
+              console.log("SELECTION MADE HURRAYYY");
+
+              let encountered = d3.selectAll(".trigger-pt").filter(e => { return e === d; }); // classed("trigger-pt--selected",true)
+
+              console.log("encountered within quadtree at " + performance.now())
+
+              encountered.transition()
+                         .duration(tPause/2)
+                         .attr("r", 1)
+                         .style("opacity", 0.8)
+
+              selected.push(d)
+            }
           } while (node = node.next);
         }
         return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
       });
+      return selected;
     }
 
     function useDefs() {
@@ -2072,9 +2092,21 @@
     }
 
     function encountered() {
-      console.log("encountered!")
-      console.log(this)
       // called by triggerPt upon selection by quadtree
+      // console.log("encountered!")
+      // console.log(this)
+
+      let encountered = d3.select(this);
+
+      console.log("reached encountered() at " + performance.now())
+      console.log(`now passing ${encountered.property("name")}`)
+      // (subtype: ${encountered.property("subtype")})`)
+
+      // // visual cue for now
+      // encountered.transition()
+      //            .duration(tPause/2)
+      //            .attr("r", 1)
+      //            .style("opacity", 0.8)
 
       // FIND associated full geometry/props in <defs>
       // VISUALIZE element
