@@ -206,28 +206,28 @@
     //     -o quantization=1e5 format=topojson mapshaped/*fileout*.json
     // then simplified and cleaned in browser for visual
 
-    // more: pois incl bridges, tunnels, iNat
-
     // background/reference
-      var admin0 = d3.json("data/final/admin0.json"),
-          admin1 = d3.json("data/final/admin1.json"),
-      // terrain = d3.buffer("data/final/terrain.tif"),
-       hydroBase = d3.json("data/final/hydro_base.json"),
-       urbanBase = d3.json("data/final/urban_areas.json"), // add major roads?
+      var initBounds = d3.json("data/final/bounding.json"),
+              admin0 = d3.json("data/final/admin0.json"),
+              admin1 = d3.json("data/final/admin1.json"),
+             // terrain = d3.buffer("data/final/terrain.tif"),
+           hydroBase = d3.json("data/final/hydro_base.json"),
+           urbanBase = d3.json("data/final/urban_areas.json"), // add major roads?
     // rail
-        railBase = d3.json("data/final/railways.json"),
-        // passRail = d3.json("data/final/pass_railways.json"),
-        railStns = d3.json("data/final/na_main_rr_stns.json"),
-       // prBuffers = d3.json("data/final/pass_rail_buffers.json");
+            railBase = d3.json("data/final/railways.json"),
+            // passRail = d3.json("data/final/pass_railways.json"),
+            // railStns = d3.json("data/final/na_main_rr_stns.json"),
+            railStns = d3.json("data/final/na_rr_stns.json"),
+           // prBuffers = d3.json("data/final/pass_rail_buffers.json");
     // merged enrich data
-       // enrichPolys = d3.json("data/final/enrich_polys.json"),
-       // enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
-       // enrichLines = d3.json("data/final/enrich_lines.json"),
-       // enrichLines = d3.json("data/final/enrich_lines_slimmed.json"),
-       enrichPts = d3.json("data/final/enrich_pts.json");
+         // enrichPolys = d3.json("data/final/enrich_polys.json"),
+         // enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
+         // enrichLines = d3.json("data/final/enrich_lines.json"),
+         // enrichLines = d3.json("data/final/enrich_lines_slimmed.json"),
+           enrichPts = d3.json("data/final/enrich_pts.json");
 
   // SET BOUNDING BOX
-    Promise.all([admin0])
+    Promise.all([initBounds])
            .then(setBounding,onError)
 
   // DRAW VECTOR BASE
@@ -582,7 +582,14 @@
 
         // opt0 == from, opt1 == to
 
-        if (!seemsValid([opt0,opt1])) return false; // throw error?
+        // Rome2Rio doesn't recognize CHI as state; remove as relevant
+        let testOpt0 = opt0.split(', '),  // note space after comma
+            testOpt1 = opt1.split(', ');
+        if (testOpt0[testOpt0.length-1] === 'CHI') {
+          opt0 = testOpt0.slice(0, testOpt0.length-1).join(" ");        }
+        if (testOpt1[testOpt1.length-1] === 'CHI') {
+          opt1 = testOpt1.slice(0, testOpt1.length-1).join(" ");
+        }
 
         let selection = queryAPI(opt0,opt1);
 
@@ -621,22 +628,16 @@
 
   // PROCESS NEW INFORMATION
     // API/complex
-      // VALIDATE CLIENT-SIDE AS POSSIBLE
-        function seemsValid(input) {
-          // for now!
-          return true;
-        }
-      // ASSUME WE'RE GOOD
-        // provide user feedback that map content is loading
-        function toggleLoading() {
-          d3.select("#modal").classed("none", true);
-          d3.select("#map-init-load").classed("none", false);
-        }
-        // prevent window reprompt on apps with lots of moving parts
-        function localStore() {
-          // add somewhere to prevent reprompt
-          localStorage.optionsReceived = true;
-        }
+      // provide user feedback that map content is loading
+      function toggleLoading() {
+        d3.select("#modal").classed("none", true);
+        d3.select("#map-init-load").classed("none", false);
+      }
+      // prevent window reprompt on apps with lots of moving parts
+      function localStore() {
+        // add somewhere to prevent reprompt
+        localStorage.optionsReceived = true;
+      }
       // QUERY API IF USING
         function queryAPI(opt0,opt1) {
 
@@ -951,7 +952,7 @@
       // Relate route waypts/nodes/links to spatially intersecting (given buffer) data for interesting and illuminating route experience
       function enrichRoute(chosen) {
 
-        // keeps radius consistent with fitlered pool of enrichData
+        // keeps radius consistent with filtered pool of enrichData
         let bufferedRoute = turf.buffer(chosen.lineString, 0.5, {units: "degrees", steps: 12}); // ? re: steps (default much more)
 
         g.append("path")
@@ -981,6 +982,11 @@
           let filteredPts = allPts.features.filter(d => {
             return turf.booleanPointInPolygon(d.geometry,bufferedRoute);
           });
+
+          console.log(filteredPts)
+          // distinguish between triggerPts & full geometries & props
+          // bind all and unveil, or bind from <use> element only upon intersect?
+
 
           // LINES
           // let singleLines = allLines.features.filter(d => {
@@ -1840,6 +1846,18 @@
                        .style("stroke-width","0.2px")
                        .style("opacity", 0.6)
 
+      // Fairbanks -> Girdwood (TOO BIG)
+      console.log(bufferExtent) // [-1004.42063268826, -717.7708679188206],
+                                // [1018.8600137863496, 619.1797111825064]
+      console.log(bufferVis.node()) // last:
+                                    // <rect class="momentary-buffer-vis" x="-1004.4206326882601" y="-717.7708679188206" width="2023.28.." height="1336.95.."></rect>
+
+      // Chicago -> Seattle (NORMAL)
+      // bufferExtent:     // [-89.2699363635677, -23.86499675683484],
+                           // [-84.56622537975238, -18.544681714602177]
+      // bufferVis.node(): // last:
+                           // <rect class="momentary-buffer-vis" x="-89.268784183.." y="-23.86312549.." width="4.7037.." height="5.32031.."></rect>
+
       d3.select("#train-point").raise(); // keep train on top of bufferVis
 
       bufferVis.transition().duration(tPause)
@@ -2298,6 +2316,19 @@
   //   drawLegend(svg, width, height)
   //
   // }
+
+  //////  adding text elements with d3 - copy/pasted notes
+    //      svg.selectAll(".place-label")
+    //        .enter().append("text")
+    //        .attr("class", "place-label")
+    //        .attr("transform", function(d) { return "translate(" + projection(d.geometry.coordinates) + ")"; })
+    //        .attr("x", function(d) { return d.geometry.coordinates[0] > -1 ? 6 : -6; })
+    //        .attr("dy", ".35em")
+    //        .style("text-anchor", function(d) { return d.geometry.coordinates[0] > -1 ? "start" : "end"; })
+    //        .text(function(d) { return d.properties.name; });
+    ////   or:
+    //        .attr("class", function(d) { return "subunit-label " + d.id; })
+    //        .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
 
   function bindTooltip(parent){
     // bind a tooltip to the layer with geography-specific information
