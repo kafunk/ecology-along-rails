@@ -700,21 +700,34 @@
             lineString: mergedGJ,
             segments: [],
             allStops: [],
-            mileMarkers() { return this.getMileMarkers(); },
-            arcPts() { return getArcPts(this.lineString,this.totalDistance); },
-            ticks: {},
+            // mileMarkers: getMileMarkers(),
+            // mileMarkers() { return this.getMileMarkers(); },
+            // arcPts() {
+            //   let pts = getArcPts(this.lineString,this.totalDistance);
+            //   this.arcPts = pts;
+            //   return pts;
+            // },
+            // ticks: {},
             overallBearing: turf.bearing([places[0].lng,places[0].lat],[places[1].lng,places[1].lat]),
             gj: gj,
+            getArcPts(steps = 500) {
+              // let breaks = getBreaks(lineStr,distance,steps);
+              let breaks = getBreaks(thisRoute.lineString,thisRoute.totalDistance,steps);
+              return [...breaks].map(point => projection(point));
+            },
             getPath() { return g.select("#full-route").attr("d"); },
             getPathLength() { return this.getPath().node().getTotalLength(); },
             // getBounds() { return projPath.bounds(this.lineString); },
             // PATH NODES / SEGMENTS (to interpolate b/t orig and destination at regular, arbitrary intervals)
             getMileMarkers() {
               let miles = Math.floor(this.totalDistance);
-              this.mileMarkers = [...getBreaks(this.lineString,this.totalDistance,miles)].map(point => projection(point));
-              return this.mileMarkers;
+              return [...getBreaks(this.lineString,this.totalDistance,miles)].map(point => projection(point));
             }
           }
+
+          // is there a better way to do this? trying to allow for access to mileMarkers value as either property or method (recalculated on the fly)
+          thisRoute.mileMarkers = thisRoute.getMileMarkers(),
+               thisRoute.arcPts = thisRoute.getArcPts()
 
           // ALL STOPS
           route.segments.forEach(segment => {
@@ -738,34 +751,25 @@
             }
           }
 
-          // ALL TICKS
-          for (var i= 0; i < thisRoute.mileMarkers.length; i++) {
-            thisRoute.ticks[i] = {
-              point: thisRoute.mileMarkers[i],
-              coords: projection.invert(thisRoute.mileMarkers[i]),
-              getPrevPt() { return thisRoute.mileMarkers[i-1] || this.point },
-              getPrevCoords() { return projection.invert(this.getPrevPt()) },
-              getNextPt() { return thisRoute.mileMarkers[i+1] || this.point },
-              getNextCoords() { return projection.invert(this.getNextPt()) },
-              getBearing() {
-                return turf.bearing(this.getPrevCoords(),this.getNextCoords());
-                // return turf.bearing(this.getPrevPt(),this.getNextPt());
-              },
-              getRotate() {
-                let angle = this.getBearing();
-                if (Math.sign(angle) == -1) {  // if angle is negative
-                  angle += 360;
-                }
-                // let rotate = perpendicular(angle);
-                // return rotate;
-                return angle;
-              }
-              // getAzimuth()
-              // getOrientation() // cardinal
-              // getElevation()
-              // getIntersecting()
-            }
-          }
+          // // ALL TICKS
+          // for (var i = 0; i < thisRoute.arcPts.length; i++) {
+          //
+          //   thisRoute.ticks[i] = {
+          //     point: thisRoute.arcPts[i],
+          //     // coords: projection.invert(thisRoute.arcPts[i]),
+          //     getPrevPt() { return thisRoute.arcPts[i-1] || this.point },
+          //     // getPrevCoords() { return projection.invert(this.getPrevPt()) },
+          //     getNextPt() { return thisRoute.arcPts[i+1] || this.point },
+          //     // getNextCoords() { return projection.invert(this.getNextPt()) },
+          //     // getBearing() {
+          //     //   return turf.bearing(this.getPrevCoords(),this.getNextCoords());
+          //     //   // return turf.bearing(this.getPrevPt(),this.getNextPt());
+          //     // },
+          //     // getOrientation() // cardinal
+          //     // getElevation()
+          //     // getIntersecting()
+          //   }
+          // }
 
           return thisRoute;
 
@@ -788,10 +792,9 @@
 
         // if routeBounds overly zoomed in
         if (routeBounds.k > scale1) {
-          let simpOptions = {tolerance: 1, highQuality: false, mutate: false},
-                simpRoute = turf.simplify(chosen.lineString, simpOptions),
-               simpLength = Math.floor(turf.length(simpRoute, {units: "miles"})),
-                    midPt = turf.along(simpRoute,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2));
+          let simpRoute = getSimpRoute(chosen.lineString),
+             simpLength = Math.floor(turf.length(simpRoute, {units: "miles"})),
+                  midPt = turf.along(simpRoute,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2));
           routeBounds = getIdentity(centerTransform(projection(midPt),scale1));
         }
 
@@ -902,7 +905,7 @@
             allStns.exit().remove();
           })
 
-        let arcPts = received.arcPts();
+        let arcPts = received.arcPts;
 
         // LINE/ROUTE
         // faint underlying solid
@@ -926,6 +929,35 @@
           .style("stroke-dasharray", dash0)
           .style("stroke-linecap", "round")
 
+        // semiSimp path for headlights/eventual compass to follow
+        let fullGj = turf.lineString(arcPts),
+          semiSimp = getSimpRoute(fullGj,0.5),
+        simpCoords = semiSimp.geometry.coordinates; // shorthand
+
+        // bind (and optionally render) semiSimp line (currently using for later DOM access to path nodes within bearWithMe())
+        var simpVis = journey.append("path")
+          .attr("id", "semi-simp")
+          .attr("d", line(simpCoords))
+          .style("fill","none")
+          // .style("stroke","slateblue")
+          // .style("stroke-width","1px")
+
+        // make headlights!
+        let azimuth0 = getAzimuth(semiSimp.geometry.coordinates[0],semiSimp.geometry.coordinates[1]),
+            radians0 = 0,            // start with unrotated arc
+                 tau = 2 * Math.PI,  // 100% of a circle
+             arcSpan = 0.18 * tau,   // hardcode as desired (in radians)
+             sector0 = getSector(radians0,arcSpan);  // radius will default to 10
+
+        // add headlights as DOM node (opacity transitions in from 0)
+        var headlights = g.select("#route").append("path")
+          .attr("id", "headlights")
+          .attr("d", sector0)
+          .attr("transform", "translate(" + arcPts[0] + ") rotate(" + azimuth0 +")")
+          .style("fill","lightyellow") // linearGradient fading outward?
+          .style("opacity", 0)
+          .property("azimuth0", azimuth0)
+
         // BIG GUY: TRAIN POINT IN MOTION
         var point = journey.append("circle")
           .attr("id","train-point")
@@ -937,7 +969,7 @@
           .style("stroke-dasharray",dash2)
           .attr("transform", "translate(" + arcPts[0] + ")")
 
-        // overlay of ticks/ties @ arcPts
+        // UNDERLYING TICKS/TIES
         let rrTies = route.append("g")
           .attr("id","rr-ties")
           .append("path")
@@ -946,6 +978,16 @@
           .style("stroke", "slateblue")
           .style("stroke-width",0.6)
           .style("stroke-dasharray", dash1)
+
+        // // SIMP TICKS
+        // let simpTicks = route.append("g")
+        //   .attr("id","simp-ticks")
+        //   .append("path")
+        //   .attr("d", line(simpCoords))
+        //   .style("fill", "none")
+        //   .style("stroke", "cyan")
+        //   .style("stroke-width",1.6)
+        //   .style("stroke-dasharray", dash1)
 
       }
 
@@ -1179,10 +1221,6 @@
 
       function initAnimation(routeObj,routeBounds) {
 
-        // SETUP
-        let point = g.select("#train-point"),
-             path = g.select("#full-route");
-
         // get zoomFollow object including simplified zoomArc, pace, and first/last zoom frames
         let zoomFollow = getZoomFollow();  // pass routeObj, optional focus int (default = 100)
 
@@ -1200,14 +1238,11 @@
         // final user prompt/countdown??
         // if (confirm("Ready?")) {
           experience.animating = true;  // global flag that experience in process
-          goTrain(point,path,zoomFollow,zoomArc,routeObj.enrichData,routeBounds); // initiate movement!
+          goTrain(zoomFollow,zoomArc,routeObj.enrichData,routeBounds); // initiate movement!
         // }
 
         function getZoomFollow(int = 100) { // also requires access to routeObj
                                             // int = miles in/out to focus view, start/stop zoomFollow
-
-          // *TODO* extract route simplification into separate function call (currently repeated elsewhere)
-          let simpOptions = {tolerance: 1, highQuality: false, mutate: false};
 
           let zoomFollow = {
             necessary: true, // default
@@ -1223,7 +1258,7 @@
               }
             },
             simpSlice: [],
-            fullSimp: turf.simplify(routeObj.lineString, simpOptions),
+            fullSimp: getSimpRoute(routeObj.lineString),
             simpLength() {
               let result = Math.floor(turf.length(this.fullSimp, {units: "miles"}));
               this.simpLength = result;
@@ -1350,10 +1385,10 @@
       // let abs = v => { return Math.abs(v) },
       //   clipExtent = [[-abs(tx), -abs(ty)], [abs(tx), abs(ty)]];
 
-      let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
-
-      identity.clipExtent(clipExtent)
-      projection.clipExtent(clipExtent)
+      // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
+      //
+      // identity.clipExtent(clipExtent)
+      // projection.clipExtent(clipExtent)
 
       g.style("stroke-width", 1 / (k*k) + "px");
 
@@ -1457,11 +1492,11 @@
           let tx = -k * p.x + width/2,
               ty = -k * p.y + height/2;
 
-          // ????
-          // clip projected data to minimize shift/render calculations?
-          let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
-          identity.clipExtent(clipExtent)
-          projection.clipExtent(clipExtent)
+          // // ????
+          // // clip projected data to minimize shift/render calculations?
+          // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
+          // identity.clipExtent(clipExtent)
+          // projection.clipExtent(clipExtent)
 
           return "translate(" + tx + "," + ty + ") scale(" + k + ")";
         }
@@ -1476,6 +1511,22 @@
         	var p = path.node().getPointAtLength(t * l);
           return "translate(" + p.x + "," + p.y + ")";
   			}
+      }
+    }
+
+    function bearWithMe(path,azimuth0) {
+      var l = path.node().getTotalLength();
+      return function(d, i, a) {
+        let rotate = azimuth0,
+               pt0 = path.node().getPointAtLength(0);
+        // additional rotate interpolator for smoother transitions?
+        // address any jumps between, eg., -179 and 179
+        return function(t) {
+          let pt1 = path.node().getPointAtLength(t * l);  // svg pt
+          if (!(pt0.x === pt1.x)) rotate = getRotate(pt0,pt1);
+          pt0 = pt1;  // shift pt values pt0 >> pt1
+          return transform = "translate(" + pt1.x + "," + pt1.y + ") rotate(" + rotate + ")";
+        }
       }
     }
 
@@ -1660,10 +1711,10 @@
     }
 
 //// TURF/GEO ON-THE-FLY
-    function getArcPts(lineStr,distance,steps = 500) {
-      let breaks = getBreaks(lineStr,distance,steps);
-      return [...breaks].map(point => projection(point));
-    }
+    // function getArcPts(lineStr,distance,steps = 500) {
+    //   let breaks = getBreaks(lineStr,distance,steps);
+    //   return [...breaks].map(point => projection(point));
+    // }
     function getBreaks(lineString,distance,steps) {
       let breaks = new Set;
       if (lineString.geometry.coordinates.length > 0) {
@@ -1673,9 +1724,88 @@
       }
       return breaks;
     }
+    function getAzimuth(p0,p1,isInitial = false) {  // returns getRotate(p0,p1)
+      let rotate = getRotate(p0,p1,isInitial);
+      return rotate;
+    }
+    function getRotate(p0,p1,isInitial = false) {
+      let slope, y0, y1;
+      // adjust slope calculation to account for reflectedY!
+      if (p0.x) {   // assume two svg pts
+        slope = (-p1.y-(-p0.y))/(p1.x-p0.x);
+        y0 = p0.y,
+        y1 = p1.y;
+      } else {      // assume two coordinate pairs
+        slope = (-p1[1]-(-p0[1]))/(p1[0]-p0[0]),
+        y0 = p0[1],
+        y1 = p1[1];
+      }
+
+      let quadrant, range;
+      // again, y1:y0 relationships account for reflected Y values
+      if (Math.sign(slope) === -1) {  // slope negative
+        if (y1 < y0) {                // heading north
+          quadrant = "NW",
+          range = [270,360];
+        } else {                      // heading south
+          quadrant = "SE",
+          range = [90,180];
+        }
+      } else {                        // slope positive
+        if (y1 < y0) {                // heading north
+          quadrant = "NE",
+          range = [0,90];
+        } else {                      // heading south
+          quadrant = "SW",
+          range = [180,270];
+        }
+      }
+
+      let angle = Math.atan(slope),            // inverse-tanget = angle in radians
+        degrees = turf.radiansToDegrees(angle) // translate to degrees for SVG rotate
+
+      let rotate;
+      if (["NE","SE"].includes(quadrant)) {
+        rotate = 90 - degrees;
+      } else {
+        rotate = -90 - degrees;
+      }
+
+      // console.log("quadrant",quadrant)
+      // console.log("rotate",rotate)
+
+      // // below necessary? what does svg do with neg degrees or degrees above 360?
+      // // what will happen in transition if a jump from 359 to 2? or, more likely, -178 to 179? (any way to insist on direction of movement to avoid jolting circles all the way around?)
+
+      // if (Math.sign(rotate) === -1) {  // too low
+      //   rotate += 360; // 180?
+      //   // rotate += 180;
+      //   console.log("negative rotate! recalculated:", rotate)
+      // }
+      // if (rotate > 360) { // too high
+      //   rotate -= 360;
+      //   console.log("rotate over 360! recalculated:", rotate)
+      // }
+
+      return rotate;
+
+    }
+
+    function getSector(radians,arcSpan,r1 = 10, r0 = 0) {
+      return d3.arc()
+        .innerRadius(r0)
+        .outerRadius(r1)
+        .cornerRadius(r1/10)
+        .startAngle(radians - arcSpan/2)
+        .endAngle(radians + arcSpan/2);
+    }
+    function getSimpRoute(full,tolerance = 1) {
+      let options = {tolerance: tolerance, highQuality: false, mutate: false};
+      return turf.simplify(full, options);
+    }
 
 //// ANIMATION
-    function goTrain(point,fullPath,zoomFollow,zoomArc,enrichData,routeBounds) {
+    function goTrain(zoomFollow,zoomArc,enrichData,routeBounds) {
 
       let tDelay,tMid;
 
@@ -1686,6 +1816,12 @@
       // tFull is based on ms/simplified mile for later tDelay calc reasons
       let tFull = Math.max(tpm * simpDistance, tPause) // effective ms per simp mile * simp miles, or tPause value if former less than latter
            tEnd = 0;                  // default 0 in case no difference between routeBounds and firstFrame
+
+      let headlights = g.select("#headlights"),
+            semiSimp = g.select("#semi-simp"),
+               point = g.select("#train-point"),
+            fullPath = g.select("#full-route"),
+            azimuth0 = headlights.property("azimuth0");
 
       if (!zoomFollow.necessary) {
 
@@ -1743,40 +1879,49 @@
               // make quadtree (now that view/data pts will remain consistent)
               quadtree =
               makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
-              d3.timeout(() => {
-                // if (confirm("Ready?")) {
-                  // d3.timerFlush() // necessary?
-                  // disable free zooming
-                  svg.on('.zoom',null)
-                  // call initial point transition, passing simplified path
-                  goOnNow(scale,tpm,lastIdentity,zoomArc)
-                // }
-              }, tEnd)
+              // turn on headlights
+              headlights.transition().duration(tEnd*2)
+                .style("opacity",0.6)
+                .on("start", () => {
+                  d3.timeout(() => {
+                    // if (confirm("Ready?")) {
+                      // d3.timerFlush() // necessary?
+                      // disable free zooming
+                      svg.on('.zoom',null)
+                      // call initial point transition, passing simplified path
+                      goOnNow(scale,tpm,lastIdentity,zoomArc)
+                    // }
+                  }, tEnd)
+                })
             })
 
       }
 
       function goOnNow(scale,tpm,lastIdentity,simpPath) {
-        dispatch.call("depart", this) // , tFull) // all three arguments necessary
+        dispatch.call("depart", this)
         // set up transition along entire route
       	point.transition().delay(tEnd).duration(tFull).ease(d3.easeSinInOut)
-    		 .attrTween("transform", translateAlong(fullPath))
-         // point transition triggers additional elements
-         .on("start", () => {
-           // kick off global timer!
-           timer = d3.timer(animate)
-           // animateSolid(fullPath,tFull)
-           fullPath.style("opacity", 0.6)
+    		  .attrTween("transform", translateAlong(fullPath))
+          // point transition triggers additional elements
+          .on("start", () => {
+            // kick off global timer!
+            timer = d3.timer(animate)
+            // keep headlights on, allowing lookAhead() for triggerPts
+            headlights.transition().duration(tFull).ease(d3.easeSinInOut)
+              .attrTween("transform", bearWithMe(semiSimp,azimuth0))
+              // animateSolid(fullPath,tFull)
+            fullPath.style("opacity", 0.6)
               .transition().duration(tFull).ease(d3.easeSinInOut)
                 .styleTween("stroke-dasharray",tweenDash)
-           // zoomFollow if necessary
-           if (simpPath) { // (firstThree[1] !== lastThree[1]) {
-             g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
-              .attrTween("transform", zoomAlong(simpPath,scale))
+            // zoomFollow if necessary
+            if (simpPath) { // (firstThree[1] !== lastThree[1]) {
+              g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
+                .attrTween("transform", zoomAlong(simpPath,scale))
             }
             // RETURN HERE****
             // follow along checking for intersecting encounters
             // getIntersecting(point,fullPath,tpm,quadtree)
+            // ie use headlights to lookAhead()
           })
          .on("end", () => {
            // ensure final alignment
@@ -1806,72 +1951,286 @@
       observer.disconnect()
     }
 
-    let prevLocation, bufferExtent, prevExtent;
+    let prevLocation, prevExtent, searchExtent, transformString;
+    let extentVis, rhombusVis; // temporary visualizations
     function trainMoved() {
 
-      let transformMatrix = this.node().transform.animVal[0].matrix,
-          currentLocation = [transformMatrix.e, transformMatrix.f];
+      let trainTransform = this.node().transform.animVal[0].matrix,
+         currentLocation = [trainTransform.e, trainTransform.f],
+              headlights = g.select("#headlights");
 
-      if (!prevExtent) {  // runs first time only
+      // // SOME NOTES FROM AN ATTEMPT AT WORKING THROUGH ISSUE #2, significantly miscalculated bufferExtent on certain origins
+      //   // OBSERVATIONS
+      //     // something to do with projection or d3.geoPath() application of projection
+      //       // returned values all good through turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"})
+      //       // problem occurs when passing above geoJson to projPath.bounds()
+      //     // issue seems to occur when initial train point is located on or above the 50th parallel -- that is, on many routes which originate in Canada or Alaska
+      //       // if lat of origin point is 49.97 => result fine
+      //       // if lat of origin point is 50.02 => result NOT FINE
+      //       // fine: *
+      //       // not fine: Fairbanks -> Wasilla, *
+      //         // let projBounds = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+      //         // console.log(projBounds)
+      //     // when bufferExtent miscalculated, it is always miscalculated to the SAME VALUE GIVEN SAME WINDOW SIZE (regardless of origin/destination)
+      //       // [width x height]
+      //       // 719 x 498
+      //         // [-987.145715085721, -737.0960021961644]
+      //         // [1036.1349313888886, 599.8545769051626]
+      //       // 719 x 442
+      //         // [-971.755915518683, -725.6045277743976]
+      //         // [1019.9813801200194, 590.5027238131]
+      //   // WORK AROUND OPTIONS
+      //     // 1) calculate bufferExtent as nullPath.bounds() of buffered currentLocation (as opposed to passing (projection.invert(currentLocation)) to projPath.bounds()), giving turf.js a value approximately equivalent to 0.5 unprojected degrees (in this case, 3 degrees seems workable)
+      //       // added benefit of saving a few calculations
+      //         // let nullBounds = nullPath.bounds(turf.buffer(turf.point(currentLocation),3,{units:"degrees"}))
+      //         // console.log(nullBounds)
+      //         // projPath (currentLngLat) buffer @ 0.5 degrees:
+      //                         // [60.581740441641934, 30.487345220753866]
+      //                         // [65.21211963541435, 35.724715491573534]
+      //         // nullPath (currentLocation) buffer @ 3 degrees:
+      //                         // [59.89563018586769, 30.549823018419225]
+      //                         // [65.89592712614403, 35.57553743530147]
+      //     // 2) use turf to calculate bbox of buffered LngLat pt, then project bbox points individually to determine projected buffer extent (though how does projection(point) return accurate value when projPath.bounds() doesn't?)
+      //       // let bbox = turf.bbox(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+      //       // console.log(bbox)
+      //       // let testBounds = [projection([bbox[0],bbox[1]]),projection([bbox[2],bbox[3]])]
+      //       // console.log(testBounds)
+      //     // 3) calculate bufferExtent directly from currentProjectedLocation using hard coded value (something generous, such as 10)
+      //       // let generousBounds = [[currentLocation[0]-5,currentLocation[1]-5], [currentLocation[0]+5,currentLocation[1]+5]]
+      //       // console.log(generousBounds)
+      //     // 4) could try to calculate 0.5-degree-equivalent bufferExtent of projected point myself (seems to range between 3-7, depending on window size)
+      //     // 5) could literally access size of train icon, use that as baseline?
+      // }
 
-        // use lngLat coords to calculate bufferExtent given radius in degrees
-        let currentLngLat = projection.invert(currentLocation);
+      // NEW APPROACH: SECTORS / HEADLIGHTS!
+        // since bufferExtent polygon is what is intersecting triggerPts / triggering geometry viz, ideally polygon shape would be a sector facing forward
+        // sector could double as polygon that triggers unveiling of eco encounters en route
+          // OPTIONS
+          // either use d3.arc() function to recompute start/end angles (create new arc) on each iteration? ("d" attr) such that sector == arc
+          // OR calculate arc once, then calculate new rotate and translate values for every shift
 
-        bufferExtent = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
+      if (!searchExtent) {  // get first time only
 
-      } else {  // translate initial bufferExtent along with train point
-        bufferExtent = shifted(prevExtent,prevLocation,currentLocation);
+        let sectorBBox = headlights.node().getBBox(),
+              arcWidth = sectorBBox.width,
+             arcHeight = sectorBBox.height;
+
+        // MAKE RHOMBUS AROUND ARC FOR EXTENT VISUALIZATION
+
+        // ** can adjust rhombusHeight such that furthermost point is far enough to counteract lag in triggerPt/fullGeom visualization **
+        let rhombusHeight = (arcHeight * 4/5) * 2;
+
+        let origin = [0,0], // use SVG transforms to position
+         reflected = [origin[0], origin[1] - rhombusHeight],  // subtracts height to account for SVG reflection
+        clockwise0 = [reflected[0] - arcWidth/2, reflected[1] + rhombusHeight/2],
+        clockwise1 = [reflected[0] + arcWidth/2, reflected[1] + rhombusHeight/2];
+
+        let rhombus = turf.convex(turf.featureCollection([
+          turf.point(origin),
+          turf.point(clockwise0),
+          turf.point(reflected),
+          turf.point(clockwise1),
+          turf.point(origin)
+        ]));
+
+        let rhombusExtent = [[-arcWidth/2,-rhombusHeight],[arcWidth/2,0]]
+
+        // CALCULATE SEARCH EXTENT FOR QUADTREE
+        // theoretically min x,y, max x,y
+          // due to SVG y reflection, must switch min/max y's for numeric comparison within quadtree
+        searchExtent = [[currentLocation[0] - arcWidth/2, currentLocation[1] - rhombusHeight],[currentLocation[0] + arcWidth/2, currentLocation[1]]]
+
+        // VISUALIZE TRANSFORMED SEARCH EXTENT AND RHOMBUS
+        let rotate0 = headlights.property("azimuth0");
+
+        transform0 = "translate(" + currentLocation[0] + "," + currentLocation[1] + ") rotate(" + rotate0 + ")";
+
+        // extentVis = g.select("#route").append("rect")
+        //   .datum(rhombusExtent)
+        //   .attr("id","extent-vis")
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .attr("transform",transform0)
+        //   .style("fill","steelblue")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.3px")
+        //   .style("stroke-dash-array",origDash)
+        //   .style("opacity",0.2)
+        // rhombusVis = g.select("#route").append("path")
+        //   .datum(rhombus)
+        //   .attr("d",nullPath) // y is already reflected
+        //   .attr("transform",transform0)
+        //   .style("fill","tomato")
+        //   .style("stroke","silver")
+        //   .style("stroke-width","0.3px")
+        //   .style("stroke-dash-array",origDash)
+        //   .style("opacity",0.4)
+
+        // upon train arrival, schedule fade/remove of headlights + each extentVis node
+        dispatch.on("arrive", () => {
+          // extentVis.transition().duration(tPause)
+          //          .style("opacity",0)
+          //          .on("end", () => {
+          //            extentVis.classed("none",true)
+          //            extentVis.remove()
+          //          })
+          // rhombusVis.transition().duration(tPause)
+          //           .style("opacity",0)
+          //           .on("end", () => {
+          //             rhombusVis.classed("none",true)
+          //             rhombusVis.remove()
+          //           })
+          headlights.transition().duration(tPause)
+                    .style("opacity",0)
+                    .on("end", () => {
+                      headlights.classed("none",true)
+                      headlights.remove()
+                    })
+        })
+
+        headlights.raise() // keep headlights on top of extent visualizations
+
+        this.raise(); // keep train on top of extentVis
+
+      } else {  // get adjusted transformString and searchExtent on each trainMove
+
+        let rotate = headlights.node().transform.animVal[1].angle,
+                dx = currentLocation[0] - prevLocation[0],
+                dy = currentLocation[1] - prevLocation[1],
+                tx = currentLocation[0] + dx,
+                ty = currentLocation[1] + dy;
+
+        // let translatedExtent = translateExtent(prevExtent,dx,dy);
+        // searchExtent = translatedExtent;  // works but lags and too narrow
+
+        let rotatedExtent = rotateExtent(prevExtent,rotate)
+        // searchExtent = rotatedExtent;     // not on its own
+
+        // let translatedThenRotated = rotateExtent(translatedExtent,rotate)
+        // searchExtent = translatedThenRotated;  // BEST SO FAR
+
+        let rotatedThenTranslated = translateExtent(rotatedExtent,dx,dy)
+        searchExtent = rotatedThenTranslated;  // BEST? though rotate still not exact
+
+          // ALT OPTION:
+          // scrap quadtree and boolean search for triggerPt in rhombus polygon (how much slower?)
+
+        // // individual extent visualizations (TEMPORARY)
+        // let tempVis = g.select("#route").append("rect")
+        //   .datum(searchExtent)
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .style("fill","magenta")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.3px")
+        //   .style("opacity",0.6)
+        //
+        // d3.timeout(() => {
+        //   tempVis.transition().duration(1200)
+        //          .style("opacity",0)
+        //          .on("end", () => {
+        //            tempVis.classed("none",true)
+        //            tempVis.remove()
+        //          })
+        // }, 1200);
+
+        function translateExtent(extent,dx,dy) {
+          return extent.map(d => { return [d[0]+dx, d[1]+dy] });
+        }
+
+        // function shiftExtent(extent,matrix) {
+        //   let p0 = extent[0],
+        //       p1 = extent[1];
+        //   let p2 = [matrix.a * p0[0] + matrix.c * p0[1] + matrix.e,
+        //             matrix.b * p0[0] + matrix.d * p0[1] + matrix.f],
+        //       p3 = [matrix.a * p1[0] + matrix.c * p1[1] + matrix.e,
+        //             matrix.b * p1[0] + matrix.d * p1[1] + matrix.f];
+        //   return [p2,p3];
+        // }
+
+        function rotateExtent(extent,degrees) {
+
+          let angle = turf.degreesToRadians(degrees),
+              width = extent[1][0]-extent[0][0],
+             height = Math.abs(extent[1][1]-extent[0][1]),
+                // pt0 = extent[0],
+                // pt1 = extent[1],
+              midPt = [extent[0][0]+width/2,extent[0][1]+height/2];
+
+          let point = midPt,
+              pivot = currentLocation;
+          let rotatedPt = rotatePt(point,angle,pivot);
+
+          // get differences relative to midPt
+          let deltaX = rotatedPt[0]-point[0],
+              deltaY = rotatedPt[1]-point[1];
+
+          // adjust extent pts accordingly // DEFINITELY NOT EXACT
+          let rotatedExtent = extent.map(d => { return [d[0]+deltaX,d[1]+deltaY] });
+
+          // let point0 = pt0,
+          //     point1 = pt1;
+          // pivot = midPt;
+          //
+          // // rotate point around pivot
+          // let rotatedPt0 = rotatePt(point0,angle,pivot),
+          //     rotatedPt1 = rotatePt(point1,angle,pivot);
+          //
+          // let rotatedExtent2 = [rotatedPt0,rotatedPt1]
+          //
+          // return rotatedExtent2;
+
+          return rotatedExtent;
+
+          // adapted from stackoverflow answer https://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
+          function rotatePt(point,angle,pivot = [0,0]) {  // angle in radians
+
+            // translate point back to origin
+            let origin = [point[0] - pivot[0], point[1] - pivot[1]],
+                   sin = Math.sin(angle),
+                   cos = Math.cos(angle);
+
+            // rotate point
+            let x = origin[0] * cos - origin[1] * sin,
+                y = origin[0] * sin + origin[1] * cos;
+
+            // translate back to pivot pt
+            let rotated = [x + pivot[0], y + pivot[1]]
+
+            return rotated;
+
+          }
+
+        }
+
+        transformString = "translate(" + tx + "," + ty + ") rotate(" + rotate +")"
+
       }
 
-      // store determined values as baseline for next transform
+      lookAhead(searchExtent); // initiate quadtree search
+
+      // save newly determined values as previous values
       prevLocation = currentLocation,
-        prevExtent = bufferExtent;
+        prevExtent = searchExtent;
 
-      function shifted(extent,previousPt,currentPt) {
-        let tx = currentPt[0] - previousPt[0],
-            ty = currentPt[1] - previousPt[1];
-        return extent.map(d => { return [d[0]+tx, d[1]+ty]; })
-      }
+      // // update transform of extentVis
+      // extentVis.attr("transform",transformString)
+      // rhombusVis.attr("transform",transformString)
 
-      // temporary visual of train buffer that will eventually trigger unveiling of eco encounters en route
-      let bufferVis = g.select("#route").append("rect")
-                       .datum(bufferExtent)
-                       .classed("momentary-buffer-vis",true)
-                       .attr("x", d => { return d[0][0]; })
-                       .attr("y", d => { return d[0][1]; })
-                       .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-                       .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-                       .style("fill","steelblue")
-                       .style("stroke","whitesmoke")
-                       .style("stroke-width","0.2px")
-                       .style("opacity", 0.6)
+    }
 
-      // Fairbanks -> Girdwood (TOO BIG)
-      console.log(bufferExtent) // [-1004.42063268826, -717.7708679188206],
-                                // [1018.8600137863496, 619.1797111825064]
-      console.log(bufferVis.node()) // last:
-                                    // <rect class="momentary-buffer-vis" x="-1004.4206326882601" y="-717.7708679188206" width="2023.28.." height="1336.95.."></rect>
+    // SEARCH QUADTREE FOR ALL TRIGGER PTS INTERSECTING CURRENT #HEADLIGHTS SECTOR EXTENT
+    function lookAhead(searchExtent) {
 
-      // Chicago -> Seattle (NORMAL)
-      // bufferExtent:     // [-89.2699363635677, -23.86499675683484],
-                           // [-84.56622537975238, -18.544681714602177]
-      // bufferVis.node(): // last:
-                           // <rect class="momentary-buffer-vis" x="-89.268784183.." y="-23.86312549.." width="4.7037.." height="5.32031.."></rect>
-
-      d3.select("#train-point").raise(); // keep train on top of bufferVis
-
-      bufferVis.transition().duration(tPause)
-                .style("opacity",0)
-                .on("end", () => {
-                  bufferVis.classed("none",true)
-                  bufferVis.remove() // no need for exit() bc datum was appended, not joined?
-                })
-
-      // SEARCH QUADTREE FOR ALL TRIGGER PTS INTERSECTING CURRENT BUFFER EXTENT
-      let newlyEncountered = searchQuadtree(quadtree, bufferExtent[0][0], bufferExtent[0][1], bufferExtent[1][0], bufferExtent[1][1]);
+      let newlyEncountered = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1]);
 
       // in case of interesecting triggerPts
       if (newlyEncountered.length) {
+        console.log(newlyEncountered)
         // REMOVE NEWLY SELECTED TRIGGER PTS FROM QUADTREE POOL?
         quadtree.removeAll(newlyEncountered)
         // CLASS RESPECTIVE DOM NODES AS trigger-pt--selected
@@ -1942,13 +2301,26 @@
                   .property("category", d => { return d.properties.CATEGORY; })
                   .property("subtype", d => { return d.properties.TYPE; })
                   .property("details", d => { return d.properties.MORE_INFO; })
-                  // temporary visual
+                  // temporary visual (as intersected)
                   .attr("r", 0)
                   .style("fill","tomato")
                   .style("stroke","goldenrod")
                   .style("stroke-width","0.1px")
                   .style("opacity", 0.1)
                   // .on("encounter", encountered) // "encountered" as custom event dispatched upon quadtree selection
+
+        // temporary visual (all triggerPts)
+        triggerPts.append("g")
+          .selectAll(".temp-trigger")
+          .data(triggerData)
+          .enter().append("circle")
+            .classed("temp-trigged",true).attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
+            .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+            .attr("r", 0.2)
+            .style("fill","lightgreen")
+            .style("stroke","goldenrod")
+            .style("stroke-width","0.1px")
+            .style("opacity", 0.8)
 
       // use mutationObserver to watch for class changes on triggerPts group
       awaitTrigger(triggerPts)
