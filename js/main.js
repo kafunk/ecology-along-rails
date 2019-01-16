@@ -36,15 +36,10 @@
        line = d3.line().curve(d3.curveCardinal.tension(0)),
           t = 12000;  // default
 
-  // var padX = -72,
-  //     padY = -24;
   var padX = 0,
       padY = 0;
 
   var parentWindow = d3.select("#map-and-dash-pane").node(),
-            // margin = { top: 0, bottom: 0, left: 0, right: 0},
-            // height = parentWindow.clientHeight - margin.top - margin.bottom,
-            //  width = parentWindow.clientWidth - margin.left - margin.right;
             height = parentWindow.clientHeight,
              width = parentWindow.clientWidth;
 
@@ -79,8 +74,6 @@
   // all rendered/zoomable content
   var g = svg.append("g")
     .attr("id", "zoomable")
-    // .attr("width", width)
-    // .attr("height", height)
 
 //// READY MAP
 
@@ -411,40 +404,9 @@
 
 
 
-
-//// AN OPTIMISTIC OUTLINE
-
-  // D3 DYNAMISM
-    // Declare function expressions for later use
-    // Colors, scales, tweens, etc
-
-  // SET UP MAP / SVG / CANVAS
-
-  // SET UP THE DATA LANDSCAPE
-    // INITIATE ASYNC DATA LOAD
-      // OVERLAYERS
-      // BASE
-    // KEEP TRACK OF THINGS
-      // Classes, Instances, Objects
-        // Layers
-        // Layer Groups
-        // Views/Frames
-        // Currently Rendered
-
-  // SET UP UI
-    // PREPARE INITIAL EVENT LISTENERS
-    // PROMPT USER FOR INITIAL OPTIONS
       function initPrompt() {
         d3.select("#modal").classed("none",false);
       }
-
-  // AWAIT NEW INFORMATION
-
-////  ===>  FUNCTIONAL LOOP STRUCTURE STARTS/RESUMES HERE  <===  (*)(*)(*)
-
-  // RECEIVE NEW INFORMATION
-    // direct event listeners
-    // // initial user customization
       function populateOptions(allOptions) {
 
         // OPTION 0 == START, OPTION 1 == END
@@ -620,14 +582,6 @@
 
       }
 
-  // ACKNOWLEDGE NEW INFORMATION I
-    // the fact of it
-      // function iFeelYou(*) : wheel & touch events
-      //  function iSeeYou(*) : mouse & scroll events
-      // function iHearYou(*) : click events & form input
-
-  // PROCESS NEW INFORMATION
-    // API/complex
       // provide user feedback that map content is loading
       function toggleLoading() {
         d3.select("#modal").classed("none", true);
@@ -658,12 +612,6 @@
 
           // IF NO GOOD DATA RETURNED
           if (data.routes.length === 0) {
-
-            // // add to ongoing list of mismatches
-            // d3.json("../data/mismatches.json").then(function(json) {
-            //   var mismatch = new Blob([JSON.stringify(data,null,2)], {type: "text/plain;charset=utf-8"});
-            //   saveAs(mismatch, "../data/mismatches.json");
-            // }, onError);
 
             // alert user
             window.alert(`No rail-only route found between ${data.places[0].shortName} and ${data.places[1].shortName}. Please try another combination!`)
@@ -700,14 +648,6 @@
             lineString: mergedGJ,
             segments: [],
             allStops: [],
-            // mileMarkers: getMileMarkers(),
-            // mileMarkers() { return this.getMileMarkers(); },
-            // arcPts() {
-            //   let pts = getArcPts(this.lineString,this.totalDistance);
-            //   this.arcPts = pts;
-            //   return pts;
-            // },
-            // ticks: {},
             overallBearing: turf.bearing([places[0].lng,places[0].lat],[places[1].lng,places[1].lat]),
             gj: gj,
             getArcPts(steps = 500) {
@@ -715,8 +655,8 @@
               let breaks = getBreaks(thisRoute.lineString,thisRoute.totalDistance,steps);
               return [...breaks].map(point => projection(point));
             },
-            getPath() { return g.select("#full-route").attr("d"); },
-            getPathLength() { return this.getPath().node().getTotalLength(); },
+            // getPath() { return g.select("#full-route").attr("d"); },
+            // getPathLength() { return this.getPath().node().getTotalLength(); },
             // getBounds() { return projPath.bounds(this.lineString); },
             // PATH NODES / SEGMENTS (to interpolate b/t orig and destination at regular, arbitrary intervals)
             getMileMarkers() {
@@ -753,7 +693,6 @@
 
           // // ALL TICKS
           // for (var i = 0; i < thisRoute.arcPts.length; i++) {
-          //
           //   thisRoute.ticks[i] = {
           //     point: thisRoute.arcPts[i],
           //     // coords: projection.invert(thisRoute.arcPts[i]),
@@ -763,7 +702,6 @@
           //     // getNextCoords() { return projection.invert(this.getNextPt()) },
           //     // getBearing() {
           //     //   return turf.bearing(this.getPrevCoords(),this.getNextCoords());
-          //     //   // return turf.bearing(this.getPrevPt(),this.getNextPt());
           //     // },
           //     // getOrientation() // cardinal
           //     // getElevation()
@@ -775,14 +713,6 @@
 
         }
 
-    // UI direct
-
-  // ACKNOWLEDGE NEW INFORMATION II
-    // the processed content
-      // function iGotYou(*) { }
-
-  // INTEGRATE NEW INFORMATION
-    // // INITIAL
       function initExp(chosen) {
 
         experience.initiated = true;
@@ -1329,29 +1259,6 @@
       }
 
 
-    // UPDATE DATA LANDSCAPE / STRUCTURE
-      // add new data layers to svg <defs>
-        // function storeNew(overlayers) { }
-      // update map object with source content?
-      // update event listeners?
-    // UPDATE PRIMARY VISUAL        <=== I.E., RENDER A MAP OF RELEVANCE
-      // function updateMap(newData) { }   // <=== GENERAL UPDATE PATTERN STARTS HERE
-      // ADD NEW CONTENT
-        // create new selections & data joins as necessary
-          // function addLayer() { }
-          // // from <defs>?
-      // UPDATE PERSISTING VISUAL
-        // function highlightRelevant(data) { }
-        // function zoomTo(bounds) { } // elsewhere
-      // REMOVE BLOAT
-        // exit excessive DOM nodes
-          // function removeExcess() { }
-    // UPDATE SECONDAY VISUALS (WIDGETS, ETC)
-
-  // AWAIT USER INTERACTION or OTHER NEW INFO
-    // UPON RECEIPT...                            ===>  LOOP TO (*)(*)(*)
-
-
 //////////////////////////
 ///// MORE FUNCTIONS /////
 //////////////////////////
@@ -1594,10 +1501,6 @@
 
   // PROJECTIONS & PATHS
 
-    // function setPPBounding([wgsJson,ppJson], crs = "preprojected") {
-    //   setBounding(ppJson, crs);
-    //   return [wgsJson,ppJson];
-    // }
     function setBounding(received, crs = "wgs84") {
       let data;
       (Array.isArray(received)) ? data = received[0] : data = received;
@@ -1614,18 +1517,6 @@
     function fitToExtent(fx,data,extent = extent0) {
       fx.fitExtent(extent,data);
     }
-    // function fitted(data,fx,extent = extent0) { // fitGJtoExtentUsingFX
-    //   fx.fitExtent(extent,data);
-    //   let fittedObj = {
-    //     extent: extent,
-    //     // bbox: nullPath.bounds(data),
-    //     // center: nullPath.centroid(data),
-    //     transform: getTransform(nullPath.bounds(data),extent)
-    //     // scale: transform.k,
-    //     // translate: getTranslate()
-    //   };
-    //   return fittedObj;
-    // };
 
     // function getScaleAtZoomLevel(zoomLevel, tileSize = 256) {
     //   return tileSize * 0.5 / Math.PI * Math.pow(2, zoomLevel);
@@ -1711,10 +1602,6 @@
     }
 
 //// TURF/GEO ON-THE-FLY
-    // function getArcPts(lineStr,distance,steps = 500) {
-    //   let breaks = getBreaks(lineStr,distance,steps);
-    //   return [...breaks].map(point => projection(point));
-    // }
     function getBreaks(lineString,distance,steps) {
       let breaks = new Set;
       if (lineString.geometry.coordinates.length > 0) {
@@ -1841,18 +1728,7 @@
 
       } else {  // calculate transforms and timing from firstFrame to lastFrame
 
-        // // calculate scale of initial view
-        // let firstFrame = projPath.bounds(turf.lineString(zoomFollow.firstThree)),
-        //      lastFrame = projPath.bounds(turf.lineString(zoomFollow.lastThree));
-        //
-        // let kPad = 0.6,
-        //   firstTransform = getIdentity(getTransform(firstFrame,extent0,kPad)),
-        //    lastTransform = getIdentity(getTransform(lastFrame,extent0,kPad));
-
-        // // calculate first and last zoomIdentity based on stable scale (the more conservative of first/last transform) to ensure steady zoom level across entire route
-        // scale = Math.min(firstTransform.k,lastTransform.k);
-
-        // SCRATCH THAT; pass hard coded scale that seems to be widely appropriate given constant bufferExtent
+        // pass hard coded scale that seems to be widely appropriate given constant bufferExtent
         scale = scale1;
 
         let firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),scale)),
@@ -1959,56 +1835,6 @@
          currentLocation = [trainTransform.e, trainTransform.f],
               headlights = g.select("#headlights");
 
-      // // SOME NOTES FROM AN ATTEMPT AT WORKING THROUGH ISSUE #2, significantly miscalculated bufferExtent on certain origins
-      //   // OBSERVATIONS
-      //     // something to do with projection or d3.geoPath() application of projection
-      //       // returned values all good through turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"})
-      //       // problem occurs when passing above geoJson to projPath.bounds()
-      //     // issue seems to occur when initial train point is located on or above the 50th parallel -- that is, on many routes which originate in Canada or Alaska
-      //       // if lat of origin point is 49.97 => result fine
-      //       // if lat of origin point is 50.02 => result NOT FINE
-      //       // fine: *
-      //       // not fine: Fairbanks -> Wasilla, *
-      //         // let projBounds = projPath.bounds(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
-      //         // console.log(projBounds)
-      //     // when bufferExtent miscalculated, it is always miscalculated to the SAME VALUE GIVEN SAME WINDOW SIZE (regardless of origin/destination)
-      //       // [width x height]
-      //       // 719 x 498
-      //         // [-987.145715085721, -737.0960021961644]
-      //         // [1036.1349313888886, 599.8545769051626]
-      //       // 719 x 442
-      //         // [-971.755915518683, -725.6045277743976]
-      //         // [1019.9813801200194, 590.5027238131]
-      //   // WORK AROUND OPTIONS
-      //     // 1) calculate bufferExtent as nullPath.bounds() of buffered currentLocation (as opposed to passing (projection.invert(currentLocation)) to projPath.bounds()), giving turf.js a value approximately equivalent to 0.5 unprojected degrees (in this case, 3 degrees seems workable)
-      //       // added benefit of saving a few calculations
-      //         // let nullBounds = nullPath.bounds(turf.buffer(turf.point(currentLocation),3,{units:"degrees"}))
-      //         // console.log(nullBounds)
-      //         // projPath (currentLngLat) buffer @ 0.5 degrees:
-      //                         // [60.581740441641934, 30.487345220753866]
-      //                         // [65.21211963541435, 35.724715491573534]
-      //         // nullPath (currentLocation) buffer @ 3 degrees:
-      //                         // [59.89563018586769, 30.549823018419225]
-      //                         // [65.89592712614403, 35.57553743530147]
-      //     // 2) use turf to calculate bbox of buffered LngLat pt, then project bbox points individually to determine projected buffer extent (though how does projection(point) return accurate value when projPath.bounds() doesn't?)
-      //       // let bbox = turf.bbox(turf.buffer(turf.point(currentLngLat),0.5,{units: "degrees"}));
-      //       // console.log(bbox)
-      //       // let testBounds = [projection([bbox[0],bbox[1]]),projection([bbox[2],bbox[3]])]
-      //       // console.log(testBounds)
-      //     // 3) calculate bufferExtent directly from currentProjectedLocation using hard coded value (something generous, such as 10)
-      //       // let generousBounds = [[currentLocation[0]-5,currentLocation[1]-5], [currentLocation[0]+5,currentLocation[1]+5]]
-      //       // console.log(generousBounds)
-      //     // 4) could try to calculate 0.5-degree-equivalent bufferExtent of projected point myself (seems to range between 3-7, depending on window size)
-      //     // 5) could literally access size of train icon, use that as baseline?
-      // }
-
-      // NEW APPROACH: SECTORS / HEADLIGHTS!
-        // since bufferExtent polygon is what is intersecting triggerPts / triggering geometry viz, ideally polygon shape would be a sector facing forward
-        // sector could double as polygon that triggers unveiling of eco encounters en route
-          // OPTIONS
-          // either use d3.arc() function to recompute start/end angles (create new arc) on each iteration? ("d" attr) such that sector == arc
-          // OR calculate arc once, then calculate new rotate and translate values for every shift
-
       if (!searchExtent) {  // get first time only
 
         let sectorBBox = headlights.node().getBBox(),
@@ -2114,8 +1940,9 @@
         let rotatedThenTranslated = translateExtent(rotatedExtent,dx,dy)
         searchExtent = rotatedThenTranslated;  // BEST? though rotate still not exact
 
-          // ALT OPTION:
-          // scrap quadtree and boolean search for triggerPt in rhombus polygon (how much slower?)
+        // ALT OPTION:
+        // scrap quadtree and boolean search for triggerPt in rhombus polygon (how much slower?)
+          // or will this run into same issues? how to rotate individual pts?? or otherwise calculate new coordinates of transformed svg element?
 
         // // individual extent visualizations (TEMPORARY)
         // let tempVis = g.select("#route").append("rect")
@@ -2141,17 +1968,6 @@
         function translateExtent(extent,dx,dy) {
           return extent.map(d => { return [d[0]+dx, d[1]+dy] });
         }
-
-        // function shiftExtent(extent,matrix) {
-        //   let p0 = extent[0],
-        //       p1 = extent[1];
-        //   let p2 = [matrix.a * p0[0] + matrix.c * p0[1] + matrix.e,
-        //             matrix.b * p0[0] + matrix.d * p0[1] + matrix.f],
-        //       p3 = [matrix.a * p1[0] + matrix.c * p1[1] + matrix.e,
-        //             matrix.b * p1[0] + matrix.d * p1[1] + matrix.f];
-        //   return [p2,p3];
-        // }
-
         function rotateExtent(extent,degrees) {
 
           let angle = turf.degreesToRadians(degrees),
@@ -2367,21 +2183,11 @@
     function getIntersecting(train,path,tprm,quadtree) {
 
       // COMBAK
-        // portions of this function have been addressed elsewhere,
-        // but searchQuadtree still not successfully registering intersections with bufferExtent // updating class on interested triggerPts; ADDRESS THIS FIRST
-        // then transition actual point encounters into view
+        // register triggerPts (occurs elsewhere)
+        // transition actual point encounters into view
         // finally, work on bringing in lines and polygons
       // OTHER ISSUES
-        // consistent reload at very begin
-        // stilted zoom (especially toward end and from routeBounds->firstFrame)
-        // abq -> vancouver overshot
-        // other problem cities (denver, etc; plus need to reintergrate/fix several already removed)
-        // promptRoute form blur/focus not right
-        // getStart/End form padding jolted upon submit-click in certain views
-
-      // console.log(train.node())
-      // console.log(path.node())
-      // console.log(tprm)
+        // consistent reload at very begin (local only? Atom liveserver related?)
 
       // as train moves along line, loop to continually check present position ::bufferedQueryPt:: against quadtree enrich data
         // points: reveal as soon as buffer intersects
@@ -2407,36 +2213,14 @@
           // log => logbook
           // keep circle; fade tooltip (but remains accessible on circle mouseover)
 
-      var l = path.node().getTotalLength();
-      // return function(d, i, a) {
-      //   return function(t) {
-      //     var p = path.node().getPointAtLength(t * l);
-      //     // return "translate(" + tx + "," + ty + ") scale(" + k + ")";
-      //   }
-      // }
-
-      // console.log(l)
-
-      // console.log(quadtree)
-      //
-      // console.log(defs.node())
-
     }
 
     function searchQuadtree(quadtree, x0, y0, x3, y3) {
-      // console.log(x0, y0)
-      // console.log(x3, y3)
       let selected = [];
       quadtree.visit(function(node, x1, y1, x2, y2) {
         if (!node.length) { // if node is not an array of nodes (i.e. has content)
-          // console.log(node)
-          // console.log(x1, y1)
-          // console.log(x2, y2)
           do {
             let d = node.data;
-            // d.scanned = true;  // no need to mark scanned nodes
-            // console.log(d[0])  // culprit! returning undefined!
-            // d.selected = (d[0] >= x0) && (d[0] < x3) && (d[1] >= y0) && (d[1] < y3);
             let d0 = projection(d.geometry.coordinates)[0],
                 d1 = projection(d.geometry.coordinates)[1];
             d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
@@ -2780,21 +2564,6 @@
 
 
 //// OTHER HELPER FUNCTIONS
-
-  // MATHS
-    // function avg(numArr, i){
-    //   if (!(i === undefined)) {
-    //     numArr = numArr.map(a => a[i]);
-    //   }
-    //   return numArr.reduce((a,b) => a+b) / numArr.length;
-    // }
-    // function floor(k) {
-    //   return Math.pow(2, Math.floor(Math.log(k) / Math.LN2));
-    // }
-    // function perpendicular(angle) {
-    //   (angle > 90) ? angle -= 90 : angle += 90;
-    //   return angle;
-    // }
 
   // RESET, RESIZE, REDRAW
     function clearDOM() { }
