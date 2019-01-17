@@ -2223,8 +2223,8 @@
 
       console.log("reached encountered() at " + performance.now())
 
-      // NEW
-      // receives triggerId directly from within quadtree search (much more direct)
+      // receives triggerId from "encounter" dispatch event call from within quadtree search -- 0.8-2.4 ms; often exactly 2ms; seems faster overall, so will keep using dispatch vs passing id as argument
+
       let id = this;
 
       // FIND full feature by id
