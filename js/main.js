@@ -235,8 +235,6 @@
 
 //// PREPARE MAP LAYERS
 
-  // DATA: OVERLAY / DEFS //
-
   // DATA: MESH / BASE //
   function drawBase(data) {
 
@@ -957,8 +955,6 @@
           });
 
           console.log(filteredPts)
-          // distinguish between triggerPts & full geometries & props
-          // bind all and unveil, or bind from <use> element only upon intersect?
 
 
           // LINES
@@ -1040,9 +1036,9 @@
           // tag all filtered features with type spec id
           // eg, id: i.toFixed().padStart(3,'0')
 
-          // ADD ALL FILTERED ENRICH DATA TO <DEFS> ELEMENTS
+          // ADD ALL FILTERED ENRICH DATA TO DOM
           // include full geometry, relevant properties, and type-spec id for triggerPt crosswalk
-          populateDefs(filteredPts/*,filteredLines,filteredPolys*/)
+          bindFiltered(filteredPts/*,filteredLines,filteredPolys*/)
 
           // NARROW FULL GEOMETRIES DOWN TO SPECIFIC TRIGGER/INTERSECTION PTS FOR SPATIAL SEARCH ALGORITHM
           // let triggerPts = getTriggerPts(filteredPts,filteredLines,filteredPolys,chosen.lineString,bufferedRoute)
@@ -1058,10 +1054,10 @@
 
         }
 
-        // append overlay data to svg <defs> element
-        function populateDefs(pts/*,lines,polys*/) {
+        // append overlay data
+        function bindFiltered(pts/*,lines,polys*/) {
 
-          var enrichLayer = defs.append("g")
+          var enrichLayer = g.append("g")
             .attr("id","enrich-layer")
 
           // const enrichPolys = enrichLayer.append("g")
@@ -1111,12 +1107,10 @@
               .property("description", d => { return d.properties.DESCRIPTION })
               .property("more-info", d => { return d.properties.MORE_INFO })
               .style("fill", d => { return d3.interpolateCool(Math.random()); })
-              .style("stroke", d => { return d3.interpolateGreys(Math.random()); })
+              .style("stroke", "whitesmoke") // d => { return d3.interpolateGreys(Math.random()); })
               .style("stroke-width", "0.1px")
-              // .attr("r", 0.1)  // once I figure out how to dynamically style/transition shadow dom elements
-              // .style("opacity", 0.1) // ditto
-              .attr("r",0.8)
-              .style("opacity", 0.8)
+              .attr("r", 0)
+              .style("opacity", 1)
 
           console.log(enrichLayer.node())
 
@@ -2069,7 +2063,7 @@
 
     }
 
-//// QUADTREE / DEFS / DATA/INTERSECT QUERIES
+//// QUADTREE / DATA / INTERSECT QUERIES
 
     function makeQuadtree(triggerData,bufferedRoute) {
       // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
@@ -2092,7 +2086,6 @@
       // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
 
       ///// QUADTREE / TRIGGER NODES ADDED TO DOM
-         // FULL GEOMETRIES WAITING IN DEFS (TO BE ACCESSED UPON TRIGGER)
       let grid = g.append("g")
                   .attr("id","quadtree")
 
@@ -2127,12 +2120,13 @@
                   .property("category", d => { return d.properties.CATEGORY; })
                   .property("subtype", d => { return d.properties.TYPE; })
                   .property("details", d => { return d.properties.MORE_INFO; })
+                  .style("fill","none")
                   // temporary visual (as intersected)
-                  .attr("r", 0)
-                  .style("fill","tomato")
-                  .style("stroke","goldenrod")
-                  .style("stroke-width","0.1px")
-                  .style("opacity", 0.1)
+                  // .attr("r", 0)
+                  // .style("fill","tomato")
+                  // .style("stroke","goldenrod")
+                  // .style("stroke-width","0.1px")
+                  // .style("opacity", 0.1)
 
         // temporary visual (all triggerPts)
         triggerPts.append("g")
@@ -2199,7 +2193,7 @@
                 d1 = projection(d.geometry.coordinates)[1];
             d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
             if (d.selected) {
-              console.log("SELECTION MADE HURRAYYY");
+              console.log("found match in quadtree at " + performance.now())
 
               // TODO ensure sort order nearest -> farthest so first intersected == first visualized?
 
@@ -2207,14 +2201,14 @@
               let triggerId = d.properties.id; // doesnt have this yet
               dispatch.call("encounter", triggerId);
 
-              // FOR NOW
-              let encountered = d3.selectAll(".trigger-pt").filter(e => { return e === d; }); // classed("trigger-pt--selected",true)
-
-              // transition selected triggerPt into view
-              encountered.transition()
-                         .duration(tPause/2)
-                         .attr("r", 1.2)
-                         .style("opacity", 0.8)
+              // // FOR NOW
+              // let encountered = d3.selectAll(".trigger-pt").filter(e => { return e === d; }); // classed("trigger-pt--selected",true)
+              //
+              // // transition selected triggerPt into view
+              // encountered.transition()
+              //            .duration(tPause/2)
+              //            .attr("r", 1.2)
+              //            .style("opacity", 0.8)
 
               selected.push(d)
             }
@@ -2227,21 +2221,21 @@
 
     function encountered() {
 
-      // console.log("reached encountered() at " + performance.now())
+      console.log("reached encountered() at " + performance.now())
 
       // NEW
       // receives triggerId directly from within quadtree search (much more direct)
       let id = this;
 
-      // FIND associated full geometry/props in <defs> element
-      let encountered = defs.select(`#${id}`);
+      // FIND full feature by id
+      let encountered = g.select(`#${id}`);
       // remove waiting class upon intersect
       encountered.classed("waiting",false);
 
       console.log(`now passing ${encountered.property("name")}`)
       // (subtype: ${encountered.property("subtype")})`)
 
-      // DETERMINE TYPE, GET OPTIONS, USE DEFS TO VISUALIZE
+      // DETERMINE TYPE, GET OPTIONS, VISUALIZE
         // ** OR, will (/should) I have already queried (during filtering) lines and polygons come for intersect pts? R/L geometries? distance from i0 to i1? **
       if (id.startsWith('ln')) {  // line feature
         // query for actual route intersect pt(s); if they don't exist, return nearestPointOnLine
@@ -2251,17 +2245,17 @@
             // calculate t based on time train will need to travel from i0 to i1 (use tpm global)
             // keep t equal for both R and L lines, even as distance varies (so they arrive together at i1)
         let options; // {t, pt0, pt1, right, left}
-        reveal(id,"line",options)
+        reveal(encountered,"line",options)
       } else if (id.startsWith('py')) { // polygon feature
         // query for actual route intersect pts (should be 2 or 0); if they don't exist, return nearestPointOnLine
         // if 0 < intersect points:
           // get 2nd intersect or closest to it
           // calculate t based on time train will need to travel from i0 to i1 (use tpm global)
         let options; // {t, pt0, pt1}
-        reveal(id,"polygon",options)
+        reveal(encountered,"polygon",options)
       } else {  // point feature
         // reveal immediately, rely on default options
-        reveal(id,"point")
+        reveal(encountered,"point")
       }
 
       // console.log(encountered)
@@ -2278,14 +2272,7 @@
 
     }
 
-    function reveal(id,type,options = {t: 1200}) {
-
-      // new <use> on every reveal?
-      defs.append("use")
-          .attr("xlink:href", `#${id}`);
-      let revealed = g.append("use")
-          .attr("id", id + "-in-use")
-          .attr("xlink:href", `#${id}`)
+    function reveal(encountered,type,options = {t: tPause}) {
 
       // all styling basics should already be in place;
       // just need to trigger appropriate transitions based on type
@@ -2295,12 +2282,10 @@
       } else if (type === "polygon") {
         // animate radial gradient outward from i0
       } else {  // type === "point"
-        // NONE OF BELOW WORKING; how to animate/style shadow dom elements? FIXME
-        // revealed.transition().duration(t)
-        //   .attr("r",1)
-        //   .style("opacity", 0.8)
-        // revealed.attr("r",1)
-        //         .style("opacity", 0.8)
+        console.log(encountered.node())
+        encountered.transition().duration(options.t)
+          .attr("r",1)
+          .style("opacity", 0.6)
         // initial glow effect?
       }
 
