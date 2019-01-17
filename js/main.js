@@ -1061,6 +1061,8 @@
         // append overlay data to svg <defs> element
         function populateDefs(pts/*,lines,polys*/) {
 
+          let begin = performance.now();
+
           var enrichLayer = defs.append("g")
             .attr("id","enrich-layer")
 
@@ -1118,7 +1120,22 @@
               .attr("r",0.8)
               .style("opacity", 0.8)
 
-          console.log(enrichLayer.node())
+          let done = performance.now();
+
+          // PTS ONLY
+          console.log("began binding filtered pts to an SVG <defs> element @ ",begin)
+          console.log("done binding @ ",done)
+          console.log("took " + (done-begin) + "ms to bind " + pts.length + " elements to <defs>")
+          // elements, ms
+            // 4, 4.3
+            // 20, 5.4
+            // 40, 8.4
+            // 47, 9
+          // VS binding directly to DOM:
+            // 4, 2.1
+            // 20, 5
+            // 21, 5.1
+            // 46, 7.8
 
         }
 
