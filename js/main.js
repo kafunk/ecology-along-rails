@@ -134,9 +134,11 @@
                    .on("encounter.trigger", encountered)
                    .on("arrive.train", arrived)
 
-// DECLARE (BUT DON'T DEFINE) CERTAIN VARIABLES FOR LATER ACCESS
+// DECLARE (BUT DON'T NECESSARILY DEFINE) CERTAIN VARIABLES FOR LATER ACCESS
 
-  let timer, observer, quadtree;
+  let tpm = 20;  // time per mile; hard-coded goal of animated ms per route mile (more == slower); eventually should be user-adjustable
+
+  let timer, quadtree; // observer
 
 // COLORS
 
@@ -705,7 +707,6 @@
           //     // },
           //     // getOrientation() // cardinal
           //     // getElevation()
-          //     // getIntersecting()
           //   }
           // }
 
@@ -1063,52 +1064,61 @@
           var enrichLayer = defs.append("g")
             .attr("id","enrich-layer")
 
-          // var enrichPolys = enrichLayer.append("g")
-          //     .attr("id", "enrich-polygons")
-          //     .attr("class", "enrich polys extract overlay group")
-          //   .selectAll("path")
+          // const enrichPolys = enrichLayer.append("g")
+          //   .attr("id", "enrich-polygons")
+          //   .selectAll(".enrich-poly")
           //   .data(polys)
           //   .enter().append("path")
+          //     .classed("enrich-poly polygon waiting", true)
           //     .attr("d", projPath)
-          //     .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
-          //     .classed("enrich poly waiting", true)
+          //     .attr("id", d => { return d.properties.id })
+          //     .property("name", d => { return d.properties.NAME })
+          //     .property("category", d => { return d.properties.CATEGORY })
+          //     .property("level", d => { return d.properties.LEVEL})
+          //     .property("more-info", d => { return d.properties.MORE_INFO })
+          //     .property("description", d => { return d.properties.DESCRIPTION })
           //     .style("fill", d => { return d3.interpolateSinebow(Math.random()); })
           //     .style("stroke", "none")
-          //    // .on("intersected", highlightPoly)
-          //
-          // var enrichLines = enrichLayer.append("g")
-          //     .attr("id", "enrich-lines")
-          //     .attr("class", "enrich lines extract overlay group")
-          //   .selectAll("path")
+
+          // const enrichLines = enrichLayer.append("g")
+          //   .attr("id", "enrich-lines")
+          //   .selectAll(".enrich-line")
           //   .data(lines)
           //   .enter().append("path")
+          //     .classed("enrich-line line waiting", true)
           //     .attr("d", projPath)
-          //     .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY })
-          //     .classed("enrich line waiting", true)
+          //     .attr("id", d => { return d.properties.id })
+          //     .property("name", d => { return d.properties.NAME })
+          //     .property("category", d => { return d.properties.CATEGORY })
+          //     .property("level", d => { return d.properties.LEVEL})
+          //     .property("more-info", d => { return d.properties.MORE_INFO })
+          //     .property("description", d => { return d.properties.DESCRIPTION })
           //     .style("stroke", d => { return d3.interpolateWarm(Math.random()); })
-          //     .style("stroke-width", 1.6)
+          //     .style("stroke-width", 1.6)  // make this data driven
           //     .style("fill", "none")
-          //    // .on("intersected", highlightLine)
 
-          var enrichPoints = enrichLayer.append("g")
+          const enrichPoints = enrichLayer.append("g")
             .attr("id", "enrich-pts")
-            // .attr("class", "enrich points extract overlay group")
             .selectAll(".enrich-pt")
             .data(pts)
             .enter().append("circle")
-              .classed("enrich-pt waiting", true)
+              .classed("enrich-pt point waiting", true)
               .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
               .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-              .attr("r", 1)
-              .attr("class", d => { return d.properties.NAME + " " + d.properties.CATEGORY + " " + d.properties.TYPE})
+              .attr("id", d => { return d.properties.id })
+              .property("name", d => { return d.properties.NAME })
+              .property("category", d => { return d.properties.CATEGORY })
+              .property("description", d => { return d.properties.DESCRIPTION })
+              .property("more-info", d => { return d.properties.MORE_INFO })
               .style("fill", d => { return d3.interpolateCool(Math.random()); })
               .style("stroke", d => { return d3.interpolateGreys(Math.random()); })
-              .style("stroke-width", "0.4px")
-             // .on("intersected", highlightPt)
+              .style("stroke-width", "0.1px")
+              // .attr("r", 0.1)  // once I figure out how to dynamically style/transition shadow dom elements
+              // .style("opacity", 0.1) // ditto
+              .attr("r",0.8)
+              .style("opacity", 0.8)
 
           console.log(enrichLayer.node())
-          console.log(enrichPoints.nodes())
-          // console.log(g.node())
 
         }
 
@@ -1180,9 +1190,8 @@
             firstThree: [],
             lastThree: [],
             pace: {
-              tpm: 20,  // time per mile; hard-coded as goal of animated ms per route mile (more == slower)
               tpsm() {  // based on tpm, calculated per simplified miles
-                let result = this.pace.tpm * Math.floor(routeObj.totalDistance) / this.simpLength;
+                let result = tpm * Math.floor(routeObj.totalDistance) / this.simpLength;
                 this.tpsm = result;
                 return result;
               }
@@ -1212,7 +1221,7 @@
 
           } else {
 
-            console.log("short route (< 300 miles -- specifically, " + zoomFollow.simpLength + ". first/last frames identical; no zoomAlong necessary.")
+            // console.log("short route (< 300 miles -- specifically, " + zoomFollow.simpLength + ". first/last frames identical; no zoomAlong necessary.")
 
             zoomFollow.necessary = false,
                   zoomFollow.arc = zoomFollow.fullSimp.geometry.coordinates.slice();
@@ -1225,7 +1234,7 @@
 
           }
 
-          console.log(zoomFollow)
+          // console.log(zoomFollow)
 
           return zoomFollow;
 
@@ -1697,8 +1706,7 @@
       let tDelay,tMid;
 
       let simpDistance = Math.floor(turf.length(zoomFollow.fullSimp, {units: "miles"})),
-                 scale = g.node().transform.animVal[1].matrix.a,  // default to current
-                   tpm = zoomFollow.pace.tpm; // shorthand
+                 scale = g.node().transform.animVal[1].matrix.a;  // default to current
 
       // tFull is based on ms/simplified mile for later tDelay calc reasons
       let tFull = Math.max(tpm * simpDistance, tPause) // effective ms per simp mile * simp miles, or tPause value if former less than latter
@@ -1722,7 +1730,7 @@
             // disable free zooming
             svg.on('.zoom',null)
             // call initial point transition
-            goOnNow(scale,tpm,routeBounds) // pass routeBounds as lastIdentity
+            goOnNow(scale,routeBounds) // pass routeBounds as lastIdentity
           // }
         }, tPause)
 
@@ -1765,7 +1773,7 @@
                       // disable free zooming
                       svg.on('.zoom',null)
                       // call initial point transition, passing simplified path
-                      goOnNow(scale,tpm,lastIdentity,zoomArc)
+                      goOnNow(scale,lastIdentity,zoomArc)
                     // }
                   }, tEnd)
                 })
@@ -1773,7 +1781,7 @@
 
       }
 
-      function goOnNow(scale,tpm,lastIdentity,simpPath) {
+      function goOnNow(scale,lastIdentity,simpPath) {
         dispatch.call("depart", this)
         // set up transition along entire route
       	point.transition().delay(tEnd).duration(tFull).ease(d3.easeSinInOut)
@@ -1794,10 +1802,6 @@
               g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
                 .attrTween("transform", zoomAlong(simpPath,scale))
             }
-            // RETURN HERE****
-            // follow along checking for intersecting encounters
-            // getIntersecting(point,fullPath,tpm,quadtree)
-            // ie use headlights to lookAhead()
           })
          .on("end", () => {
            // ensure final alignment
@@ -1824,7 +1828,7 @@
     function arrived() {
       console.log("train arrived @ " + performance.now())
       timer.stop()
-      observer.disconnect()
+      // observer.disconnect()
     }
 
     let prevLocation, prevExtent, searchExtent, transformString;
@@ -2046,15 +2050,21 @@
 
       // in case of interesecting triggerPts
       if (newlyEncountered.length) {
-        console.log(newlyEncountered)
+        // console.log(newlyEncountered)
         // REMOVE NEWLY SELECTED TRIGGER PTS FROM QUADTREE POOL?
         quadtree.removeAll(newlyEncountered)
-        // CLASS RESPECTIVE DOM NODES AS trigger-pt--selected
-          // will trigger encountered()
-        g.select("#trigger-pts")
-         .selectAll(".trigger-pt")
-         .filter(d => { return newlyEncountered.includes(d); })
-         .classed("trigger-pt--selected",true)
+      //   // CLASS RESPECTIVE DOM NODES AS trigger-pt--selected
+      //     // will trigger encountered()
+      //   g.select("#trigger-pts")
+      //    .selectAll(".trigger-pt")
+      //    .filter(d => { return newlyEncountered.includes(d); })
+      //    .classed("trigger-pt--selected",true)
+      //
+      //   console.log(newlyEncountered)
+      //
+      //   // dispatch custom "encounter" event directly? (without need to watch for MutationObserver) // ELSEWHERE
+      //   newlyEncountered.forEach(trigger => { dispatch.call("encounter", trigger) });
+      //
       }
 
     }
@@ -2112,7 +2122,7 @@
                   .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
                   .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
                   // properties
-                  // .property("id", d => {return d.properties.id; })
+                  .property("id", d => {return d.properties.id; })
                   .property("name", d => { return d.properties.NAME; })
                   .property("category", d => { return d.properties.CATEGORY; })
                   .property("subtype", d => { return d.properties.TYPE; })
@@ -2123,7 +2133,6 @@
                   .style("stroke","goldenrod")
                   .style("stroke-width","0.1px")
                   .style("opacity", 0.1)
-                  // .on("encounter", encountered) // "encountered" as custom event dispatched upon quadtree selection
 
         // temporary visual (all triggerPts)
         triggerPts.append("g")
@@ -2138,33 +2147,33 @@
             .style("stroke-width","0.1px")
             .style("opacity", 0.8)
 
-      // use mutationObserver to watch for class changes on triggerPts group
-      awaitTrigger(triggerPts)
-
-      function awaitTrigger(triggerPts) {
-
-        observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            if (mutation.attributeName === "class") {
-              // store most recent class addition
-              let trigger = mutation.target;
-              // console.log(trigger)
-              var newlyClassed = trigger.classList[trigger.classList.length - 1];
-              if (newlyClassed === "trigger-pt--selected") {
-                // dispatch custom "encounter" event
-                dispatch.call("encounter", trigger)
-                // trigger.dispatch("encounter")
-              }
-            }
-          });
-        });
-
-        observer.observe(triggerPts.node(), {
-          attributes: true,
-          subtree: true     // extend observation to children of group
-        });
-
-      }
+      // // use mutationObserver to watch for class changes on triggerPts group
+      // awaitTrigger(triggerPts);
+      //
+      // function awaitTrigger(triggerPts) {
+      //
+      //   observer = new MutationObserver(function(mutations) {
+      //     mutations.forEach(function(mutation) {
+      //       if (mutation.attributeName === "class") {
+      //         // store most recent class addition
+      //         let trigger = mutation.target;
+      //         // console.log(trigger)
+      //         var newlyClassed = trigger.classList[trigger.classList.length - 1];
+      //         if (newlyClassed === "trigger-pt--selected") {
+      //           // dispatch custom "encounter" event
+      //           dispatch.call("encounter", trigger)
+      //           // trigger.dispatch("encounter")
+      //         }
+      //       }
+      //     });
+      //   });
+      //
+      //   observer.observe(triggerPts.node(), {
+      //     attributes: true,
+      //     subtree: true     // extend observation to children of group
+      //   });
+      //
+      // }
 
       // Collapse the quadtree into an array of rectangles.
       function nodes(quadtree) {
@@ -2180,41 +2189,6 @@
       return quadtree;
     }
 
-    function getIntersecting(train,path,tprm,quadtree) {
-
-      // COMBAK
-        // register triggerPts (occurs elsewhere)
-        // transition actual point encounters into view
-        // finally, work on bringing in lines and polygons
-      // OTHER ISSUES
-        // consistent reload at very begin (local only? Atom liveserver related?)
-
-      // as train moves along line, loop to continually check present position ::bufferedQueryPt:: against quadtree enrich data
-        // points: reveal as soon as buffer intersects
-        // lines and polygons: once buffer intersects, query for actual route intersect pts; if they don't exist, return nearestPointOnLine
-
-      // as data returned (booleanIntersects), get geometry type and immediately pass specifics onto transition makers ("reveal" function)
-
-      // change data class and remove from quadtree searchRemaining
-
-        // polygons
-          // get 2nd intersect or closest to it; calculate t based on time train will need to travel from i0 to i1; animate radial gradient outward from i0
-
-        // lines
-          // divide line into R and L; get 2nd intersect or closest to it; calculate t based on time train will need to travel from i0 to i1; keep t equal for both R and L lines, even as distance varies
-          // watersheds: animateDashed within varying dashArrays and thickness; higher levels thinner and with more intricate/subtle patterns
-          // rivers and streams: animatedSolid R and L with continual branching outward
-
-        // points
-          // grow circle r out from 0 + initial glow effect
-          // flash tiny offset tooltip with basic info (name, category)
-            // animate cursive writing?
-          // alert => dashboard
-          // log => logbook
-          // keep circle; fade tooltip (but remains accessible on circle mouseover)
-
-    }
-
     function searchQuadtree(quadtree, x0, y0, x3, y3) {
       let selected = [];
       quadtree.visit(function(node, x1, y1, x2, y2) {
@@ -2227,13 +2201,19 @@
             if (d.selected) {
               console.log("SELECTION MADE HURRAYYY");
 
+              // TODO ensure sort order nearest -> farthest so first intersected == first visualized?
+
+              // console.log(d) // gj feature; with pts, as much as i got
+              let triggerId = d.properties.id; // doesnt have this yet
+              dispatch.call("encounter", triggerId);
+
+              // FOR NOW
               let encountered = d3.selectAll(".trigger-pt").filter(e => { return e === d; }); // classed("trigger-pt--selected",true)
 
-              console.log("encountered within quadtree at " + performance.now())
-
+              // transition selected triggerPt into view
               encountered.transition()
                          .duration(tPause/2)
-                         .attr("r", 1)
+                         .attr("r", 1.2)
                          .style("opacity", 0.8)
 
               selected.push(d)
@@ -2245,49 +2225,88 @@
       return selected;
     }
 
-    function useDefs() {
-
-      defs.append("use")
-          .attr("xlink:href", "#watersheds");
-      // svg.append("use")
-      //   .attr("xlink:href", "#watersheds")
-      g.append("use")
-        .attr("id", "enrich-pool")
-        .attr("xlink:href", "#watersheds")
-        // .attr("d",path)
-        // .attr("class", "stroke")
-        // .attr("stroke-dasharray", "1 1")
-        // .attr("stroke-width", 1.6)
-        // .attr("stroke", "teal")
-        // FILTER
-
-      // console.log(d3.select("#enrich-pool"))
-
-    }
-
     function encountered() {
-      // called by triggerPt upon selection by quadtree
-      // console.log("encountered!")
-      // console.log(this)
 
-      let encountered = d3.select(this);
+      // console.log("reached encountered() at " + performance.now())
 
-      console.log("reached encountered() at " + performance.now())
+      // NEW
+      // receives triggerId directly from within quadtree search (much more direct)
+      let id = this;
+
+      // FIND associated full geometry/props in <defs> element
+      let encountered = defs.select(`#${id}`);
+      // remove waiting class upon intersect
+      encountered.classed("waiting",false);
+
       console.log(`now passing ${encountered.property("name")}`)
       // (subtype: ${encountered.property("subtype")})`)
 
-      // // visual cue for now
-      // encountered.transition()
-      //            .duration(tPause/2)
-      //            .attr("r", 1)
-      //            .style("opacity", 0.8)
+      // DETERMINE TYPE, GET OPTIONS, USE DEFS TO VISUALIZE
+        // ** OR, will (/should) I have already queried (during filtering) lines and polygons come for intersect pts? R/L geometries? distance from i0 to i1? **
+      if (id.startsWith('ln')) {  // line feature
+        // query for actual route intersect pt(s); if they don't exist, return nearestPointOnLine
+          // if multiple intersect pts:
+            // get 2nd intersect
+            // divide line into R and L
+            // calculate t based on time train will need to travel from i0 to i1 (use tpm global)
+            // keep t equal for both R and L lines, even as distance varies (so they arrive together at i1)
+        let options; // {t, pt0, pt1, right, left}
+        reveal(id,"line",options)
+      } else if (id.startsWith('py')) { // polygon feature
+        // query for actual route intersect pts (should be 2 or 0); if they don't exist, return nearestPointOnLine
+        // if 0 < intersect points:
+          // get 2nd intersect or closest to it
+          // calculate t based on time train will need to travel from i0 to i1 (use tpm global)
+        let options; // {t, pt0, pt1}
+        reveal(id,"polygon",options)
+      } else {  // point feature
+        // reveal immediately, rely on default options
+        reveal(id,"point")
+      }
 
-      // FIND associated full geometry/props in <defs>
-      // VISUALIZE element
+      // console.log(encountered)
+      // console.log(encountered.node())
+
       // OUTPUT encounter
+      // let props = encountered. // properties
         // temp popups/tooltips fade in/out
+          // points:
+            // flash tiny offset tooltip with basic info (name, category)
+            // animate cursive writing?
         // legend-log populated
         // dashboard/trackers updated
+
+    }
+
+    function reveal(id,type,options = {t: 1200}) {
+
+      // new <use> on every reveal?
+      defs.append("use")
+          .attr("xlink:href", `#${id}`);
+      let revealed = g.append("use")
+          .attr("id", id + "-in-use")
+          .attr("xlink:href", `#${id}`)
+
+      // all styling basics should already be in place;
+      // just need to trigger appropriate transitions based on type
+      if (type === "line") {
+        // watersheds: animateDashed within varying dashArrays and thickness; higher levels thinner and with more intricate/subtle patterns
+        // rivers and streams: animatedSolid R and L with continual branching outward
+      } else if (type === "polygon") {
+        // animate radial gradient outward from i0
+      } else {  // type === "point"
+        // NONE OF BELOW WORKING; how to animate/style shadow dom elements? FIXME
+        // revealed.transition().duration(t)
+        //   .attr("r",1)
+        //   .style("opacity", 0.8)
+        // revealed.attr("r",1)
+        //         .style("opacity", 0.8)
+        // initial glow effect?
+      }
+
+      // console.log(revealed)
+      // console.log(revealed.node())
+
     }
 
 //// OUTPUT AND ALERT incl DASHBOARD
