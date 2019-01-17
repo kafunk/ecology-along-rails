@@ -1057,6 +1057,8 @@
         // append overlay data
         function bindFiltered(pts/*,lines,polys*/) {
 
+          let begin = performance.now();
+
           var enrichLayer = g.append("g")
             .attr("id","enrich-layer")
 
@@ -1112,7 +1114,17 @@
               .attr("r", 0)
               .style("opacity", 1)
 
-          console.log(enrichLayer.node())
+          let done = performance.now();
+
+          // PTS ONLY
+          console.log("began binding filtered pts directly to DOM @ ",begin)
+          console.log("done binding @ ",done)
+          console.log("took " + (done-begin) + "ms to bind " + pts.length + " elements directly to the DOM")
+          // elements, ms
+            // 4, 2.1
+            // 20, 5
+            // 21, 5.1
+            // 46, 7.8
 
         }
 
@@ -2221,9 +2233,7 @@
 
     function encountered() {
 
-      console.log("reached encountered() at " + performance.now())
-
-      // receives triggerId from "encounter" dispatch event call from within quadtree search -- 0.8-2.4 ms; often exactly 2ms; seems faster overall, so will keep using dispatch vs passing id as argument
+      // console.log("reached encountered() at " + performance.now())
 
       let id = this;
 
