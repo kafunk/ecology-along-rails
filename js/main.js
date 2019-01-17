@@ -1057,8 +1057,8 @@
         // append overlay data
         function bindFiltered(pts/*,lines,polys*/) {
 
-          let begin = performance.now();
-
+          // let begin = performance.now();
+          
           var enrichLayer = g.append("g")
             .attr("id","enrich-layer")
 
@@ -1114,17 +1114,7 @@
               .attr("r", 0)
               .style("opacity", 1)
 
-          let done = performance.now();
-
-          // PTS ONLY
-          console.log("began binding filtered pts directly to DOM @ ",begin)
-          console.log("done binding @ ",done)
-          console.log("took " + (done-begin) + "ms to bind " + pts.length + " elements directly to the DOM")
-          // elements, ms
-            // 4, 2.1
-            // 20, 5
-            // 21, 5.1
-            // 46, 7.8
+          // let done = performance.now();
 
         }
 
