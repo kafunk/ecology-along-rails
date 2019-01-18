@@ -215,10 +215,10 @@
             railStns = d3.json("data/final/na_rr_stns.json"),
            // prBuffers = d3.json("data/final/pass_rail_buffers.json");
     // merged enrich data
-         // enrichPolys = d3.json("data/final/enrich_polys.json"),
-         // enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
-         // enrichLines = d3.json("data/final/enrich_lines.json"),
-         // enrichLines = d3.json("data/final/enrich_lines_slimmed.json"),
+           // enrichPolys = d3.json("data/final/enrich_polys.json"),
+         enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
+           // enrichLines = d3.json("data/final/enrich_lines.json"),
+         enrichLines = d3.json("data/final/enrich_lines_slimmed.json"),
            enrichPts = d3.json("data/final/enrich_pts.json");
 
   // SET BOUNDING BOX
@@ -935,33 +935,31 @@
           // .attr("stroke","black")
 
         // filterAndJoin returns enriched route object
-        let enriched = Promise.all([/*enrichPolys,enrichLines,*/enrichPts]).then(filterAndJoin,onError);
+        let enriched = Promise.all([enrichPolys,enrichLines,enrichPts]).then(filterAndJoin,onError);
 
         return enriched;
 
         function filterAndJoin(data) {
 
+          // *USE A QUADTREE HERE?*
+
           // console.log(data)
 
-          // let allPolys = topojson.feature(data[0], data[0].objects.enrichPolys),
-          //     allLines = topojson.feature(data[1], data[1].objects.enrichLines),
-          //       allPts = topojson.feature(data[2], data[2].objects.enrichPts);
+          let allPolys = topojson.feature(data[0], data[0].objects.enrichPolys),
+              allLines = topojson.feature(data[1], data[1].objects.enrichLines),
+                allPts = topojson.feature(data[2], data[2].objects.enrichPts);
 
           // POINTS
-          let allPts = topojson.feature(data[0], data[0].objects.enrichPts);
-
           let filteredPts = allPts.features.filter(d => {
             return turf.booleanPointInPolygon(d.geometry,bufferedRoute);
           });
-
-          console.log(filteredPts)
-
+          console.log("filtered points:",filteredPts)
 
           // LINES
-          // let singleLines = allLines.features.filter(d => {
-          //   return d.geometry.type === "LineString" && turf.booleanCrosses(d.geometry,bufferedRoute);
-          // });
-          //
+          let singleLines = allLines.features.filter(d => {
+            return d.geometry.type === "LineString" && turf.booleanCrosses(d.geometry,bufferedRoute);
+          });
+
           // let multiLines = allLines.features.filter(d => {
           //   return d.geometry.type === "MultiLineString"
           //   // 'multilines not supported'
@@ -990,6 +988,10 @@
           //
           // // combine all intersecting initial lines and intersecting multiline segments
           // let filteredLines = singleLines.concat(moreLines);
+
+          // FOR NOW
+          let filteredLines = singleLines;
+          console.log("filtered lines:",filteredLines)
 
           // POLYGONS
           // let singlePolys = allPolys.features.filter(d => {
@@ -1029,24 +1031,39 @@
           // // combine all intersecting initial polys and intersecting multipoly parts
           // let filteredPolys = singlePolys.concat(morePolys);
 
-          // console.log(filteredPts)
-          // console.log(filteredLines)
-          // console.log(filteredPolys)
-
-          // tag all filtered features with type spec id
-          // eg, id: i.toFixed().padStart(3,'0')
-
-          // ADD ALL FILTERED ENRICH DATA TO DOM
-          // include full geometry, relevant properties, and type-spec id for triggerPt crosswalk
-          bindFiltered(filteredPts/*,filteredLines,filteredPolys*/)
+          // // FOR NOW
+          // let filteredPolys = singlePolys;
+          // console.log("filtered polys:",filteredPolys)
 
           // NARROW FULL GEOMETRIES DOWN TO SPECIFIC TRIGGER/INTERSECTION PTS FOR SPATIAL SEARCH ALGORITHM
-          // let triggerPts = getTriggerPts(filteredPts,filteredLines,filteredPolys,chosen.lineString,bufferedRoute)
-          let triggerPts = filteredPts;  // temporary while polys/lines out of this
+          // let triggerData = getTriggerData(filteredPts,filteredLines,filteredPolys,chosen.lineString,bufferedRoute)
+          // points and lines only:
+          let triggerData = getTriggerData(filteredPts,filteredLines,chosen.lineString,bufferedRoute)
+
+          // UPDATE ENRICH GJ'S AS NEEDED
+          let replaceStack = triggerData.replaceStack,
+                replaceIds = [...new Set(replaceStack.map(d => d.properties.id))];
+          let updatedLines = filteredLines.map(feature => {
+            if (replaceIds.includes(feature.properties.id)) {
+              let replaceWith = [];
+              replaceWith.push(replaceStack.filter(replacement => {
+                return replacement.properties.id === feature.properties.id;
+              }));
+              return replaceWith;
+            } else {
+              return feature;
+            }
+          });
+
+          // filteredLines = updated.flat();
+
+          // ADD ALL FILTERED AND UPDATED ENRICH DATA TO DOM
+          // include full geometry, relevant properties, and type-spec id for triggerPt crosswalk
+          bindFiltered(filteredPts,updatedLines.flat()) //,filteredPolys)
 
           // ADD ENRICH DATA TO CHOSEN ROUTE OBJ & RETURN
           chosen.enrichData = {
-            triggerPts: triggerPts,
+            triggerPts: triggerData.triggerPts,
           withinBuffer: bufferedRoute
           }
 
@@ -1055,10 +1072,10 @@
         }
 
         // append overlay data
-        function bindFiltered(pts/*,lines,polys*/) {
+        function bindFiltered(pts,lines) { // ,polys) {
 
           // let begin = performance.now();
-          
+
           var enrichLayer = g.append("g")
             .attr("id","enrich-layer")
 
@@ -1078,22 +1095,28 @@
           //     .style("fill", d => { return d3.interpolateSinebow(Math.random()); })
           //     .style("stroke", "none")
 
-          // const enrichLines = enrichLayer.append("g")
-          //   .attr("id", "enrich-lines")
-          //   .selectAll(".enrich-line")
-          //   .data(lines)
-          //   .enter().append("path")
-          //     .classed("enrich-line line waiting", true)
-          //     .attr("d", projPath)
-          //     .attr("id", d => { return d.properties.id })
-          //     .property("name", d => { return d.properties.NAME })
-          //     .property("category", d => { return d.properties.CATEGORY })
-          //     .property("level", d => { return d.properties.LEVEL})
-          //     .property("more-info", d => { return d.properties.MORE_INFO })
-          //     .property("description", d => { return d.properties.DESCRIPTION })
-          //     .style("stroke", d => { return d3.interpolateWarm(Math.random()); })
-          //     .style("stroke-width", 1.6)  // make this data driven
-          //     .style("fill", "none")
+          console.log(lines)
+
+          const enrichLines = enrichLayer.append("g")
+            .attr("id", "enrich-lines")
+            .selectAll(".enrich-line")
+            .data(lines.flat())
+            .enter().append("path")
+              .classed("enrich-line line waiting", true)
+              .attr("d", projPath)
+              .attr("id", d => { return d.properties.id })
+              .property("name", d => { return d.properties.NAME })
+              .property("category", d => { return d.properties.CATEGORY })
+              .property("level", d => { return d.properties.LEVEL})
+              .property("distance", d => { return d.properties.distance})
+              // .property("more-info", d => { return d.properties.MORE_INFO })
+              // .property("description", d => { return d.properties.DESCRIPTION })
+              .style("fill", "none")
+              .style("stroke", d => { return  d3.interpolateSpectral(Math.random()); }) // d3.interpolateBrBG(Math.random()); })
+              .style("stroke-width", d => { return d.properties.STROKEWIDTH || 0.4; })
+              .style("stroke-dasharray", dash0)
+              .style("stroke-linecap", "round")
+              .style("opacity", 0)
 
           const enrichPoints = enrichLayer.append("g")
             .attr("id", "enrich-pts")
@@ -1112,44 +1135,184 @@
               .style("stroke", "whitesmoke") // d => { return d3.interpolateGreys(Math.random()); })
               .style("stroke-width", "0.1px")
               .attr("r", 0)
-              .style("opacity", 1)
+              .style("opacity", 1) // transitions from solid and small to larger and more transparent
 
           // let done = performance.now();
 
         }
 
-        function getTriggerPts(pts,lines,polys,route,buffer) {
+        function getTriggerData(pts,lines,/*polys,*/route,buffer) {
+          // and their associated intersection0,intersection1 pairs;
+          // split line geometries into two or more segments as necessary (one trigger pt per segment; occasionally, same trigger pt triggers multiple segments)
+          // add relevant properties:
+            // flag as partial geometry (tell log not to add to counts, etc)
+            // flag as multi trigger
+            // store distance from i0 to i1
+            // reference counterparts/group
 
-          let polyIntersectPts = polys.map((d,i) => {
-            // get first interesect pt in direction of travel + type-spec id
-            console.log(d)
-            let pt = {
-              id: d.properties.id,
-              type: "polygon",
-              coords: turf.lineIntersect(d.geometry,route) || closestTriggerPt()
-            };
-            return pt;
-          })
-          let lineIntersectPts = lines.map((d,i) => {
-            console.log(d)
-            let pt = {
-              id: d.properties.id,
-              type: "line",
-              coords: turf.lineIntersect(d.geometry,route) || closestTriggerPt()
-            };
-            return pt;
-          })
+          let replaceStack = [];  // should be lines/linegons only
+          // keep track of features that come in whole and were segmented, such that associated full GJ's can be replaced with multiple parts before binding to domain
+          // keep all ids and geoms consistent between triggerPts and triggered features to ensure easy styling/transitions later on
 
-          // if remaining pts that intersected route buffer but NOT actual route, allow nearest point on line to trigger animation
-          function closestTriggerPt() {
-            let bufferIntersect = turf.lineIntersect(this,buffer),
-                        snapped = turf.nearestPointOnLine(route,bufferIntersect, {units: 'miles'});
-            return snapped;
-          }
+          // POLYGONS
+            // query for actual polygon intersect pts (should be 2+ (even numbers) or none at all)
+              // if 0, return single nearestPointOnLine (i.e. any of buffer intersect pts) as trigger pt
+                // calculate t dynamically based on polygon area
+              // if somehow only 1: use this pt as i0 and proceed as with 0
+              // if 2 or more intersect points:
+                // store first encountered as i0, last encountered as i1 (i.e. if route enters/exits polygon 3 different time, save only first enter and last exit)
 
-          let allTriggerPts = pts.concat(lineIntersectPts).concat(polyIntersectPts);
+            // let polyIntersectPts = polys.map((d,i) => {
+            //   // get first interesect pt in direction of travel + type-spec id
+            //   console.log(d)
+            //   let pt = {
+            //     id: d.properties.id,
+            //     triggers: "polygon",
+            //     coordinates: turf.lineIntersect(d.geometry,route) || getAlmostPts()
+            //   };
+            //   return pt;
+            // })
 
-          return allTriggerPts;
+          // LINES
+            // separate out LINEGONS (aka a polygon I want to style as a line, eg watersheds; pronounced liney-gons; not to be confused with polylines):
+            let linegons = [],
+              regularLines = [];
+            for (let i = 0; i < lines.length; i++) {
+              let coords = lines[i].geometry.coordinates  // shorthand
+              // if line === closed
+              if (coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {
+                linegons.push(lines[i])
+              } else {
+                regularLines.push(lines[i])
+              }
+            }
+
+            // LINEGONS
+              // query for actual route intersect pts (should be 2+ (even numbers) or none at all)
+                // if 0:
+                  // save single nearestPointOnLine (i.e. any of buffer intersect pts) as i0
+                  // calculate approx midpt on closed line (i0-i0) and save as i1
+                // if somehow only 1: use this pt as i0 and proceed as with 0
+                // if 2 or more intersect points:
+                  // store first encountered as i0, last encountered as i1 (i.e. if route enters/exits linegon 3 different time, save only first enter and last exit)
+                  // flag as multiTrigger (one pt triggers multiple features) so quadtree can pass both features at once so that start from i0 is synchronized
+
+            // REMAINING (REGULAR) LINES
+            let lineTriggerPts = regularLines.map(d => {
+
+              let intersectPts,
+                segmentTriggers = [];
+
+              // query for actual route intersect pt(s)
+              let routeIntersectPts = turf.lineIntersect(d,route);
+
+              if (routeIntersectPts.features.length > 0) {
+
+                // flag actual route intersect pts as such
+                routeIntersectPts.features.forEach(feature => {
+                  feature.properties.routeIntersect = true;
+                })
+
+                intersectPts = routeIntersectPts.features;
+
+              } else {
+
+                // if no actual route intersect pts, use every other buffer intersect pt (only enters, not exits!) starting @ index 0
+                  // confirm this works in both directions (how are turf results ordered? how to ensure sort by order encountered?
+                  // backup plan: allow middle-ish of buffer intersections to trigger animation
+                    // let index = Math.floor(bufferIntersectPts.length/2), i0 = bufferIntersectPts[index];
+
+                let bufferIntersectPts = turf.lineIntersect(d,buffer);
+
+                intersectPts = bufferIntersectPts.features.filter((d,i) => { return i % 2 === 0; });
+
+                // COMBAK confirm turf.lineIntersect is working right?? have to be more than 1 intersection on some of these route/line/buffer combos...
+
+              }
+
+              // invariably add one segmentTrigger representing first intersectPt to line begin
+              segmentTriggers.push(turf.point(intersectPts[0].geometry.coordinates,{
+                i1: turf.point(d.geometry.coordinates[0]), // i1 of first segmentTrigger: first coord or last? FIXME?
+                oid: d.properties.id,
+                triggers: "line",
+                segment: true
+              }));
+
+              // iterate through remaining intersect points, creating i0,i1 pairs for every segment; that is, while intersect pts remaining, last ending becomes new beginning in next i0,i1 pair
+              let prevEnd;
+              while (intersectPts.length > 1) {
+                let i0 = prevEnd || intersectPts.shift().geometry.coordinates,
+                    i1 = intersectPts.shift().geometry.coordinates;
+                segmentTriggers.push(turf.point(i0,{
+                  i1: i1,
+                  oid: d.properties.id,
+                  triggers: "line",
+                  segment: true
+                }));
+                prevEnd = i1;
+              }
+
+              // create final segmentTrigger representing prevEnd or original i0 -> line.coords[coords.length-1]
+              let i0 = prevEnd || intersectPts.shift().geometry.coordinates;
+              segmentTriggers.push(turf.point(i0,{
+                i1: turf.point(d.geometry.coordinates[d.geometry.coordinates.length-1]), // i1 of last segmentTrigger: first coord or last? FIXME?
+                oid: d.properties.id,
+                triggers: "line",
+                segment: true
+              }));
+
+              // each linePart is array of segments (i0,i1 pairs), within which i0 is always triggerPt
+              // flag all segments with associated feature id and geom type
+
+              let i = 1, newId = d.properties.id + "-" + i;
+              segmentTriggers.forEach((trigger,i) => {
+
+                // add new id and distance properties
+                trigger.properties.distance = turf.distance(trigger,trigger.properties.i1,{units:"miles"}),
+                trigger.properties.id = newId;
+
+                // does this segmentTrigger share geometry with its neighbor? if so, flag appropriately as multiTrigger
+                if (((segmentTriggers[i+1]) && (segmentTriggers[i].geometry.coordinates === segmentTriggers[i+1].geometry.coordinates)) || ((segmentTriggers[i-1]) && (segmentTriggers[i].geometry.coordinates === segmentTriggers[i-1].geometry.coordinates))) {
+                  trigger.properties.multiTrigger = true;
+                };
+
+                // create new geoJSON feature for the associated line segment and push into outer function's 'replaceStack' array. transfer properties and update id to align with triggerPt id (while saving former id as oid).
+                let gj = turf.lineSlice(trigger,trigger.properties.i1,d.geometry);
+                gj.properties = d.properties,
+                gj.properties.oid = d.properties.id,
+                gj.properties.id = newId,
+                gj.properties.distance = trigger.properties.distance;
+
+                if (i > 0) {
+                  gj.properties.segmentFlag = true;
+                }
+
+                replaceStack.push(gj);
+                i++;
+
+              });
+
+              return segmentTriggers;
+
+            });
+
+          // POINTS - COMBAK
+            // COULD, for all pts and chosen bufferIntersectPts, get actual point-en-route (turf.nearestPointOnLine) to trigger animation!! consider this for more control over reveal?
+            // COULD also save distance-from-route as property on each pt, and use this to later calculate transition times
+            let ptTriggerPts = pts; // for now
+
+          // CONCATENATE AND RETURN ALL
+          // let allTriggerPts = polyTriggerPts.concat(linegonTriggerPts.flat()).concat(lineTriggerPts.flat()).concat(ptTriggerPts.flat());
+
+          let allTriggerPts = lineTriggerPts.flat().concat(ptTriggerPts.flat());
+
+          // console.log(allTriggerPts)
+          // console.log(replaceStack)
+
+          return {
+            triggerPts: allTriggerPts,
+            replaceStack: replaceStack
+          };
 
         }
 
@@ -1386,7 +1549,11 @@
           i = d3.interpolateString("0," + l, l + "," + l);
       return function(t) { return i(t); };
     }
-
+    function dashTest() { // ?
+      var l = this.getTotalLength(),
+          i = d3.interpolateString(l + "," + l, l + ",0");
+      return function(t) { return i(t); };
+    }
     function dashBack() {
       var l = this.getTotalLength(),
           i = d3.interpolateString(l + ",0", "0," + l);
@@ -1442,9 +1609,9 @@
       }
     }
 
-    function fadeToDashed(pathSelection) {
-      pathSelection.transition()
-    }
+    // function fadeToDashed(pathSelection) {
+    //   pathSelection.transition()
+    // }
 
     function drawDashed() {
       var l = this.getTotalLength();
@@ -1452,13 +1619,24 @@
       return function(t) { return i(t); };
     }
 
-    function animateSolid(along,t){
-      along.style("opacity", 0.6)
-           .transition()
-           .duration(t)
-           .styleTween("stroke-dasharray",tweenDash)
-    }
+    // function animateSolid(along,t){
+    //   along.style("opacity", 0.6)
+    //        .transition()
+    //        .duration(t)
+    //        .styleTween("stroke-dasharray",tweenDash)
+    // }
 
+    function reversePath(clone){
+      // for certain finicky attrTweens
+      let currentPath = clone.attr("d"),
+       currentPathArr = currentPath.split('M'),
+      currentPathBulk = currentPathArr[1].split('L'),
+         reversedBulk = currentPathBulk.reverse(),
+           joinedBulk = reversedBulk.join('L'),
+      reversedPathArr = ["M",joinedBulk],
+         reversedPath = reversedPathArr.join('');
+      return reversedPath;
+    }
     function animateDashed(along,t) {
 
       // see https://bl.ocks.org/kafunk/91f7b870b79c2f104f1ebacf4197c9dc for more commentary
@@ -1476,13 +1654,7 @@
          dashStr = dashFill + ", " + length;
 
       // REVERSE PATH for drawDashed only (finicky)
-      let currentPath = reversedAlong.attr("d"),
-       currentPathArr = currentPath.split('M'),
-      currentPathBulk = currentPathArr[1].split('L'),
-         reversedBulk = currentPathBulk.reverse(),
-           joinedBulk = reversedBulk.join('L'),
-      reversedPathArr = ["M",joinedBulk],
-         reversedPath = reversedPathArr.join('');
+      let reversedPath = reversePath(reversedAlong);
 
       reversedAlong.attr("d", reversedPath)
                    .attr("id", "full-route-reversed")
@@ -1789,7 +1961,6 @@
             // keep headlights on, allowing lookAhead() for triggerPts
             headlights.transition().duration(tFull).ease(d3.easeSinInOut)
               .attrTween("transform", bearWithMe(semiSimp,azimuth0))
-              // animateSolid(fullPath,tFull)
             fullPath.style("opacity", 0.6)
               .transition().duration(tFull).ease(d3.easeSinInOut)
                 .styleTween("stroke-dasharray",tweenDash)
@@ -2195,12 +2366,16 @@
                 d1 = projection(d.geometry.coordinates)[1];
             d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
             if (d.selected) {
-              console.log("found match in quadtree at " + performance.now())
+              // console.log("found match in quadtree at " + performance.now())
 
               // TODO ensure sort order nearest -> farthest so first intersected == first visualized?
 
-              // console.log(d) // gj feature; with pts, as much as i got
-              let triggerId = d.properties.id; // doesnt have this yet
+              // WITHIN QUADTREE
+                // for lines only, recognize multiTrigger flag and respond accordingly
+                  // get pair (also multiTrigger and same id) and pass both together in array
+
+              let triggerId = d.properties.id;
+
               dispatch.call("encounter", triggerId);
 
               // // FOR NOW
@@ -2235,33 +2410,25 @@
       console.log(`now passing ${encountered.property("name")}`)
       // (subtype: ${encountered.property("subtype")})`)
 
-      // DETERMINE TYPE, GET OPTIONS, VISUALIZE
-        // ** OR, will (/should) I have already queried (during filtering) lines and polygons come for intersect pts? R/L geometries? distance from i0 to i1? **
+      // DETERMINE TYPE, CALCULATE T, VISUALIZE
       if (id.startsWith('ln')) {  // line feature
-        // query for actual route intersect pt(s); if they don't exist, return nearestPointOnLine
-          // if multiple intersect pts:
-            // get 2nd intersect
-            // divide line into R and L
-            // calculate t based on time train will need to travel from i0 to i1 (use tpm global)
-            // keep t equal for both R and L lines, even as distance varies (so they arrive together at i1)
-        let options; // {t, pt0, pt1, right, left}
-        reveal(encountered,"line",options)
+        // if train doesn't intersect i1 (coords first/last or linegon that doesn't intersect actual route): calculate t dynamically based on line segment distance
+        // otherwise, calc t based on time train will need to travel from i0 to i1 (use tpm global)
+        // even if multiple segments starting from i0 (linegons), keep t equal for both lines (so they arrive together at i1)
+        let t = encountered.datum().properties.distance * 100;
+        reveal(encountered,"line",t)
       } else if (id.startsWith('py')) { // polygon feature
-        // query for actual route intersect pts (should be 2 or 0); if they don't exist, return nearestPointOnLine
-        // if 0 < intersect points:
-          // get 2nd intersect or closest to it
-          // calculate t based on time train will need to travel from i0 to i1 (use tpm global)
-        let options; // {t, pt0, pt1}
-        reveal(encountered,"polygon",options)
+        // if no i1, calculate t dynamically based on polygon area
+        // otherwise, calc t based on time train will need to travel from i0 to i1 (use tpm global)
+        let t;
+        reveal(encountered,"polygon",t)
       } else {  // point feature
-        // reveal immediately, rely on default options
+        // reveal immediately, relying on default t
         reveal(encountered,"point")
       }
 
-      // console.log(encountered)
-      // console.log(encountered.node())
-
       // OUTPUT encounter
+      // query encountered for 'segment' flag; do not add multiples to log counters, etc
       // let props = encountered. // properties
         // temp popups/tooltips fade in/out
           // points:
@@ -2272,25 +2439,37 @@
 
     }
 
-    function reveal(encountered,type,options = {t: tPause}) {
+    function reveal(encountered,type,t = tPause) {
 
       // all styling basics should already be in place;
       // just need to trigger appropriate transitions based on type
+
       if (type === "line") {
         // watersheds: animateDashed within varying dashArrays and thickness; higher levels thinner and with more intricate/subtle patterns
-        // rivers and streams: animatedSolid R and L with continual branching outward
+        // rivers and streams: animatedSolid in both directions with continual branching outward (will be necessarily limited by data pool, filtered to certain level of watershed)
+        // FOR NOW
+        if (Array.isArray(encountered)) { // multiTrigger
+          encountered[0].transition().duration(t)
+            .style("opacity", 1)
+            .on("start", () => {
+              encountered[1].transition().duration(t)
+            })
+        } else {
+          encountered.style("opacity",0.8)
+            .transition().duration(t).ease(d3.easeLinear)
+            .styleTween("stroke-dasharray",tweenDash) // currently grow backwards FIXME
+        }
       } else if (type === "polygon") {
+        // FOR NOW
+        encountered.transition().duration(t)
+          .style("opacity", 1)
         // animate radial gradient outward from i0
       } else {  // type === "point"
-        console.log(encountered.node())
-        encountered.transition().duration(options.t)
+        encountered.transition().duration(t)
           .attr("r",1)
           .style("opacity", 0.6)
         // initial glow effect?
       }
-
-      // console.log(revealed)
-      // console.log(revealed.node())
 
     }
 
