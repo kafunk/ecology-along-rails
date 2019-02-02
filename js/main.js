@@ -1144,18 +1144,18 @@
               //                    .colors(oceanIds.length);
               baseHues = chroma.scale('Set2').colors(oceanIds.length);
 
-          oceanIds.forEach((oceanId,i) => {
-            colorAssignments[oceanId] = {
-              "I": baseHues.shift()
-            }
-          })
+          // oceanIds.forEach((oceanId,i) => {
+          //   colorAssignments[oceanId] = {
+          //     "I": baseHues.shift()
+          //   }
+          // })
 
           function getColor(level,oceanId) {
-            // if (!colorAssignments[oceanId]) {
-            //   colorAssignments[oceanId] = {
-            //     "I": baseHues.shift();
-            //   }
-            // }
+            if (!colorAssignments[oceanId]) {
+              colorAssignments[oceanId] = {
+                "I": baseHues.shift()
+              }
+            }
             if (!colorAssignments[oceanId][level]) {
               // deriveColor as brighter level I color assignment
               colorAssignments[oceanId][level] = chroma(colorAssignments[oceanId]["I"]).brighten(unromanize(level))
@@ -1507,10 +1507,12 @@ function refreshed(i0,i1) {}
 
               // this shouldn't be happening.. temporary fix
               if (gj.properties.tDistance === 0) {
-                console.log("GJ.PROPS.TDISTANCE === 0")
-                console.log(gj)
-                gj.properties.tDistance = turf.length(d,{units:"miles"})/segmentTriggers.length; // very approximate replacement
-                console.log(turf.length(d,{units:"miles"})/segmentTriggers.length)
+                // console.log("GJ.PROPS.TDISTANCE === 0")
+                // console.log("segmentDistance",segmentDistance)
+                // console.log("gj length",turf.length(gj,{units:"miles"}))
+                // console.log("enrich line length / segmentTriggers num",turf.length(d,{units:"miles"})/segmentTriggers.length)
+                gj.properties.tDistance = Math.pow(turf.length(d,{units:"miles"})/segmentTriggers.length,2) * tpm/10 // very approximate replacement
+                // console.log("squared * tpm/10",gj.properties.tDistance)
               }
 
               replaceStack.push(gj);
@@ -2459,7 +2461,6 @@ function refreshed(i0,i1) {}
 
 //*** return ***
 // TODO
-// remove from stations: ft edward, fraser fort george BC, la junta CHI, grand forks, greater sudbury, malta MT?, corcoran CA?
 // use quadtree for initial filtering search
 // restructure triggering (bc triggerPts now all on route itself)
   // i0 = w/in trainMove window
@@ -2665,14 +2666,14 @@ function refreshed(i0,i1) {}
           t = encountered.datum().properties.tDistance * tFactor;
         }
         if (t === 0) {
-          console.log("t === 0")
-          console.log(encountered[0].node().getTotalLength())
-          t = encountered[0].node().getTotalLength() * defaultT;
+          // console.log("t === 0")
+          // console.log(encountered[0].node().getTotalLength())
+          t = Math.pow(encountered[0].node().getTotalLength(),2);
         } else if (Array.isArray(t) && t.includes(0)) {
-          console.log("initial t includes(0)")
-          t[0] = encountered[0].node().getTotalLength() * defaultT
-          t[1] = encountered[1].node().getTotalLength() * defaultT
-          console.log("new t",t)
+          // console.log("initial t includes(0)")
+          t[0] = Math.pow(encountered[0].node().getTotalLength(),2)
+          t[1] = Math.pow(encountered[1].node().getTotalLength(),2)
+          // console.log("new t",t)
         }
         reveal(encountered,"line",t)
       } else if (id.startsWith('py')) { // polygon feature
@@ -2955,20 +2956,25 @@ function onMouseover(e) {
   onMouseenter(e);
 }
 function onMouseenter(d) {
-  // d is target
+  // d is target node
+  // d3.select(d.properties.id) is target selection
   // d3.event is event
-  console.log(d)
-  console.log(d3.event)
+  // console.log(d)
+  // console.log(d3.event)
+  // console.log(d3.select(d))
+  // console.log(d3.select(`#${d.properties.id}`))
 
+  let eTarget = d3.select(`#${d.properties.id}`);
   // visual affordance for element itself
   // d3.select(this).classed("hover", true).raise();
-  d3.select(d).classed("hover", true).raise();
+  // d3.select(d).classed("hover", true).raise();
 
   // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
   let tooltip = d3.select("body").append("div")
-    // .attr("id", "current-hover")
+    .datum(d)
+    // .attr("id", d => d.properties.id)
     .attr("class","tooltip")
-    .html(getTooltipContent(d))
+    .html(getTooltipContent(eTarget)) // d.properties.name
     .style("left", (d3.event.pageX + 10) + "px")
     .style("top", (d3.event.pageY - 30) + "px")
     .style("fill", "honeydew")
@@ -2980,7 +2986,7 @@ function onMouseenter(d) {
     .style("opacity", 1)
 
   function getTooltipContent(d) {
-    let content = d.name; // for now
+    let content = d.property("name"); // for now
     // let content = `
     //   <span class="category">Facility Name: </span>
     //   <span class="align-r">${titleCase(d.Facility_Name)}</span>
@@ -2998,17 +3004,20 @@ function onMouseout(d) {
 
   // d3.select("#current-hover").remove();
 
-  let node = d3.select(d);
+  // console.log(d) // gj
+  // console.log(d3.event) // event
+  // console.log(d3.select(`#${d.properties.id}`).node()) // circle
+  // console.log(d3.select("body").selectAll(".tooltip").node()) // tooltip
+  // console.log(d3.select("body").selectAll(".tooltip").nodes()) // array of all tooltips
 
   // reset visual affordances
-  node.classed("hover", false)
+  // node.classed("hover", false)
 
   // access existing
-  let tooltip = node.selectAll(".tooltip")
-  // let doneWith = d3.select("body").selectAll(".tooltip").data(d => { return d.id; }) // key function? match by id
+  let tooltip = d3.select("body").selectAll(".tooltip") //.datum(d => { return d.properties.id; }) // key function? match by id
 
   // transition tooltip away
-  tooltip.transition().duration(300)
+  tooltip.transition().duration(600)
     .style("opacity", 0)
 
   // remove tooltip from DOM?
