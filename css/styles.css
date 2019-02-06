@@ -1,56 +1,21 @@
 /* custom CSS rules */
 body { margin:0; padding:0; } /* background-color:#fafafa; } */
-h1 { font-family: 'Stardos Stencil', cursive; }
-  /* Mirza? */
+/* h1 { font-family: 'Stardos Stencil', cursive; } */
+h1 { font-family: 'Mirza', cursive;} /* note that different fonts will require different margin adjustments */
 h2,h3,h4,h5,h6 { font-family: 'Buda', cursive; }
 p, span, a, li { font-family: 'Thasadith', sans-serif; line-height: 150%;}
   /* Quattrocentro? py6? */
-a { color: lightsalmon; }
+a { color: whitesmoke; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
-svg path { stroke-linejoin: round; shape-rendering: optimizeSpeed; }
+svg path { stroke-linejoin: round; } /* shape-rendering: optimizeSpeed; } */
 
 /* list of all IDed elements */
-/* #header, #title, #subtitle, #main, #section, #aside, #map-plus, #overlay, #map, #legend, #legend-content, #info, #attribution, #zoom, #about-toggles, #about-expand, #about-collapse, #about, #about-wrapper, #about-content, #modal-plus-veil, #modal, #veil, #modal-content, #about-modal, #modal-close, #footer */
+/* #header, #title, #subtitle, #main, #section, #aside, #map-plus, #overlay, #map, #legend, #legend-content, #info, #attribution, #zoom, #about-toggles, #about-expand, #about-collapse, #about, #about-wrapper, #about-content, #dash-plus, #dashboard, #dash-toggles, #dash-wrapper, #dash-content, #modal-plus, #modal, #veil, #modal-content, #modal-about, #modal-close, #footer */
 
-/* #modal-plus-veil, #modal, #veil, #about-modal { transition: 0.6s all; } */
+/* #aside, #about-toggles, #about-expand, #about-collapse, #about, #about-wrapper, #about-content, #dashboard, #dash-toggles, #dash-wrapper, #dash-content, #modal-plus, #modal, #veil, #modal-about { transition: 0.6s all; } */
 
-.bg-base { background: #dbd99f; }
-.bg-main { background: *; }
-.txt-fancy { font-family: 'Raleway Dots', cursive; }
-.color-symbol { color: #2A4C48; }
-
-.disappear-up {
-  position: fixed; top: -600px; transition: 0.6s all;
-}
-.disappear-down {
-  position: fixed; bottom: -600px; transition: 0.6s all;
-}
-.disappear-right {
-  position: fixed; right: -600px; transition: 0.6s all;
-}
-.disappear-left {
-  position: fixed; left: -600px; transition: 0.6s all;
-}
-.widget {
-  border: 1px solid #6B7063;
-  border-radius: 0 0 0 2px;
-}
-.tooltip { /* div.tooltip? */
-  position: absolute;
-  text-align: center;
-  width: 60px;
-  height: 28px;
-  padding: 2px;
-  border-radius: 8px;
-  pointer-events: none;
-  /* background: lightsteelblue; */
-  /* border: 0px; */
-}
-.legend-item { }
-.legend-symbol { }
-.legend-text { }
-.hover { }
+/* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 
 #map {  /* i.e. .svg-container */
   top:0;
@@ -64,11 +29,78 @@ svg path { stroke-linejoin: round; shape-rendering: optimizeSpeed; }
   /* padding-bottom: 100%; /* aspect ratio = height/width * 50% */
 }
 
+/* margin-y around all of map-plus/aside on @media < 1200 */
+
+/* CSS VARIBLES */
+:root {
+  --bg-main: slategray;
+}
+.bg-base { background: #2A4C48; } /* #dbd99f; } */
+/* .bg-main {} */
+.bg-map { background: var(--bg-main); }
+.bg-section { background: var(--bg-main); }
+.bg-aside { background: var(--bg-main); }
+.bg-accent1 { background: #dbd99f; }
+.bg-accent2 { background: #5d7876; }
+.txt-fancy { font-family: 'Raleway Dots', cursive; }
+.color-symbol { color: #2A4C48; }
+
+.disappear-up {
+  position: fixed; top: -600px; transition: 0.6s all;
+}
+.disappear-down {
+  position: fixed; bottom: -600px; transition: 0.6s all;
+}
+.disappear-right {
+  position: fixed; right: -960px; transition: 0.8s all;
+}
+.disappear-left {
+  position: fixed; left: -600px; transition: 0.6s all;
+}
+.widget {
+  border: 1px solid #6B7063;
+  border-radius: 0 0 0 2px;
+}
+.tooltip { /* div.tooltip? */
+  position: absolute;
+  text-align: center;
+  /* width: 60px;
+  height: 28px; */
+  padding: 12px 18px;
+  border-radius: 2px;
+  pointer-events: none;
+  background: honeydew;
+  border: 2px;
+}
+.legend-item { }
+.legend-symbol { }
+.legend-text { }
+.hover { }
+.visible { }
+.hidden { }
+
 .svg-content {
   display: inline-block;
   position: absolute;
   top: 0;
   left: 0;
+}
+
+.trigger-pt {
+  fill: darkgoldenrod;
+  stroke: goldenrod;
+}
+.trigger-pt--scanned {
+  fill: lightgreen;
+  stroke: darkgoldenrod;
+}
+.trigger-pt--selected {
+  fill: tomato;
+  stroke: darksalmon;
+}
+.trigger-pt--removed {
+  fill: darksalmon;
+  stroke: dimgray;
 }
 
 /* MEDIA QUERIES */

@@ -37,44 +37,41 @@
      wDash2 = "64 4",
      wDash3 = "128 4",
      wDash4 = "256 4",
-     // wDash5 = "1 2",
    origDash = "4 8 16 8",
-       line = d3.line().curve(d3.curveCardinal.tension(0)),
           t = 12000;  // default
 
   var padX = 0,
       padY = 0;
+      // marginX = 0,
+      // marginY = 0;
 
-  var parentWindow = d3.select("#map-and-dash-pane").node(),
-            height = parentWindow.clientHeight,
-             width = parentWindow.clientWidth;
+  var initial = calcSize();
 
-  var thisWindow = d3.select(window);
+  console.log("initial height",initial.height)
+  console.log("initial width",initial.width)
 
-  var extent0 = [[-width/2, -height/2],[width/2, height/2]];
-
-  var translate0 = [(width + padX)/2, (height + padY)/2];
-
-  var scale0 = 0.95, // 1; // initial overview scale
-      scale1 = 12;        // standard scale during animation (and maximum routeBounds)
+  var extent0 = [[-initial.width/2, -initial.height/2],[initial.width/2, initial.height/2]],
+   translate0 = [(initial.width + padX)/2, (initial.height + padY)/2],
+       scale0 = 0.9, // initial overview scale
+       scale1 = 12;  // standard scale during animation (and maximum routeBounds)
 
   var tPause = 2400;      // standard pause/transition time
 
-  let currentView = {
-      scale: scale0
-    },
-    experience = {
-      initiated: false,
-      animating: false
-    };
+  let experience = { initiated: false, animating: false };
 
 // SET UP SVG
 
-  var svg = d3.select("#map").append("svg")
-    .attr("width", width)
-    .attr("height", height)
+  // d3.select("#map")
+  //   .style("padding-bottom", (Math.ceil(initial.height/initial.width * 50) + "%"))
 
-  // <defs> elements for later <use></use>
+  var svg = d3.select("#map").append("svg")
+    .attr("width", initial.width)
+    .attr("height", initial.height)
+    .attr("preserveAspectRatio", "xMidYMid slice") // xMinYMin, xMinYMid, meet
+    .attr("viewBox", `0 0 ${initial.width} ${initial.height}`)
+    // .classed("svg-content", true)
+
+  // space to define elements for later <use></use>
   var defs = svg.append("defs");
 
   // all rendered/zoomable content
@@ -83,7 +80,7 @@
 
 //// READY MAP
 
-  // PROJECTIONS & PATHS
+  // PROJECTION & GEOIDENTITY
 
   // EPSG 102008ish
   var projection = d3.geoConicEqualArea()
@@ -110,6 +107,8 @@
   // pre-projected path generator
   var ppPath = d3.geoPath().projection(identity);
 
+  var line = d3.line().curve(d3.curveCardinal.tension(0));
+
 // SET UP PAN/ZOOM BEHAVIOR
 
   var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0)
@@ -117,17 +116,17 @@
   var active = d3.select(null);
 
   var zoom = d3.zoom()
-    .translateExtent(extent0)
-    .scaleExtent([scale0*0.5, scale0*64])
+    // .translateExtent(extent0)
+    // .scaleExtent([scale0*0.5, scale0*64])
     .on("zoom", zoomed)
 
   var background = svg.append("rect")
-      .attr("id", "background")
-      .attr("width", width)
-      .attr("height", height)
-      .style("fill", "none")
-      // .style("pointer-events", "all")
-      .on("dblclick", resetZoom());
+    .attr("id", "background")
+    .attr("width", initial.width)
+    .attr("height", initial.height)
+    .style("fill", "none")
+    // .style("pointer-events", "all")
+    .on("dblclick", resetZoom());
 
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
@@ -146,12 +145,9 @@
 
   let timer, quadtree; // observer
 
-// COLORS
+  const cityState = d => { return d.city + ", " + d.state; }
 
-  var diverging = d3.scaleDiverging(d3.interpolateBrBG),
-    sequential = d3.scaleSequential(d3.interpolateSpectral),
-    threshold = d3.scaleThreshold(d3.interpolateMagma),
-    categorical = d3.scaleOrdinal(d3.schemeDark2);
+// COLORS
 
   let riverBlues = d3.interpolate({colors: ["rosybrown","mediumaquamarine"]},{colors: ["cadetblue","darkcyan"]}),
        // riverBlue = riverBlues(Math.random());
@@ -197,77 +193,59 @@
       .attr("offset", function(d,i) { return i/(numColors-1)*50 + 40 + "%"; })
       .attr("stop-color", d => { return radialGradientScale(d) });
 
-// DECLARE A FEW MORE FREQUENTLY USEFUL BINDINGS FOR LATER ASSIGNMENT
-
-  var cityState = d => { return d.city + ", " + d.state; }
-  // routeSpec, initStats
-
-// INITIATE DATA LOAD
+//// INITIATE DATA LOAD
 
   // Typical Mapshaper CLI transform:
     // mapshaper *filein*.geojson name=*objectunits* \
     //     -o quantization=1e5 format=topojson mapshaped/*fileout*.json
     // then simplified and cleaned in browser for visual
 
-    // background/reference
-      var initBounds = d3.json("data/final/bounding.json"),
-              admin0 = d3.json("data/final/admin0.json"),
-              admin1 = d3.json("data/final/admin1.json"),
-             // terrain = d3.buffer("data/final/terrain.tif"),
-           hydroBase = d3.json("data/final/hydro_base.json"),
-           urbanBase = d3.json("data/final/urban_areas.json"), // add major roads?
-    // rail
-            railBase = d3.json("data/final/railways.json"),
-            // passRail = d3.json("data/final/pass_railways.json"),
-            // railStns = d3.json("data/final/na_main_rr_stns.json"),
-            railStns = d3.json("data/final/na_rr_stns.json"),
-           // prBuffers = d3.json("data/final/pass_rail_buffers.json");
-    // merged enrich data
-         // enrichPolys = d3.json("data/final/enrich_polys.json"),
-         enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
-         enrichLines = d3.json("data/final/enrich_lines.json"),
-           enrichPts = d3.json("data/final/enrich_pts.json");
-
-  // SET BOUNDING BOX
-    Promise.all([initBounds])
-           .then(data => {
-             data = (Array.isArray(data)) ? data[0] : data,
-             boundingGJ = tj2gj(data); // includes fallback if data already gj
-             projection.fitExtent(extent0,boundingGJ)
-           },onError)
-
-  // DRAW VECTOR BASE
-    Promise.all([admin0,admin1,hydroBase,urbanBase,railBase,railStns]).then(drawBase, onError);
-
-
-//////////////////////////
-/////// FUNCTIONS ////////
-//////////////////////////
+  // background/reference
+  var initBounds = d3.json("data/final/bounding.json"),
+          admin0 = d3.json("data/final/admin0.json"),
+          admin1 = d3.json("data/final/admin1.json"),
+         // terrain = d3.buffer("data/final/terrain.tif"),
+       hydroBase = d3.json("data/final/hydro_base.json"),
+       urbanBase = d3.json("data/final/urban_areas.json"), // add major roads?
+  // rail
+        railBase = d3.json("data/final/railways.json"),
+        // passRail = d3.json("data/final/pass_railways.json"),
+        // railStns = d3.json("data/final/na_main_rr_stns.json"),
+        railStns = d3.json("data/final/na_rr_stns.json"),
+       // prBuffers = d3.json("data/final/pass_rail_buffers.json");
+  // merged enrich data
+     // enrichPolys = d3.json("data/final/enrich_polys.json"),
+     enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
+     enrichLines = d3.json("data/final/enrich_lines.json"),
+       enrichPts = d3.json("data/final/enrich_pts.json");
 
 //// PREPARE MAP LAYERS
 
-  // DATA: MESH / BASE //
+  // SET BOUNDING BOX
+  Promise.all([initBounds]).then(bindTo => {
+      let gj, key, data = (Array.isArray(bindTo)) ? bindTo[0] : bindTo;
+      if (data["type"] == "Topology") { key = Object.keys(data.objects)[0]; }
+      gj = key ? topojson.feature(data, data.objects[key]) : data;
+      // identity.fitExtent(extent0,gj)
+      projection.fitExtent(extent0,gj)
+    }, onError)
+
+  // DRAW VECTOR BASE
+  Promise.all([admin0,admin1,hydroBase,urbanBase,railBase,railStns]).then(drawBase, onError);
+
   function drawBase(data) {
 
-    // console.log(data)
-
-    // presimplified and converted as relevant/possible
+    // CONVERT TJ'S TO GJ'S AS NECESSARY
     let sourceData = new Object();
-
     data.forEach(datum => {
       if (datum["type"] == "Topology") {
         let oKey = Object.keys(datum.objects)[0],  // object key
            sdKey = oKey;                           // sourceData key (to distinguish multiple TJ's with objects of same name)
         if (sourceData[sdKey]) { sdKey += "2" };
-        // regardless
-        sourceData[sdKey] = {
-          tj: datum
-        },
-        sourceData[sdKey].gj = getGj(sourceData[sdKey],oKey);
+        sourceData[sdKey] = { tj: datum },
+        sourceData[sdKey].gj = topojson.feature(sourceData[sdKey].tj, sourceData[sdKey].tj.objects[oKey]);
       } else {  // if not topojson, assume already geojson
-        sourceData[datum.name] = {
-          gj: datum
-        }
+        sourceData[datum.name] = { gj: datum };
       }
     });
 
@@ -277,7 +255,6 @@
    continentMesh = getMesh(sourceData.countries,"countries",outerlines()),
    countriesMesh = getMesh(sourceData.countries,"countries",innerlines()),
       statesMesh = getMesh(sourceData.states,"states",innerlines());
-    // passRailMesh = getMesh(sourceData.passRailways,"passRailways");
 
     console.log("* base data *")
     console.log(sourceData)
@@ -299,7 +276,6 @@
       .style("opacity", 1)
 
     // FILLED MESH
-    // var continent =
     adminBase.append("path")
       .attr("id", "continent-mesh")
       .attr("d", projPath(continentMesh))
@@ -308,7 +284,6 @@
       .style("stroke-opacity",0.8)
       .style("fill","dimgray")
 
-    // var lakeMesh =
     hydroBase.append("path")
       .attr("id", "lake-mesh")
       .attr("d", projPath(lakeMesh))
@@ -318,7 +293,6 @@
       .style("opacity",0.6)
       .style("stroke-opacity",1)
 
-    // var urbanAreas =
     urbanBase.append("path")
       .attr("id", "urban-areas")
       .attr("d", projPath(urbanMesh))
@@ -328,7 +302,6 @@
       .style("opacity",0.4)
 
     // STROKED MESH
-    // var countryBorders =
     adminBase.append("path")
       .attr("id","country-borders")
       .attr("d", projPath(countriesMesh))
@@ -336,7 +309,6 @@
       .style("stroke","yellowgreen")
       .style("stroke-width",0.6)
 
-    // var stateBorders =
     adminBase.append("path")
       .attr("id","state-borders")
       .attr("d", projPath(statesMesh))
@@ -346,7 +318,6 @@
       .style("stroke-dasharray", "0.2 0.4")
 
     // STROKED FEATURES
-    // var rivers =
     hydroBase.append("g")
       .attr("id", "rivers")
       .selectAll("path")
@@ -357,7 +328,6 @@
         .style("stroke","teal")
         .style("stroke-width", d => { return d.properties.strokeweig })
 
-    // var railways =
     railBase.append("g")
       .attr("id", "railways")
       .selectAll("path")
@@ -368,10 +338,8 @@
         .attr("stroke","lightslategray")
         .style("fill", "none")
         .style("opacity",0.95)
-        // .attr("class", d => { return "rendered railway " + d.properties.scalerank.toLocaleString(); } )
 
     // POINT FEATURES
-    // var stations =
     railBase.append("g")
       .attr("id", "rail-stations")
       .selectAll("circle")
@@ -379,12 +347,13 @@
       .enter().append("circle")
         .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
         .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-        .attr("r", 0.8)
-        .style("fill", "#f13131")
-        .style("stroke","#36454F")
-        .style("stroke-width",0.1)
-        // .attr("class", d => {
-        //   return "rail station point rendered " + d.properties.city + " " + d.properties.country })
+        .attr("r", 0.4)
+        .property("name", d => { return cityState(d.properties); })
+        .style("fill", "lightsalmon")
+        .style("stroke","indianred")
+        .style("stroke-width",0.05)
+        .on("mouseover", onMouseover)
+        .on("mouseout", onMouseout)
 
     // // sort stations by city name
     // let sorted = sourceData.stations.gj.features.sort( (a,b) => {
@@ -409,9 +378,8 @@
     // create new allStations array by extracting sorted, slimmed railStns properties
     var allStations = /*sourceData.stations.gj.features*/shuffled.map( (d,i) => {
       let props = d.properties, // shorthand
-        stnCode = i.toLocaleString().padStart(3,"0"),
         station = {
-          id: stnCode,
+          id: i.toLocaleString().padStart(3,"0"),
           city: props.city,
           state: props.state ? props.state : props.province,
           country: props.country
@@ -423,9 +391,11 @@
 
   }
 
+//// ON INITIAL LOAD
   function initPrompt() {
-    d3.select("#modal").classed("none",false);
+    d3.select("#modal-plus").classed("none",false);
   }
+
   function populateOptions(allOptions) {
 
     // OPTION 0 == START, OPTION 1 == END
@@ -603,16 +573,12 @@
 
   // provide user feedback that map content is loading
   function toggleLoading() {
-    d3.select("#modal").classed("none", true);
+    d3.select("#modal-plus").classed("none", true);
     d3.select("#map-init-load").classed("none", false);
   }
-  // prevent window reprompt on apps with lots of moving parts
-  function localStore() {
-    // add somewhere to prevent reprompt
-    localStorage.optionsReceived = true;
-  }
 
-  // QUERY API IF USING
+
+//// API / DATA-PROCESSING RELATED
   function queryAPI(opt0,opt1) {
 
     // save and parse user input
@@ -727,215 +693,6 @@
     // }
 
     return thisRoute;
-
-  }
-
-  function initExp(chosen) {
-
-    experience.initiated = true;
-
-    // zoom to bounds of chosen route
-    let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString)));
-
-    // if routeBounds overly zoomed in
-    if (routeBounds.k > scale1) {
-      let simpRoute = getSimpRoute(chosen.lineString),
-         simpLength = Math.floor(turf.length(simpRoute, {units: "miles"})),
-              midPt = turf.along(simpRoute,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2));
-      routeBounds = getIdentity(centerTransform(projection(midPt),scale1));
-    }
-
-    // control timing with transition start/end events
-    svg.transition().duration(tPause*2).ease(d3.easeCubicIn)
-      .call(zoom.transform, routeBounds)
-      .on("start", () => {
-        drawRoute(chosen, tPause);
-        prepareEnvironment();
-      })
-      .on("end", () => {
-        // confirm g transform where it should be
-        g.attr("transform", routeBounds.toString())
-        // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
-        prepareUser();
-        d3.timeout(() => {
-          initAnimation(chosen,routeBounds);
-        }, tPause);
-      })
-
-    function prepareEnvironment() {
-      // setup dashboard including legend
-        // store initial orienting data:
-          // total length (leg length sum?)
-          // full travel time(basetime?)
-          // remainTime, remainDistance
-      // setup Tooltips
-      // setup / initiate select event listeners
-        // use remoteControl.js for button functionality
-      // activate newly relevant buttons
-    }
-
-    function prepareUser() {
-      // provide feedback via overview of selected route
-      // introduce dashboard and journey log
-      // prompt for readiness or provide countdown?
-
-      // e.g. 'You have chosen to travel from {ptA} to {ptB} on {railCompany}'s {lineName} line. IRL, this route would take you about {travelTime} to complete, but we are going to more a little more quickly. Keep your eye on the dashboard and journey log for more details as the journey unfolds in {countdown?... until data loads?}'
-    }
-  }
-
-  function drawRoute(received,sT) {
-
-    d3.select("#veil").transition()
-      .duration(sT)
-      .style("opacity", 0)
-      .on("end", hide)
-
-    d3.select("#map-init-load").transition()
-      .delay(sT/2)
-      .duration(sT/2 - 200)
-      .style("opacity", 0)
-      .on("end", hide)
-
-    // d3.select("#dashplus").transition()
-    //   .delay(sT/2)
-    //   .duration(sT * 2)
-    //   .style("opacity", 1)
-    //   .on("end", show)
-
-    // draw faint stroke along returned route
-    var journey = g.append("g")
-      // .classed("experience current", true)
-      .attr("id", "journey")
-
-    var places = journey.append("g")
-      .classed("places points encountered", true)
-      .attr("id", "places")
-
-    var route = journey.append("g")
-      // .classed("route line rail railway", true)
-      .attr("id", "route")
-
-    // fade background railways
-    g.select("#railways").transition().delay(sT/2).duration(sT/2)
-      .attr("opacity",0.2)
-
-    // remove non-chosen station points
-    var allStns = g.select("#rail-stations").selectAll("circle");
-
-    // segment start/ends only; could easily be changed to include more
-    let stnsEnRoute = new Set();
-    received.segments.forEach(segment => {
-      stnsEnRoute.add(segment.departing);
-      stnsEnRoute.add(segment.arriving);
-    });
-
-    // keep relevant station points
-    let relevantStns = places.selectAll("circle")
-      .data([...stnsEnRoute])
-      .enter().append("circle")
-        .attr("cx", d => { return projection([d.lng,d.lat])[0]; })
-        .attr("cy", d => { return projection([d.lng,d.lat])[1]; })
-        .attr("r", 0)
-        .style("fill","salmon")
-        .style("stroke","darksalmon")
-        .style("stroke-width",0.1)
-
-    allStns.transition().duration(sT)
-      .attr("r", 0)
-      .on("start", () => {
-        relevantStns.transition().duration(sT)
-          .attr("r", 0.7)
-      })
-      .on("end", () => {
-        allStns.data([]);
-        relevantStns.merge(allStns);
-        allStns.exit().remove();
-      })
-
-    let arcPts = received.arcPts;
-
-    // LINE/ROUTE
-    // faint underlying solid
-    route.append("path")
-      .datum(arcPts)
-      .attr("d", line)
-      .style("fill","none")
-      .style("stroke","honeydew")
-      .style("opacity",0.6)
-      .style("stroke-width",0.4)
-
-    // setup path for dashed stroked interpolation
-    var fullRoute = route.append("path")
-      .attr("id", "full-route")
-      .datum(arcPts)
-      .attr("d", line)
-      .style("fill", "none")
-      .style("stroke", "orangered") // fiddle/improve
-      .style("stroke-width", 0.3)
-      .style("opacity",0)
-      .style("stroke-dasharray", dash0)
-      .style("stroke-linecap", "round")
-
-    // semiSimp path for headlights/eventual compass to follow
-    let fullGj = turf.lineString(arcPts),
-      semiSimp = getSimpRoute(fullGj,0.5),
-    simpCoords = semiSimp.geometry.coordinates; // shorthand
-
-    // bind (and optionally render) semiSimp line (currently using for later DOM access to path nodes within bearWithMe())
-    journey.append("path")
-      .attr("id", "semi-simp")
-      .attr("d", line(simpCoords))
-      .style("fill","none")
-      // .style("stroke","slateblue")
-      // .style("stroke-width","1px")
-
-    // make headlights!
-    let azimuth0 = getAzimuth(semiSimp.geometry.coordinates[0],semiSimp.geometry.coordinates[1]),
-        radians0 = 0,            // start with unrotated arc
-             tau = 2 * Math.PI,  // 100% of a circle
-         arcSpan = 0.16 * tau,   // hardcode as desired (in radians)
-          radius = 6,            // will otherwise default to 10 if not hardcoded here
-         sector0 = getSector(radians0,arcSpan,6);
-
-    // add headlights as DOM node (opacity transitions in from 0)
-    var headlights = g.select("#route").append("path")
-      .attr("id", "headlights")
-      .attr("d", sector0)
-      .attr("transform", "translate(" + arcPts[0] + ") rotate(" + azimuth0 +")")
-      .style("fill","lightyellow") // linearGradient fading outward?
-      .style("opacity", 0)
-      .property("azimuth0", azimuth0)
-
-    // BIG GUY: TRAIN POINT IN MOTION
-    var point = journey.append("circle")
-      .attr("id","train-point")
-      .attr("r", 1.6)
-      .style("fill","url(#radial-gradient)")
-    	.style("stroke-width", 0.4)
-      .style("stroke","brown")
-      .style("stroke-opacity",0.6)
-      .style("stroke-dasharray",dash2)
-      .attr("transform", "translate(" + arcPts[0] + ")")
-
-    // UNDERLYING TICKS/TIES
-    let rrTies = route.append("g")
-      .attr("id","rr-ties")
-      .append("path")
-      .attr("d", line(arcPts))
-      .style("fill", "none")
-      .style("stroke","gainsboro")
-      .style("stroke-width",0.6)
-      .style("stroke-dasharray", rrDash)
-
-    // // SIMP TICKS
-    // let simpTicks = route.append("g")
-    //   .attr("id","simp-ticks")
-    //   .append("path")
-    //   .attr("d", line(simpCoords))
-    //   .style("fill", "none")
-    //   .style("stroke", "cyan")
-    //   .style("stroke-width",1.6)
-    //   .style("stroke-dasharray", dash1)
 
   }
 
@@ -1165,7 +922,7 @@
         }
       }
 
-      let levelStyles = {
+      const levelStyles = {
         "I": {
           dash: wDash1,
           width: 0.15,
@@ -1187,6 +944,7 @@
           zIndex: 1
         }
       }
+
       const getDashArray = function(d) {
         let dashArray;
         if (d.properties.CATEGORY === "Watershed") {
@@ -1196,6 +954,7 @@
         }
         return dashArray;
       }
+
       const getStrokeWidth = function(d) {
         let width = 0.1,           // default
             props = d.properties;  // shorthand
@@ -1206,6 +965,7 @@
         }
         return width;
       }
+
       const getZIndex = function(d) {
         let zIndex,
             props = d.properties;  // shorthand
@@ -1214,6 +974,7 @@
         }
         return zIndex;
       }
+
       const getStroke = function(d) {
         let props = d.properties; // shorthand
         if (props.CATEGORY === "Watershed") {
@@ -1222,6 +983,7 @@
           return riverBlue;
         }
       }
+
       const enrichLines = enrichLayer.append("g")
         .attr("id", "enrich-lines")
         .selectAll(".enrich-line")
@@ -1359,13 +1121,19 @@
         } else {
           index1 = turf.nearestPointOnLine(shifted,i1,{units:"miles"}).properties.index;
           if (index1 === 0) { // shouldn't be happening; FIXME
+            // i0.geom.coords are near identicial to i1.geom.coords, so turf.nearestPointOnLine is returning same point for both;
+
             console.log("index1 === 0")
-            console.log(i0.geometry.coordinates)
-            console.log(i1.geometry.coordinates)
-            console.log("index1 on shifted", turf.nearestPointOnLine(shifted,i1,{units:"miles"}))
-            console.log("index0 calculated for shifted (not d)", turf.nearestPointOnLine(shifted,i0,{units:"miles"}).properties.index)
-            console.log("shifted at (shifted)index0",shifted[turf.nearestPointOnLine(shifted,i0,{units:"miles"}).properties.index])
+            console.log("pt i0", i0.geometry.coordinates)
+            console.log("pt i1", i1.geometry.coordinates)
+            console.log("d at index0",shifted.geometry.coordinates[index0])
             console.log("shifted at index1",shifted.geometry.coordinates[index1])
+            console.log("orig geom; why so short? should be linegon?",shifted.geometry.coordinates)
+            console.log("orig length",turf.length(shifted,{units:"miles"}))
+
+            console.log("route intersect pts",routeIntersectPts)
+            // two route intersect points were basically next to each other; treat as one, throw error to catch @ around line 1102
+
             // for now
             index1++;
           }
@@ -1566,6 +1334,217 @@
 
   }
 
+//// INITIATE EXPERIENCE
+  function initExp(chosen) {
+
+    experience.initiated = true;
+
+    // zoom to bounds of chosen route
+    let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString)));
+
+    // if routeBounds overly zoomed in
+    if (routeBounds.k > scale1) {
+      let simpRoute = getSimpRoute(chosen.lineString),
+         simpLength = Math.floor(turf.length(simpRoute, {units: "miles"})),
+              midPt = turf.along(simpRoute,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2));
+      routeBounds = getIdentity(centerTransform(projection(midPt),scale1));
+    }
+
+    // control timing with transition start/end events
+    svg.transition().duration(tPause*2).ease(d3.easeCubicIn)
+      .call(zoom.transform, routeBounds)
+      .on("start", () => {
+        drawRoute(chosen, tPause);
+        prepareEnvironment();
+      })
+      .on("end", () => {
+        // confirm g transform where it should be
+        g.attr("transform", routeBounds.toString())
+        // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
+        prepareUser();
+        d3.timeout(() => {
+          initAnimation(chosen,routeBounds);
+        }, tPause);
+      })
+
+    function prepareEnvironment() {
+      // setup dashboard including legend
+        // store initial orienting data:
+          // total length (leg length sum?)
+          // full travel time(basetime?)
+          // remainTime, remainDistance
+      // setup Tooltips
+      // setup / initiate select event listeners
+        // use remoteControl.js for button functionality
+      // activate newly relevant buttons
+    }
+
+    function prepareUser() {
+      // provide feedback via overview of selected route
+      // introduce dashboard and journey log
+      // prompt for readiness or provide countdown?
+
+      // e.g. 'You have chosen to travel from {ptA} to {ptB} on {railCompany}'s {lineName} line. IRL, this route would take you about {travelTime} to complete, but we are going to move a little more quickly. Keep your eye on the dashboard and journey log for more details as the journey unfolds in {countdown?... until data loads?}'
+    }
+  }
+
+  function drawRoute(received,sT) {
+
+    d3.select("#veil").transition()
+      .duration(sT)
+      .style("opacity", 0)
+      .on("end", noneClass)
+
+    d3.select("#map-init-load").transition()
+      .delay(sT/2)
+      .duration(sT/2 - 200)
+      .style("opacity", 0)
+      .on("end", noneClass)
+
+    d3.select("#dash").classed("disappear-down", false)
+    d3.select("#dash-collapse").classed("none",false)
+          // ??
+          // d3.select("#about-up-btn").classed("h24",false)
+          // d3.select("#about-up").classed("mt-neg6",false)
+
+d3.select("#map").classed("mb0-mxl", false) // mb-neg6?
+                 .classed("mb-neg6-mxl", true) // mb-neg30?
+
+    // draw faint stroke along returned route
+    var journey = g.append("g")
+      // .classed("experience current", true)
+      .attr("id", "journey")
+
+    var places = journey.append("g")
+      .classed("places points encountered", true)
+      .attr("id", "places")
+
+    var route = journey.append("g")
+      // .classed("route line rail railway", true)
+      .attr("id", "route")
+
+    // fade background railways
+    g.select("#railways").transition().delay(sT/2).duration(sT/2)
+      .attr("opacity",0.2)
+
+    // keep relevant station points
+    // segment start/ends only; could easily be changed to include more
+    let stnsEnRoute = new Set();
+    received.segments.forEach(segment => {
+      stnsEnRoute.add(segment.departing);
+      stnsEnRoute.add(segment.arriving);
+    });
+    let relevantStns = places.selectAll("circle")
+      .data([...stnsEnRoute])
+      .enter().append("circle")
+        .attr("cx", d => { return projection([d.lng,d.lat])[0]; })
+        .attr("cy", d => { return projection([d.lng,d.lat])[1]; })
+        .attr("r", 0)
+        .style("fill","salmon")
+        .style("stroke","darksalmon")
+        .style("stroke-width",0.1)
+
+    // remove non-chosen station points
+    let allStns = g.select("#rail-stations").selectAll("circle");
+    allStns.transition().duration(sT)
+        .attr("r", 0)
+        .on("start", () => {
+          relevantStns.transition().duration(sT)
+            .attr("r", 0.7)
+        })
+        .on("end", () => {
+          allStns.data([]);
+          relevantStns.merge(allStns);
+          allStns.exit().remove();
+        })
+
+    let arcPts = received.arcPts;
+
+    // LINE/ROUTE
+    // faint underlying solid
+    route.append("path")
+      .datum(arcPts)
+      .attr("d", line)
+      .style("fill","none")
+      .style("stroke","honeydew")
+      .style("opacity",0.6)
+      .style("stroke-width",0.4)
+
+    // setup path for dashed stroked interpolation
+    var fullRoute = route.append("path")
+      .attr("id", "full-route")
+      .datum(arcPts)
+      .attr("d", line)
+      .style("fill", "none")
+      .style("stroke", "darksalmon") // fiddle/improve
+      .style("stroke-width", 0.3)
+      .style("opacity",0)
+      .style("stroke-dasharray", dash0)
+      .style("stroke-linecap", "round")
+
+    // semiSimp path for headlights/eventual compass to follow
+    let fullGj = turf.lineString(arcPts),
+      semiSimp = getSimpRoute(fullGj,0.5),
+    simpCoords = semiSimp.geometry.coordinates; // shorthand
+
+    // bind (and optionally render) semiSimp line (currently using for later DOM access to path nodes within bearWithMe())
+    journey.append("path")
+      .attr("id", "semi-simp")
+      .attr("d", line(simpCoords))
+      .style("fill","none")
+      // .style("stroke","slateblue")
+      // .style("stroke-width","1px")
+
+    // make headlights!
+    let azimuth0 = getAzimuth(semiSimp.geometry.coordinates[0],semiSimp.geometry.coordinates[1]),
+        radians0 = 0,            // start with unrotated arc
+             tau = 2 * Math.PI,  // 100% of a circle
+         arcSpan = 0.16 * tau,   // hardcode as desired (in radians)
+          radius = 6,            // will otherwise default to 10 if not hardcoded here
+         sector0 = getSector(radians0,arcSpan,6);
+
+    // add headlights as DOM node (opacity transitions in from 0)
+    var headlights = g.select("#route").append("path")
+      .attr("id", "headlights")
+      .attr("d", sector0)
+      .attr("transform", "translate(" + arcPts[0] + ") rotate(" + azimuth0 +")")
+      .style("fill","lightyellow") // linearGradient fading outward?
+      .style("opacity", 0)
+      .property("azimuth0", azimuth0)
+
+    // BIG GUY: TRAIN POINT IN MOTION
+    var point = journey.append("circle")
+      .attr("id","train-point")
+      .attr("r", 1.6)
+      .style("fill","url(#radial-gradient)")
+    	.style("stroke-width", 0.4)
+      .style("stroke","brown")
+      .style("stroke-opacity",0.6)
+      .style("stroke-dasharray",dash2)
+      .attr("transform", "translate(" + arcPts[0] + ")")
+
+    // UNDERLYING TICKS/TIES
+    let rrTies = route.append("g")
+      .attr("id","rr-ties")
+      .append("path")
+      .attr("d", line(arcPts))
+      .style("fill", "none")
+      .style("stroke","gainsboro")
+      .style("stroke-width",0.6)
+      .style("stroke-dasharray", rrDash)
+
+    // // SIMP TICKS
+    // let simpTicks = route.append("g")
+    //   .attr("id","simp-ticks")
+    //   .append("path")
+    //   .attr("d", line(simpCoords))
+    //   .style("fill", "none")
+    //   .style("stroke", "cyan")
+    //   .style("stroke-width",1.6)
+    //   .style("stroke-dasharray", dash1)
+
+  }
+
   function initAnimation(routeObj,routeBounds) {
 
     // get zoomFollow object including simplified zoomArc, pace, and first/last zoom frames
@@ -1675,1232 +1654,1354 @@
   }
 
 
+////////////////////////////////////////////////
+///// EVENT LISTENERS & VISUAL AFFORDANCES /////
+////////////////////////////////////////////////
+
+// CLICK EVENTS
+  // Default Prevention
+  d3.select("#submit-btn").on("click", function() {
+    d3.event.preventDefault();
+    d3.select("#submit-btn-txt").classed("none",true);
+    d3.select("#submit-btn-load").classed("none",false);
+  })
+
+  // Custom Buttons
+  // d3.select("#play-pause").on("click", remoteControl.playPause(e))
+
+  // General Visibility Mgmt
+  // d3.selectAll(".expand-trigger").on("click", e=> {
+  //   expand(e.target.for); // controls?
+  //   noneClass(e.target);       // hide the icon that prompted expansion, once expansion is attained
+  // });
+  // d3.selectAll(".hide-trigger").on("click", e => {
+  //   noneClass(e.target.for); // controls? (for as attribute containing id of element to hide)
+  //   // with the exception of the modal hide-trigger (and all submit buttons)
+  //   if (e.target.type != "submit") {
+  //     // expand something else? (expand-trigger icon?)
+  //   }
+  // });
+
+// LOAD EVENTS
+  d3.select(window).on("load", function () {
+    // if (!('optionsReceived' in localStorage)) {
+      initPrompt();
+    // }
+  });
+  // d3.select(window).on("reload", *)
+
+// RESIZE EVENTS
+  d3.select(window).on("resize.map", resize)
+  d3.select("#about-expand").on("click", resize)
+  d3.select("#about-collapse").on("click", resize)
+  // svg.on("move", rerender);
+  // svg.on("viewreset", rerender);
+
+// FORMS & FIELDS
+  d3.select("#getInitOptions").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
+                                .on("blur", function (e) { e.target.style.background = "#fafafa" })
+
+
 //////////////////////////
 ///// MORE FUNCTIONS /////
 //////////////////////////
 
-//// SVG
+//// LAYOUT
 
-  // ZOOM BEHAVIOR
-    // function dblclicked(d,i) {
-    //
-    //   if (active.node() === this) return resetZoom();
-    //
-    //   if (d3.event.defaultPrevented) return; // panning, not zooming
-    //
-    //   active.classed("active", false);
-    //
-    //   active = d3.select(this).classed("active", true);
-    //
-    //   zoomTo(projPath.bounds(d))
-    //     // make sure upper-most (clickable) layer is in accordance with path function, or adjust bounds() caller accordingly
-    //
-    // }
+  function resize() {
 
-    function zoomed() {
+    // get updated dimensions
+    let updated = calcSize();
 
-      var transform = d3.zoomTransform(this) // .scale(0.8);
+    // apply as new svg attributes
+    svg.attr("width", updated.width)
+       .attr("height", updated.height)
 
-      let k = transform.k,
-         tx = transform.x,
-         ty = transform.y;
+    // console.log("resized height", updated.height)
+    // console.log("resized width", updated.width)
 
-      // let abs = v => { return Math.abs(v) },
-      //   clipExtent = [[-abs(tx), -abs(ty)], [abs(tx), abs(ty)]];
+  }
 
-      // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
-      //
-      // identity.clipExtent(clipExtent)
-      // projection.clipExtent(clipExtent)
+  function rerender(content = "map") {
+    // for now..
+    resize()
+  }
 
-      g.style("stroke-width", 1 / (k*k) + "px");
+  function calcSize() {
 
-      g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + k + ")");
+    let calculated = {};
 
-    }
+    // if screen mxl, account for #aside on right vs bottom
+    if (window.innerWidth >= 1200) {
 
-    // function zoomTo(bounds,k) {
-    //
-    //   let transform = getTransform(bounds);
-    //
-    //   let zoom1 = d3.zoomIdentity
-    //     .translate(transform.x,transform.y)
-    //     .scale(k || transform.k)
-    //
-    //   svg.transition().duration(750)
-    //     .call(zoom.transform, zoom1)
-    //
-    // }
+      if (!d3.select("#aside").classed("mxl")) {
 
-    function getIdentity(atTransform,k) {
-      let identity = d3.zoomIdentity
-        .translate(atTransform.x,atTransform.y)
-        .scale(k || atTransform.k)  // if (k), k || (keep k constant?)
-      return identity;
-    }
-    function centerTransform(pt,scale) {
-      let tx = -scale * pt[0] + width/2,
-          ty = -scale * pt[1] + height/2;
-      return {x: tx, y: ty, k: scale};
-    }
+        // if #aside wasn't previously flagged (either entering @mxl screen or first resize on initial load @ mxl), flag as such now
+        d3.select("#aside").classed("mxl", true)
 
-    function getTransform(bounds, extent = extent0, padding = 0.1) {
+        // if #about was hidden on smaller window size
+        if (d3.select("#about").classed("disappear-down")) {
+          // *keep* collapsed, but change disappear-direction
+          d3.select("#about").classed("disappear-right",true)
+                             .classed("disappear-down",false)
+          // if about closed on small then moved to mxl, remove relative from section
+          d3.select("#section-wrapper").classed("relative",false)
+          // OR re-expand element from right (unless modal open)
+          // if (d3.select("#modal-plus").classed("none")) {
+          //  expand("about","left");
+          // }
+        }
 
-      // COMBAK rework double default parameters;
-
-      let b0,b1;
-
-      // accept bbox, projPath.bounds(), or SVG bbox
-      if (bounds.length === 4) {
-        b0 = [bounds[0],bounds[1]],
-        b1 = [bounds[2],bounds[3]]
-      } else {
-        b0 = bounds[0] || [bounds.x,bounds.y],
-        b1 = bounds[1] || [bounds.width,bounds.height]
-      }
-
-      let dx = b1[0] - b0[0],                // domain x (input)
-          dy = b1[1] - b0[1],                // domain y (input)
-       width = extent[1][0] - extent[0][0],  // range x (output)
-      height = extent[1][1] - extent[0][1];  // range y (output)
-
-      let k = (1 - padding) / Math.max(dx / width, dy / height),
-                             // aka the m in y = mx + b
-                             // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
-                             // 0.9 provides 10% built-in padding
-          x = b1[0] + b0[0], // xMax (b1[0]) + xOffset (b0[0])
-          y = b1[1] + b0[1];  // yMax (b1[1]) + yOffset (b0[1])
-
-      // calculate translate necessary to center data within extent
-      let tx = (width - k * x) / 2,
-          ty = (height - k * y) / 2;
-
-      let transform = { k: k, x: tx, y: ty };
-
-      return transform;
-
-    }
-
-    function resetZoom() {
-      active.classed("active", false);
-      active = d3.select(null);
-
-      svg.transition().duration(3000).ease(d3.easeLinear)
-        .call(zoom.transform, zoom0)
-
-      svg.call(zoom)
-    }
-
-  // TRANSITIONS AND TWEENS
-    function tweenDash() {
-      var l = this.getTotalLength(),
-          i = d3.interpolateString("0," + l, l + "," + l);
-      return function(t) { return i(t); };
-    }
-    function dashTest() { // ?
-      var l = this.getTotalLength(),
-          i = d3.interpolateString(l + "," + l, l + ",0");
-      return function(t) { return i(t); };
-    }
-    function dashBack() {
-      var l = this.getTotalLength(),
-          i = d3.interpolateString(l + ",0", "0," + l);
-      return function(t) { return i(t); };
-    }
-
-    // TRANSLATE ONLY
-    function zoomAlong(path,k = currentView.scale) {
-      var l = path.node().getTotalLength();
-      return function(d, i, a) {
-        return function(t) {
-          // KEEP NODE P IN CENTER OF FRAME
-          var p = path.node().getPointAtLength(t * l);
-          // calculate translate necessary to center data within extent
-          let tx = -k * p.x + width/2,
-              ty = -k * p.y + height/2;
-
-          // // ????
-          // // clip projected data to minimize shift/render calculations?
-          // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
-          // identity.clipExtent(clipExtent)
-          // projection.clipExtent(clipExtent)
-
-          return "translate(" + tx + "," + ty + ") scale(" + k + ")";
+        // ensure dash tags in alignment if #dash closed
+        if (d3.select("#dash").classed("disappear-down")) {
+          d3.select("#dash-up").classed("mt-neg6", true);
+          d3.select("#dash-up").classed("mt-neg18", false);
+          d3.select("#dash-expand-btn").classed("h24", true)
+          d3.select("#dash-expand-btn").classed("h18", false)
         }
       }
-    }
 
-    // function returns value for translating point along path
-    function translateAlong(path) {
-      var l = path.node().getTotalLength(); // orig 'this'
-      return function(d, i, a) {
-        return function(t) {
-        	var p = path.node().getPointAtLength(t * l);
-          return "translate(" + p.x + "," + p.y + ")";
-  			}
-      }
-    }
+      calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight,  //  - marginY*2,
 
-    function bearWithMe(path,azimuth0) {
-      var l = path.node().getTotalLength();
-      return function(d, i, a) {
-        let rotate = azimuth0,
-               pt0 = path.node().getPointAtLength(0);
-        // additional rotate interpolator for smoother transitions?
-        // address any jumps between, eg., -179 and 179
-        return function(t) {
-          let pt1 = path.node().getPointAtLength(t * l);  // svg pt
-          if (!(pt0.x === pt1.x)) rotate = getRotate(pt0,pt1);
-          pt0 = pt1;  // shift pt values pt0 >> pt1
-          return transform = "translate(" + pt1.x + "," + pt1.y + ") rotate(" + rotate + ")";
+      calculated.width = window.innerWidth - d3.select("#aside").node().clientWidth;  // - marginX*2;
+
+      // update #about-wrapper to align with full map height
+      d3.select("#about-wrapper").style("height", calculated.height + "px");
+
+    } else {
+
+      // if screen sizing downward from 1200+
+      if (d3.select("#aside").classed("mxl")) {
+        // remove mxl flag, then reset a variety of styles
+        (d3.select("#aside").classed("mxl", false))
+        // reset #about-wrapper height
+        d3.select("#about-wrapper").style("height", null);
+        // if #about was manually collapsed on screen mxl
+        if (d3.select("#about").classed("disappear-right")) {
+          // // *keep* #about collapsed, but change class to disappear-down so transitions/placement correct if #about re-expanded from smaller window position
+          // d3.select("#about").classed("disappear-down",true).classed("disappear-right",false)
+          // replace previously-removed "relative" class in #section-wrapper
+          d3.select("#section-wrapper").classed("relative", true);
+          // attribution mr24 is false
+          d3.select("#attribution").classed("mr24", false)
+          // if dash was ALSO closed
+          if (d3.select("#dash").classed("disappear-down")) {
+            d3.select("#dash-expand-btn").classed("h24", true);
+            d3.select("#dash-expand-btn").classed("h18", false);
+            d3.select("#dash-up").classed("mt-neg6", true);
+            d3.select("#dash-up").classed("mt-neg18", false);
+          }
         }
+        // below not happening right now because about always closed automatically on move from large to smaller screen
+        // else if (d3.select("#dash").classed("disappear-down")) {
+        //   // about open, dash closed
+        //   d3.select("#dash-expand-btn").classed("h24", false);
+        //   d3.select("#dash-expand-btn").classed("h18", true);
+        //   d3.select("#dash-up").classed("mt-neg6", false);
+        //   d3.select("#dash-up").classed("mt-neg18", true);
+        // }
+        // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
+        d3.select("#about").classed("disappear-right", false)
+        collapse("about","down")
       }
-    }
 
-    // function fadeToDashed(pathSelection) {
-    //   pathSelection.transition()
-    // }
+      // if window too short to show #about content, collapse automatically
+      if (window.innerHeight < 500) collapse("about","down");
 
-    function drawDashed() {
-      var l = this.getTotalLength();
-      var i = d3.interpolateString(-l,"0"); // results in 0=>dashed in wrong direction
-      return function(t) { return i(t); };
-    }
+      // map height calculation includes #aside
+      calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#aside").node().clientHeight - d3.select("#footer").node().clientHeight // - marginY*2;
 
-    // function animateSolid(along,t){
-    //   along.style("opacity", 0.6)
-    //        .transition()
-    //        .duration(t)
-    //        .styleTween("stroke-dasharray",tweenDash)
-    // }
-
-    function reverseSVGPath(pathStr){
-      // // for certain finicky attrTweens
-      // let currentPathArr = pathStr.split('M'),
-      //    currentPathBulk = currentPathArr[1].split('L'),
-      //       reversedBulk = currentPathBulk.reverse(),
-      //         joinedBulk = reversedBulk.join('L'),
-      //    reversedPathArr = ["M",joinedBulk],
-      //       reversedPath = reversedPathArr.join('');
-      // return reversedPath;
-
-      // golf reverse
-      return ["M",pathStr.split('M')[1].split('L').reverse().join('L')].join('');
-    }
-    function getDashStr(along,length,dash = dash1) {
-      let dashSum = dash.split(" ").map(x => +x)
-                       .reduce((accumulator, currentVal) =>
-                         accumulator + currentVal, 0
-                       ),
-        dashTimes = Math.ceil(length/dashSum),
-         dashFill = new Array(dashTimes + 1).join(dash + ' '),
-          dashStr = dashFill + ", " + length;
-      return dashStr;
-    }
-    function animateDashed(along,t) {
-
-      // see https://bl.ocks.org/kafunk/91f7b870b79c2f104f1ebacf4197c9dc for more commentary
-
-      let reversedAlong = along.clone(),
-                 length = reversedAlong.node().getTotalLength();
-
-      let dashStr = getDashStr(reversedAlong,length,dash1);
-
-      // REVERSE PATH for proper direction
-      let reversedPath = reverseSVGPath(reversedAlong.attr("d"));
-
-      reversedAlong.attr("d", reversedPath)
-                   .attr("id", "full-route-reversed")
-
-      // dashed path initially blank
-      reversedAlong.style("stroke-dasharray", dashStr)
-                   .style("stroke-dashoffset", -length)
-                   .style("opacity", 0.6)
-
-      reversedAlong.transition()
-                   .duration(t)
-                   .styleTween("stroke-dashoffset",drawDashed)
+      calculated.width = d3.select("#about-plus").node().clientWidth
 
     }
 
-    function endall(transition,callback) {
-      var n = 0;
-      transition.each(function() { ++n; })
-                .each("end", function() { if (!--n) callback.apply(this, arguments); });
-    }
+    return calculated;
 
-  // PROJECTIONS & PATHS
+  }
 
+//// PROJECTIONS & PATHS
 
-    // function getScaleAtZoomLevel(zoomLevel, tileSize = 256) {
-    //   return tileSize * 0.5 / Math.PI * Math.pow(2, zoomLevel);
-    // }
-
+  // function getScaleAtZoomLevel(zoomLevel, tileSize = 256) {
+  //   return tileSize * 0.5 / Math.PI * Math.pow(2, zoomLevel);
+  // }
 
 //// GEOJSON + TOPOJSON HELPERS
 
-    function tj2gj(data) {
-      let gj;
-      if (data["type"] == "Topology") {
-        let key = Object.keys(data.objects)[0];
-        gj = topojson.feature(data, data.objects[key]);
-      } else {
-        gj = data;
-      }
-      return gj;
-    }
+  function innerlines() {
+    return function(a,b) { return a !== b; }
+  }
 
-    // converting from TopoJSON
-    function getGj(source,key){
-      return topojson.feature(source.tj, source.tj.objects[key]);
-    }
-    function innerlines() {
-      return function(a,b) { return a !== b; }
-    }
-    function outerlines() {
-      return function(a,b) { return a === b; }
-    }
-    function getMesh(source,key,meshFx) {
-      if (meshFx) {
-        return topojson.mesh(source.tj, source.tj.objects[key], meshFx);
-      } else if (key) {
-        return topojson.mesh(source.tj, source.tj.objects[key]);
-      } else {
-        return topojson.mesh(source.tj);
-      }
-    }
+  function outerlines() {
+    return function(a,b) { return a === b; }
+  }
 
-    // COMBAK don't rely on polyline.js
-    function newFeatureCollection(data) {
-      let gj = {
-        "type": "FeatureCollection",
-        "features": data ? populateFeatures(data) : []  // ONLY IN THIS CONTEXT / CALLS ON POLYLINE.JS (FIXME)
-      }
-      return gj;
+  function getMesh(source,key,meshFx) {
+    if (meshFx) {
+      return topojson.mesh(source.tj, source.tj.objects[key], meshFx);
+    } else if (key) {
+      return topojson.mesh(source.tj, source.tj.objects[key]);
+    } else {
+      return topojson.mesh(source.tj);
     }
-    function emptyFeatureCollection() {
-      return {
-        "type": "FeatureCollection",
-        "features": []
-      }
-    }
+  }
 
-    // newData and existingFeatures (if applicable) should be typeOf Array
-    function populateFeatures(segments,existingFeatures = null) {
-      let features = existingFeatures || [];
-      segments.forEach(function(segment) {
-        features.push({
-          "type": "Feature",
-          // use mapbox polyline.js function to decode received path string as geoJSON
-          "geometry": polyline.toGeoJSON(segment.path),
-          "properties": { }
-        });
-      });
-      return features;
+  // COMBAK don't rely on polyline.js
+  function newFeatureCollection(data) {
+    let gj = {
+      "type": "FeatureCollection",
+      "features": data ? populateFeatures(data) : []  // ONLY IN THIS CONTEXT / CALLS ON POLYLINE.JS (FIXME)
     }
-    function makeFeature(coords, type = "Point") {
-      return {
+    return gj;
+  }
+
+  function emptyFeatureCollection() {
+    return {
+      "type": "FeatureCollection",
+      "features": []
+    }
+  }
+
+  // newData and existingFeatures (if applicable) should be typeOf Array
+  function populateFeatures(segments,existingFeatures = null) {
+    let features = existingFeatures || [];
+    segments.forEach(function(segment) {
+      features.push({
         "type": "Feature",
-        "geometry": {
-          "type": type,
-          "coordinates": coords
-        }
+        // use mapbox polyline.js function to decode received path string as geoJSON
+        "geometry": polyline.toGeoJSON(segment.path),
+        "properties": { }
+      });
+    });
+    return features;
+  }
+
+  function makeFeature(coords, type = "Point") {
+    return {
+      "type": "Feature",
+      "geometry": {
+        "type": type,
+        "coordinates": coords
       }
     }
-    function merge(iterable,spec = ["geometry","coordinates"]) {
-      let merged = [];
-      for (var i = 0; i < iterable.length; i++) {
-        let latest = iterable[i],
-           specDup = spec.slice();    // preserve original spec for remaining iterations
-        while (specDup.length > 0) {
-          var key = specDup.shift();
-          latest = latest[key.toLocaleString()];
-        }
-        merged = merged.concat(latest);
+  }
+
+  function merge(iterable,spec = ["geometry","coordinates"]) {
+    let merged = [];
+    for (var i = 0; i < iterable.length; i++) {
+      let latest = iterable[i],
+         specDup = spec.slice();    // preserve original spec for remaining iterations
+      while (specDup.length > 0) {
+        var key = specDup.shift();
+        latest = latest[key.toLocaleString()];
       }
-      return merged;
+      merged = merged.concat(latest);
     }
+    return merged;
+  }
 
 //// TURF/GEO ON-THE-FLY
-    function getBreaks(lineString,distance,steps) {
-      let breaks = new Set();
-      if (lineString.geometry.coordinates.length > 0) {
-        for (var i = 0; i < distance; i += distance / steps) {
-          breaks.add(turf.along(lineString, i, { units: "miles" }).geometry.coordinates);
-        }
+
+  function getBreaks(lineString,distance,steps) {
+    let breaks = new Set();
+    if (lineString.geometry.coordinates.length > 0) {
+      for (var i = 0; i < distance; i += distance / steps) {
+        breaks.add(turf.along(lineString, i, { units: "miles" }).geometry.coordinates);
       }
-      return breaks;
     }
-    function getAzimuth(p0,p1,isInitial = false) {  // returns getRotate(p0,p1)
-      let rotate = getRotate(p0,p1,isInitial);
-      return rotate;
-    }
-    function getRotate(p0,p1,isInitial = false) {
-      let slope, y0, y1;
-      // adjust slope calculation to account for reflectedY!
-      if (p0.x) {   // assume two svg pts
-        slope = (-p1.y-(-p0.y))/(p1.x-p0.x);
-        y0 = p0.y,
-        y1 = p1.y;
-      } else {      // assume two coordinate pairs
-        slope = (-p1[1]-(-p0[1]))/(p1[0]-p0[0]),
-        y0 = p0[1],
-        y1 = p1[1];
-      }
+    return breaks;
+  }
 
-      let quadrant, range;
-      // again, y1:y0 relationships account for reflected Y values
-      if (Math.sign(slope) === -1) {  // slope negative
-        if (y1 < y0) {                // heading north
-          quadrant = "NW",
-          range = [270,360];
-        } else {                      // heading south
-          quadrant = "SE",
-          range = [90,180];
-        }
-      } else {                        // slope positive
-        if (y1 < y0) {                // heading north
-          quadrant = "NE",
-          range = [0,90];
-        } else {                      // heading south
-          quadrant = "SW",
-          range = [180,270];
-        }
-      }
+  function getAzimuth(p0,p1,isInitial = false) {  // returns getRotate(p0,p1)
+    let rotate = getRotate(p0,p1,isInitial);
+    return rotate;
+  }
 
-      let angle = Math.atan(slope),            // inverse-tanget = angle in radians
-        degrees = turf.radiansToDegrees(angle) // translate to degrees for SVG rotate
-
-      let rotate;
-      if (["NE","SE"].includes(quadrant)) {
-        rotate = 90 - degrees;
-      } else {
-        rotate = -90 - degrees;
-      }
-
-      // console.log("quadrant",quadrant)
-      // console.log("rotate",rotate)
-
-      // // below necessary? what does svg do with neg degrees or degrees above 360?
-      // // what will happen in transition if a jump from 359 to 2? or, more likely, -178 to 179? (any way to insist on direction of movement to avoid jolting circles all the way around?)
-
-      // if (Math.sign(rotate) === -1) {  // too low
-      //   rotate += 360; // 180?
-      //   // rotate += 180;
-      //   console.log("negative rotate! recalculated:", rotate)
-      // }
-      // if (rotate > 360) { // too high
-      //   rotate -= 360;
-      //   console.log("rotate over 360! recalculated:", rotate)
-      // }
-
-      return rotate;
-
+  function getRotate(p0,p1,isInitial = false) {
+    let slope, y0, y1;
+    // adjust slope calculation to account for reflectedY!
+    if (p0.x) {   // assume two svg pts
+      slope = (-p1.y-(-p0.y))/(p1.x-p0.x);
+      y0 = p0.y,
+      y1 = p1.y;
+    } else {      // assume two coordinate pairs
+      slope = (-p1[1]-(-p0[1]))/(p1[0]-p0[0]),
+      y0 = p0[1],
+      y1 = p1[1];
     }
 
-    function getSector(radians,arcSpan,r1 = 10, r0 = 0) {
-      return d3.arc()
-        .innerRadius(r0)
-        .outerRadius(r1)
-        .cornerRadius(r1/10)
-        .startAngle(radians - arcSpan/2)
-        .endAngle(radians + arcSpan/2);
-    }
-    function getSimpRoute(full,tolerance = 1) {
-      let options = {tolerance: tolerance, highQuality: false, mutate: false};
-      return turf.simplify(full, options);
-    }
-
-//// ANIMATION
-    function goTrain(zoomFollow,zoomArc,enrichData,routeBounds) {
-
-      let tDelay,tMid;
-
-      let simpDistance = Math.floor(turf.length(zoomFollow.fullSimp, {units: "miles"})),
-                 scale = g.node().transform.animVal[1].matrix.a;  // default to current
-
-      // tFull is based on ms/simplified mile for later tDelay calc reasons
-      let tFull = Math.max(tpm * simpDistance, tPause) // effective ms per simp mile * simp miles, or tPause value if former less than latter
-           tEnd = 0;                  // default 0 in case no difference between routeBounds and firstFrame
-
-      let headlights = g.select("#headlights"),
-            semiSimp = g.select("#semi-simp"),
-               point = g.select("#train-point"),
-            fullPath = g.select("#full-route"),
-            azimuth0 = headlights.property("azimuth0");
-
-      if (!zoomFollow.necessary) {
-
-        // no more zooming; make quadtree at this point since view/data pts will remain consistent here on in
-        quadtree =
-        makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
-        // pause, then start train movement
-        d3.timeout(() => {
-          // if (confirm("Ready?")) {
-            // d3.timerFlush() // necessary?
-            // disable free zooming
-            svg.on('.zoom',null)
-            // call initial point transition
-            goOnNow(scale,routeBounds) // pass routeBounds as lastIdentity
-          // }
-        }, tPause)
-
-      } else {  // calculate transforms and timing from firstFrame to lastFrame
-
-        // pass hard coded scale that seems to be widely appropriate given constant bufferExtent
-        scale = scale1;
-
-        let firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),scale)),
-             lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),scale));
-
-        tDelay = (simpDistance > 300) ? tpm * 100 : tpm * 0,      // delay zoomFollow until train hits mm 100 (of fullSimp) IF route long enough
-          tMid = tFull - (tDelay*2),  // tDelay doubled to account for stopping 100m from end
-          tEnd = tPause;              // arbitrary time to zoom to start frame
-
-        // helpful??
-        // let x0 = firstFrame[0][0], // xmin
-        //     y0 = firstFrame[0][1], // ymin
-        //     x1 = firstFrame[1][0], // xmax
-        //     y1 = firstFrame[1][1]; // ymax
-        // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-        // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
-
-        // zoom to First frame
-        svg.transition().duration(tEnd*2) // .ease(d3.easeBounceIn)
-          .call(zoom.transform, firstIdentity)
-            .on("end", () => {
-              // confirm g exactly in alignment for next transition
-              g.attr("transform",firstIdentity.toString())
-              // make quadtree (now that view/data pts will remain consistent)
-              quadtree =
-              makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
-              // dim background
-              dimBackground()
-              // turn on headlights
-              headlights.transition().duration(tEnd*2)
-                .style("opacity",0.6)
-                .on("start", () => {
-                  d3.timeout(() => {
-                    // if (confirm("Ready?")) {
-                      // d3.timerFlush() // necessary?
-                      // disable free zooming
-                      svg.on('.zoom',null)
-                      // call initial point transition, passing simplified path
-                      goOnNow(scale,lastIdentity,zoomArc)
-                    // }
-                  }, tEnd)
-                })
-            })
-
+    let quadrant, range;
+    // again, y1:y0 relationships account for reflected Y values
+    if (Math.sign(slope) === -1) {  // slope negative
+      if (y1 < y0) {                // heading north
+        quadrant = "NW",
+        range = [270,360];
+      } else {                      // heading south
+        quadrant = "SE",
+        range = [90,180];
       }
-
-      function dimBackground() {
-        // temporarily dim background, admin, rail, urban during animation (to focus visualization / ease problem solving and reduce load until performance improved)
-        let toDim = [d3.select("#admin-base"),d3.select("#hydro-base"),d3.select("#urban-base"),d3.select("#rail-base")];
-        toDim.forEach(selection => {
-          let currentOpacity = selection.style("opacity")
-          selection // .selectAll("*")
-            .transition().duration(2400)
-            .style("opacity", currentOpacity * 0.4)
-            // .on("end", () => {
-            //   selection.selectAll("*").remove();
-            // })
-          });
-
-        // // partial dim #admin-base elements
-        // [d3.select("#continent-mesh"), d3.select("#country-borders"), d3.select("#state-borders")].forEach(selection => {
-        //   let currentFill = selection.style("fill"),
-        //       currentStroke = selection.style("stroke");
-        //   if ((currentFill) && (currentFill !== "none")) {
-        //     selection.transition().duration(2400)
-        //       .style("fill", chroma(currentFill).darken(3))
-        //       .style("opacity",0.4)
-        //   }
-        //   if ((currentStroke) && (currentStroke !== "none")) {
-        //     selection.transition().duration(2400)
-        //       .style("stroke", chroma(currentStroke).darken(3))
-        //       .style("opacity",0.4)
-        //   }
-        // });
+    } else {                        // slope positive
+      if (y1 < y0) {                // heading north
+        quadrant = "NE",
+        range = [0,90];
+      } else {                      // heading south
+        quadrant = "SW",
+        range = [180,270];
       }
-      function goOnNow(scale,lastIdentity,simpPath) {
-        dispatch.call("depart", this)
-        // transition train along entire route
-      	point.transition().delay(tEnd).duration(tFull).ease(d3.easeSinInOut)
-    		  .attrTween("transform", translateAlong(fullPath))
-          // point transition triggers additional elements
-          .on("start", () => {
-            // kick off global timer!
-            timer = d3.timer(animate)
-            // keep headlights on, allowing lookAhead() for triggerPts
-            headlights.transition().duration(tFull).ease(d3.easeSinInOut)
-              .attrTween("transform", bearWithMe(semiSimp,azimuth0))
-            // illuminate path traversed as train progresses
-            fullPath.style("opacity", 1)
-              .transition().duration(tFull).ease(d3.easeSinInOut)
-                .styleTween("stroke-dasharray",tweenDash)
-            // zoomFollow if necessary
-            if (simpPath) { // (firstThree[1] !== lastThree[1]) {
-              g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
-                .attrTween("transform", zoomAlong(simpPath,scale))
-            }
-          })
-         .on("end", () => {
-           // ensure final alignment
-           g.attr("transform",lastIdentity.toString())
-           // dispatch custom "arrive" event
-           dispatch.call("arrive", this)
-           // inform d3 zoom behavior of final transform value and reenable free zooming
-           svg.call(zoom.transform, lastIdentity)
-           svg.call(zoom)
-         });
-      }
-
-      function animate(elapsed) {
-        // dispatch another move event
-        dispatch.call("move", point)
-      }
-
     }
 
-    function departed() {
-      console.log("train departing @ " + performance.now())
-      d3.timerFlush() // necessary?
-    }
-    function arrived() {
-      console.log("train arrived @ " + performance.now())
-      timer.stop()
-      // observer.disconnect()
-    }
+    let angle = Math.atan(slope),            // inverse-tanget = angle in radians
+      degrees = turf.radiansToDegrees(angle) // translate to degrees for SVG rotate
 
-    let prevLocation, prevExtent, searchExtent, transformString;
-    let extentVis, rhombusVis; // temporary visualizations
-    function trainMoved() {
-
-      let trainTransform = this.node().transform.animVal[0].matrix,
-         currentLocation = [trainTransform.e, trainTransform.f],
-              headlights = g.select("#headlights");
-
-      if (!searchExtent) {  // get first time only
-
-        let sectorBBox = headlights.node().getBBox(),
-              arcWidth = sectorBBox.width,
-             arcHeight = sectorBBox.height;
-
-        // MAKE RHOMBUS AROUND ARC FOR EXTENT VISUALIZATION
-
-        // ** can adjust rhombusHeight such that furthermost point is far enough to counteract lag in triggerPt/fullGeom visualization **
-        let rhombusHeight = (arcHeight * 4/5) // * 2;
-
-        let origin = [0,0], // use SVG transforms to position
-         reflected = [origin[0], origin[1] - rhombusHeight],  // subtracts height to account for SVG reflection
-        clockwise0 = [reflected[0] - arcWidth/2, reflected[1] + rhombusHeight/2],
-        clockwise1 = [reflected[0] + arcWidth/2, reflected[1] + rhombusHeight/2];
-
-        let rhombus = turf.convex(turf.featureCollection([
-          turf.point(origin),
-          turf.point(clockwise0),
-          turf.point(reflected),
-          turf.point(clockwise1),
-          turf.point(origin)
-        ]));
-
-        let rhombusExtent = [[-arcWidth/2,-rhombusHeight],[arcWidth/2,0]]
-
-        // CALCULATE SEARCH EXTENT FOR QUADTREE
-        // theoretically min x,y, max x,y
-          // due to SVG y reflection, must switch min/max y's for numeric comparison within quadtree
-        // searchExtent = [[currentLocation[0] - arcWidth/2, currentLocation[1] - rhombusHeight],[currentLocation[0] + arcWidth/2, currentLocation[1]]]
-
-        // TRYING MUCH SMALLER EXTENT SINCE ALL TRIGGER PTS NOW ON ROUTE
-        let x = 2,
-            y = 2;
-        searchExtent = [[currentLocation[0] - x, currentLocation[1] - y],[currentLocation[0] + x, currentLocation[1] + y]]
-
-        // VISUALIZE TRANSFORMED SEARCH EXTENT AND RHOMBUS
-        let rotate0 = headlights.property("azimuth0");
-
-        transform0 = "translate(" + currentLocation[0] + "," + currentLocation[1] + ") rotate(" + rotate0 + ")";
-
-        // extentVis = g.select("#route").append("rect")
-        //   .datum(rhombusExtent)
-        //   .attr("id","extent-vis")
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .attr("transform",transform0)
-        //   .style("fill","steelblue")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.3px")
-        //   .style("stroke-dash-array",origDash)
-        //   .style("opacity",0.2)
-        // rhombusVis = g.select("#route").append("path")
-        //   .datum(rhombus)
-        //   .attr("d",nullPath) // y is already reflected
-        //   .attr("transform",transform0)
-        //   .style("fill","tomato")
-        //   .style("stroke","silver")
-        //   .style("stroke-width","0.3px")
-        //   .style("stroke-dash-array",origDash)
-        //   .style("opacity",0.4)
-
-        // upon train arrival, schedule fade/remove of headlights + each extentVis node
-        dispatch.on("arrive", () => {
-          // extentVis.transition().duration(tPause)
-          //          .style("opacity",0)
-          //          .on("end", () => {
-          //            extentVis.classed("none",true)
-          //            extentVis.remove()
-          //          })
-          // rhombusVis.transition().duration(tPause)
-          //           .style("opacity",0)
-          //           .on("end", () => {
-          //             rhombusVis.classed("none",true)
-          //             rhombusVis.remove()
-          //           })
-          headlights.transition().duration(tPause)
-                    .style("opacity",0)
-                    .on("end", () => {
-                      headlights.classed("none",true)
-                      headlights.remove()
-                    })
-        })
-
-        headlights.raise() // keep headlights on top of extent visualizations
-
-        this.raise(); // keep train on top of extentVis
-
-      } else {  // get adjusted transformString and searchExtent on each trainMove
-
-        let rotate = headlights.node().transform.animVal[1].angle,
-                dx = currentLocation[0] - prevLocation[0],
-                dy = currentLocation[1] - prevLocation[1],
-                tx = currentLocation[0] + dx,
-                ty = currentLocation[1] + dy;
-
-        let translatedExtent = translateExtent(prevExtent,dx,dy);
-        searchExtent = translatedExtent;  // works but lags and too narrow
-
-        // let rotatedExtent = rotateExtent(prevExtent,rotate),
-        //   rotatedThenTranslated = translateExtent(rotatedExtent,dx,dy)
-        // searchExtent = rotatedThenTranslated;  // BEST? though rotate still not exact
-
-        // ALT OPTION:
-        // scrap quadtree and boolean search for triggerPt in rhombus polygon (how much slower?)
-          // or will this run into same issues? *** how to rotate individual pts?? or otherwise calculate new coordinates of transformed svg element? ***
-
-        // // individual extent visualizations (TEMPORARY)
-        // let tempVis = g.select("#route").append("rect")
-        //   .datum(searchExtent)
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .style("fill","magenta")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.3px")
-        //   .style("opacity",0.6)
-        //
-        // d3.timeout(() => {
-        //   tempVis.transition().duration(600)
-        //          .style("opacity",0)
-        //          .on("end", () => {
-        //            tempVis.classed("none",true)
-        //            tempVis.remove()
-        //          })
-        // }, 600);
-
-        function translateExtent(extent,dx,dy) {
-          return extent.map(d => { return [d[0]+dx, d[1]+dy] });
-        }
-        function rotateExtent(extent,degrees) {
-
-          let angle = turf.degreesToRadians(degrees),
-              width = extent[1][0]-extent[0][0],
-             height = Math.abs(extent[1][1]-extent[0][1]),
-                // pt0 = extent[0],
-                // pt1 = extent[1],
-              midPt = [extent[0][0]+width/2,extent[0][1]+height/2];
-
-          let point = midPt,
-              pivot = currentLocation;
-          let rotatedPt = rotatePt(point,angle,pivot);
-
-          // get differences relative to midPt
-          let deltaX = rotatedPt[0]-point[0],
-              deltaY = rotatedPt[1]-point[1];
-
-          // adjust extent pts accordingly // DEFINITELY NOT EXACT
-          let rotatedExtent = extent.map(d => { return [d[0]+deltaX,d[1]+deltaY] });
-
-          // let point0 = pt0,
-          //     point1 = pt1;
-          // pivot = midPt;
-          //
-          // // rotate point around pivot
-          // let rotatedPt0 = rotatePt(point0,angle,pivot),
-          //     rotatedPt1 = rotatePt(point1,angle,pivot);
-          //
-          // let rotatedExtent2 = [rotatedPt0,rotatedPt1]
-          //
-          // return rotatedExtent2;
-
-          return rotatedExtent;
-
-          // adapted from stackoverflow answer https://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
-          function rotatePt(point,angle,pivot = [0,0]) {  // angle in radians
-
-            // translate point back to origin
-            let origin = [point[0] - pivot[0], point[1] - pivot[1]],
-                   sin = Math.sin(angle),
-                   cos = Math.cos(angle);
-
-            // rotate point
-            let x = origin[0] * cos - origin[1] * sin,
-                y = origin[0] * sin + origin[1] * cos;
-
-            // translate back to pivot pt
-            let rotated = [x + pivot[0], y + pivot[1]]
-
-            return rotated;
-
-          }
-
-        }
-
-        transformString = "translate(" + tx + "," + ty + ") rotate(" + rotate +")"
-
-      }
-
-      lookAhead(searchExtent); // initiate quadtree search
-
-      // save newly determined values as previous values
-      prevLocation = currentLocation,
-        prevExtent = searchExtent;
-
-      // // update transform of extentVis
-      // extentVis.attr("transform",transformString)
-      // rhombusVis.attr("transform",transformString)
-
+    let rotate;
+    if (["NE","SE"].includes(quadrant)) {
+      rotate = 90 - degrees;
+    } else {
+      rotate = -90 - degrees;
     }
 
-    // SEARCH QUADTREE FOR ALL TRIGGER PTS INTERSECTING CURRENT #HEADLIGHTS SECTOR EXTENT
-    function lookAhead(searchExtent) {
+    // console.log("quadrant",quadrant)
+    // console.log("rotate",rotate)
 
-      let newlyEncountered = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1]);
+    // // below necessary? what does svg do with neg degrees or degrees above 360?
+    // // what will happen in transition if a jump from 359 to 2? or, more likely, -178 to 179? (any way to insist on direction of movement to avoid jolting circles all the way around?)
 
-      if (newlyEncountered.length) {
-        // REMOVE NEWLY SELECTED TRIGGER PTS FROM QUADTREE POOL
-        quadtree.removeAll(newlyEncountered)
-      }
+    // if (Math.sign(rotate) === -1) {  // too low
+    //   rotate += 360; // 180?
+    //   // rotate += 180;
+    //   console.log("negative rotate! recalculated:", rotate)
+    // }
+    // if (rotate > 360) { // too high
+    //   rotate -= 360;
+    //   console.log("rotate over 360! recalculated:", rotate)
+    // }
 
+    return rotate;
+
+  }
+
+  function getSector(radians,arcSpan,r1 = 10, r0 = 0) {
+    return d3.arc()
+      .innerRadius(r0)
+      .outerRadius(r1)
+      .cornerRadius(r1/10)
+      .startAngle(radians - arcSpan/2)
+      .endAngle(radians + arcSpan/2);
+  }
+
+  function getSimpRoute(full,tolerance = 1) {
+    let options = {tolerance: tolerance, highQuality: false, mutate: false};
+    return turf.simplify(full, options);
+  }
+
+//// ZOOM BEHAVIOR
+
+  function zoomed() {
+
+    var transform = d3.zoomTransform(this) // .scale(0.8);
+
+    let k = transform.k,
+       tx = transform.x,
+       ty = transform.y;
+
+    // let abs = v => { return Math.abs(v) },
+    //   clipExtent = [[-abs(tx), -abs(ty)], [abs(tx), abs(ty)]];
+
+    // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extended for leeway around edges
+    //
+    // identity.clipExtent(clipExtent)
+    // projection.clipExtent(clipExtent)
+
+    g.style("stroke-width", 1 / (k*k) + "px");
+
+    g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + k + ")");
+
+  }
+
+  function zoomTo(d,i) {
+
+    if (active.node() === this) return resetZoom();
+
+    if (d3.event.defaultPrevented) return; // panning, not zooming
+
+    active.classed("active", false);
+
+    active = d3.select(this).classed("active", true);
+
+    let transform = getTransform(path.bounds(d));
+
+    let zoom1 = d3.zoomIdentity
+      .translate(transform.x,transform.y)
+      .scale(transform.k)
+
+    svg.transition().duration(750)
+      .call(zoom.transform, zoom1)
+
+  }
+
+  function getTransform(bounds, extent = extent0, padding = 0.1) {
+
+    // COMBAK rework double default parameters;
+
+    let b0,b1;
+
+    // accept bbox, projPath.bounds(), or SVG bbox
+    if (bounds.length === 4) {
+      b0 = [bounds[0],bounds[1]],
+      b1 = [bounds[2],bounds[3]]
+    } else {
+      b0 = bounds[0] || [bounds.x,bounds.y],
+      b1 = bounds[1] || [bounds.width,bounds.height]
     }
+
+    let dx = b1[0] - b0[0],                // domain x (input)
+        dy = b1[1] - b0[1],                // domain y (input)
+     width = extent[1][0] - extent[0][0],  // range x (output)
+    height = extent[1][1] - extent[0][1];  // range y (output)
+
+    let k = (1 - padding) / Math.max(dx / width, dy / height),
+                           // aka the m in y = mx + b
+                           // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
+                           // 0.9 provides 10% built-in padding
+        x = b1[0] + b0[0], // xMax (b1[0]) + xOffset (b0[0])
+        y = b1[1] + b0[1];  // yMax (b1[1]) + yOffset (b0[1])
+
+    // calculate translate necessary to center data within extent
+    let tx = (width - k * x) / 2,
+        ty = (height - k * y) / 2;
+
+    let transform = { k: k, x: tx, y: ty };
+
+    return transform;
+
+  }
+
+  function getIdentity(atTransform,k) {
+    let identity = d3.zoomIdentity
+      .translate(atTransform.x,atTransform.y)
+      .scale(k || atTransform.k)  // if (k), k || (keep k constant?)
+    return identity;
+  }
+
+  function centerTransform(pt,scale) {
+    let tx = -scale * pt[0] + initial.width/2,  // adjust to 'current'?
+        ty = -scale * pt[1] + initial.height/2;
+    return {x: tx, y: ty, k: scale};
+  }
+
+  function resetZoom() {
+    active.classed("active", false);
+    active = d3.select(null);
+
+    svg.transition().duration(3000).ease(d3.easeLinear)
+      .call(zoom.transform, zoom0)
+
+    svg.call(zoom)
+  }
+
+  function nozoom() {
+    d3.event.preventDefault();
+  }
+
 
 //// QUADTREE / DATA / INTERSECT QUERIES
 
-    function makeQuadtree(triggerData,bufferedRoute) {
-      // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
+  function makeQuadtree(triggerData,bufferedRoute) {
+    // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
 
-      // get projected bounding box of chosen route
-      let pathBox = projPath.bounds(bufferedRoute),
-               x0 = pathBox[0][0], // xmin
-               y0 = pathBox[0][1], // ymin
-               x1 = pathBox[1][0], // xmax
-               y1 = pathBox[1][1]; // ymax
+    // get projected bounding box of chosen route
+    let pathBox = projPath.bounds(bufferedRoute),
+             x0 = pathBox[0][0], // xmin
+             y0 = pathBox[0][1], // ymin
+             x1 = pathBox[1][0], // xmax
+             y1 = pathBox[1][1]; // ymax
 
-      // initiate quadtree with specified x and y functions
-      const projectX = d => { return projection(d.geometry.coordinates)[0] },
-            projectY = d => { return projection(d.geometry.coordinates)[1] };
+    // initiate quadtree with specified x and y functions
+    const projectX = d => { return projection(d.geometry.coordinates)[0] },
+          projectY = d => { return projection(d.geometry.coordinates)[1] };
 
-      quadtree = d3.quadtree(triggerData,projectX,projectY)
-                   .extent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+    quadtree = d3.quadtree(triggerData,projectX,projectY)
+                 .extent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
 
+    // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+    // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+
+    ///// QUADTREE / TRIGGER NODES ADDED TO DOM
+    let grid = g.append("g")
+                .attr("id","quadtree")
+
+    grid.selectAll(".quadnode")
+        .data(nodes(quadtree))
+        .enter().append("rect")
+          .classed("quadnode", true)
+          .attr("x", function(d) { return d.x0; })
+          .attr("y", function(d) { return d.y0; })
+          .attr("width", function(d) { return d.y1 - d.y0; })
+          .attr("height", function(d) { return d.x1 - d.x0; })
+          .style("fill","none")
+          // uncomment for visual of grid
+            // .style("fill","tomato")
+            // .style("stroke","whitesmoke")
+            // .style("stroke-width","0.2px")
+            // .style("opacity","0.4")
+
+    let triggerPts = g.append("g")
+                      .attr("id","trigger-pts")
+
+    triggerPts.selectAll(".trigger-pt")
+              .data(triggerData)
+              .enter().append("circle")
+                .classed("trigger-pt", true)
+                .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
+                .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+                .property("id", d => {return d.properties.id; })
+                .property("name", d => { return d.properties.NAME; })
+                .property("category", d => { return d.properties.CATEGORY; })
+                .property("subtype", d => { return d.properties.TYPE; })
+                .property("details", d => { return d.properties.MORE_INFO; })
+                // .style("fill","none")
+                // temporary visual (all triggerPts)
+                .attr("r", 0.2)
+                .style("fill","lightgreen")
+                .style("stroke","goldenrod")
+                .style("stroke-width","0.1px")
+                .style("opacity", 0.8)
+                .on("mouseover", onMouseover)
+                .on("mouseout", onMouseout)
+
+    // Collapse the quadtree into an array of rectangles.
+    function nodes(quadtree) {
+      var nodes = [];
+      quadtree.visit(function(node, x0, y0, x1, y1) {
+        node.x0 = x0, node.y0 = y0;
+        node.x1 = x1, node.y1 = y1;
+        nodes.push(node);
+      });
+      return nodes;
+    }
+
+    return quadtree;
+  }
+
+  function lookAhead(searchExtent) {
+
+    let newlyEncountered = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1]);
+
+    if (newlyEncountered.length) {
+      // REMOVE NEWLY SELECTED TRIGGER PTS FROM QUADTREE POOL
+      quadtree.removeAll(newlyEncountered)
+    }
+
+  }
+
+  function searchQuadtree(quadtree, x0, y0, x3, y3) {
+
+    let selected = [];
+
+    quadtree.visit(function(node, x1, y1, x2, y2) {
+
+      if (!node.length) { // if node is not an array of nodes (i.e. has content)
+        do {
+          let d = node.data;
+          let d0 = projection(d.geometry.coordinates)[0],
+              d1 = projection(d.geometry.coordinates)[1];
+          d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
+          if (d.selected) {
+            // console.log("found match in quadtree at " + performance.now())
+
+            // save d id as triggerId
+              // for lines only, recognize multiTrigger flag and pass both ids together as pair
+            let triggerId = (d.properties.multiTrigger) ? [d.properties.oid + "-1", d.properties.oid + "-2"] : d.properties.id;
+
+            dispatch.call("encounter", triggerId);
+
+            selected.push(d)
+          }
+        } while (node = node.next);
+      }
+      return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
+    });
+
+    return selected;
+
+  }
+
+
+//// ANIMATION
+
+  function goTrain(zoomFollow,zoomArc,enrichData,routeBounds) {
+
+    let tDelay,tMid;
+
+    let simpDistance = Math.floor(turf.length(zoomFollow.fullSimp, {units: "miles"})),
+               scale = g.node().transform.animVal[1].matrix.a;  // default to current
+
+    // tFull is based on ms/simplified mile for later tDelay calc reasons
+    let tFull = Math.max(tpm * simpDistance, tPause) // effective ms per simp mile * simp miles, or tPause value if former less than latter
+         tEnd = 0;                  // default 0 in case no difference between routeBounds and firstFrame
+
+    let headlights = g.select("#headlights"),
+          semiSimp = g.select("#semi-simp"),
+             point = g.select("#train-point"),
+          fullPath = g.select("#full-route"),
+          azimuth0 = headlights.property("azimuth0");
+
+    if (!zoomFollow.necessary) {
+
+      // no more zooming; make quadtree at this point since view/data pts will remain consistent here on in
+      quadtree =
+      makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
+      // pause, then start train movement
+      d3.timeout(() => {
+        // if (confirm("Ready?")) {
+          // d3.timerFlush() // necessary?
+          // disable free zooming
+          svg.on('.zoom',null)
+          // call initial point transition
+          goOnNow(scale,routeBounds) // pass routeBounds as lastIdentity
+        // }
+      }, tPause)
+
+    } else {  // calculate transforms and timing from firstFrame to lastFrame
+
+      // pass hard coded scale that seems to be widely appropriate given constant bufferExtent
+      scale = scale1;
+
+      let firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),scale)),
+           lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),scale));
+
+      tDelay = (simpDistance > 300) ? tpm * 100 : tpm * 0,      // delay zoomFollow until train hits mm 100 (of fullSimp) IF route long enough
+        tMid = tFull - (tDelay*2),  // tDelay doubled to account for stopping 100m from end
+        tEnd = tPause;              // arbitrary time to zoom to start frame
+
+      // helpful??
+      // let x0 = firstFrame[0][0], // xmin
+      //     y0 = firstFrame[0][1], // ymin
+      //     x1 = firstFrame[1][0], // xmax
+      //     y1 = firstFrame[1][1]; // ymax
       // projection.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
       // identity.clipExtent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
 
-      ///// QUADTREE / TRIGGER NODES ADDED TO DOM
-      let grid = g.append("g")
-                  .attr("id","quadtree")
-
-      grid.selectAll(".quadnode")
-          .data(nodes(quadtree))
-          .enter().append("rect")
-            .classed("quadnode", true)
-            .attr("x", function(d) { return d.x0; })
-            .attr("y", function(d) { return d.y0; })
-            .attr("width", function(d) { return d.y1 - d.y0; })
-            .attr("height", function(d) { return d.x1 - d.x0; })
-            .style("fill","none")
-            // uncomment for visual of grid
-              // .style("fill","tomato")
-              // .style("stroke","whitesmoke")
-              // .style("stroke-width","0.2px")
-              // .style("opacity","0.4")
-
-      let triggerPts = g.append("g")
-                        .attr("id","trigger-pts")
-
-      triggerPts.selectAll(".trigger-pt")
-                .data(triggerData)
-                .enter().append("circle")
-                  // .classed("trigger-pt", true)
-                  // .classed("trigger-pt--selected", false) // for now
-                  .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-                  .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-                  .property("id", d => {return d.properties.id; })
-                  .property("name", d => { return d.properties.NAME; })
-                  .property("category", d => { return d.properties.CATEGORY; })
-                  .property("subtype", d => { return d.properties.TYPE; })
-                  .property("details", d => { return d.properties.MORE_INFO; })
-                  .style("fill","none")
-                  // temporary visual (as intersected)
-                  // .attr("r", 0)
-                  // .style("fill","tomato")
-                  // .style("stroke","goldenrod")
-                  // .style("stroke-width","0.1px")
-                  // .style("opacity", 0.1)
-
-        // temporary visual (all triggerPts)
-        triggerPts.append("g")
-          .selectAll(".temp-trigger")
-          .data(triggerData)
-          .enter().append("circle")
-            .classed("temp-trigged",true).attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-            .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-            .attr("r", 0.2)
-            .style("fill","lightgreen")
-            .style("stroke","goldenrod")
-            .style("stroke-width","0.1px")
-            .style("opacity", 0.8)
-            .raise()
-            .on("mouseover", onMouseover)
-            .on("mouseout", onMouseout)
-
-      // Collapse the quadtree into an array of rectangles.
-      function nodes(quadtree) {
-        var nodes = [];
-        quadtree.visit(function(node, x0, y0, x1, y1) {
-          node.x0 = x0, node.y0 = y0;
-          node.x1 = x1, node.y1 = y1;
-          nodes.push(node);
-        });
-        return nodes;
-      }
-
-      return quadtree;
-    }
-
-    function searchQuadtree(quadtree, x0, y0, x3, y3) {
-
-      let selected = [];
-
-      quadtree.visit(function(node, x1, y1, x2, y2) {
-
-        if (!node.length) { // if node is not an array of nodes (i.e. has content)
-          do {
-            let d = node.data;
-            let d0 = projection(d.geometry.coordinates)[0],
-                d1 = projection(d.geometry.coordinates)[1];
-            d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
-            if (d.selected) {
-              // console.log("found match in quadtree at " + performance.now())
-
-              // save d id as triggerId
-                // for lines only, recognize multiTrigger flag and pass both ids together as pair
-              let triggerId = (d.properties.multiTrigger) ? [d.properties.oid + "-1", d.properties.oid + "-2"] : d.properties.id;
-
-              dispatch.call("encounter", triggerId);
-
-              selected.push(d)
-            }
-          } while (node = node.next);
-        }
-        return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
-      });
-
-      return selected;
-
-    }
-
-    function encountered() {
-
-      // console.log("reached encountered() at " + performance.now())
-
-      let defaultT = tpm * 10, id = this, id1, encountered1;
-
-      if (Array.isArray(this)) {
-        id = this[0],
-        id1 = this[1],
-        encountered1 = g.select(`#${id1}`);
-        encountered1.classed("waiting",false);
-      }
-
-      // FIND full feature(s) by id
-      let encountered = g.select(`#${id}`);
-      // remove waiting class upon intersect
-      encountered.classed("waiting",false);
-
-      // DETERMINE TYPE, CALCULATE T, VISUALIZE
-      if (id.startsWith('ln')) {  // line feature
-        let t, tFactor = tpm, tFactor1 = tpm, vectorAdjust = 0.5 // ??
-        // where possible, t calculated based on route distance (travel time) from triggerPt => triggerPt
-        if (encountered1) {
-          // even if multiple segments starting from i0 (linegons), keep t equal for both lines (so they arrive together at i1)
-          if (encountered.vectorFlag) {
-            tFactor *= vectorAdjust;
-          } else if (encountered1.vectorFlag) {
-            tFactor1 *= vectorAdjust;
-          }
-          // for linegons with same pair of route-intersecting start/end pts, these should work out to be the same
-          t0 = encountered.datum().properties.tDistance * tFactor,
-          t1 = encountered1.datum().properties.tDistance * tFactor1,
-          t = [t0,t1],
-          encountered = [encountered,encountered1];
-        } else {
-          if (encountered.vectorFlag) tFactor *= vectorAdjust;
-          t = encountered.datum().properties.tDistance * tFactor;
-        }
-        if (t === 0) {
-          // console.log("t === 0")
-          // console.log(encountered[0].node().getTotalLength())
-          t = Math.pow(encountered[0].node().getTotalLength(),2);
-        } else if (Array.isArray(t) && t.includes(0)) {
-          // console.log("initial t includes(0)")
-          t[0] = Math.pow(encountered[0].node().getTotalLength(),2)
-          t[1] = Math.pow(encountered[1].node().getTotalLength(),2)
-          // console.log("new t",t)
-        }
-        reveal(encountered,"line",t)
-      } else if (id.startsWith('py')) { // polygon feature
-        // if no i1, calculate t dynamically based on polygon area
-        // otherwise, calc t based on time train will need to travel from i0 to i1 (use tpm global)
-        let t;
-        reveal(encountered,"polygon",t)
-      } else {  // point feature
-        // let tFactor = tpm/2,
-        //   t = Math.pow(encountered.datum().properties.tDistance,2) * tFactor;
-        reveal(encountered,"point",defaultT * 2)
-      }
-
-      output(encountered[0] || encountered)
-
-    }
-
-    function reveal(encountered,type,t = tPause) {
-
-      // all styling basics should already be in place;
-      // just need to trigger appropriate transitions based on type
-
-      if (type === "line") {
-        // watersheds: animateDashed within varying dashArrays and thickness; higher levels thinner and with more intricate/subtle patterns
-        // rivers and streams: animatedSolid in both directions with continual branching outward (will be necessarily limited by data pool, filtered to certain level of watershed)
-        // FOR NOW
-        if (Array.isArray(encountered)) { // multiTrigger
-          if (encountered[0].property("category") === "Watershed") {
-
-            // console.log(encountered[0].node())
-            // console.log(encountered[1].node())
-            // console.log(encountered[0].style("stroke-dasharray"))
-            // console.log(encountered[1].style("stroke-dasharray"))
-
-            // TODO attune dashArrays (get/pass current?)
-
-            let length0 = encountered[0].node().getTotalLength(),
-                length1 = encountered[1].node().getTotalLength(),
-               dashStr0 = getDashStr(encountered[0], length0),
-               dashStr1 = getDashStr(encountered[1], length1)
-
-            encountered[0].style("stroke-dasharray", dashStr0)
-                          .style("stroke-dashoffset", -length0)
-                          .style("opacity", 0.6)
-                          .transition().duration(t[0]).ease(d3.easeLinear)
-                          .styleTween("stroke-dashoffset",drawDashed)
-                          .on("start", () => {
-                            encountered[1].style("stroke-dasharray", dashStr1)
-                              .style("stroke-dashoffset", -length1)
-                              .style("opacity", 0.6)
-                              .transition().duration(t[1]).ease(d3.easeLinear)
-                              .styleTween("stroke-dashoffset",drawDashed)
-                          })
-          } else {
-            encountered[0].style("opacity",0.8)
-              .transition().duration(t[0]).ease(d3.easeLinear)
-              .styleTween("stroke-dasharray",tweenDash)
+      // zoom to First frame
+      svg.transition().duration(tEnd*2) // .ease(d3.easeBounceIn)
+        .call(zoom.transform, firstIdentity)
+          .on("end", () => {
+            // confirm g exactly in alignment for next transition
+            g.attr("transform",firstIdentity.toString())
+            // make quadtree (now that view/data pts will remain consistent)
+            quadtree =
+            makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
+            // dim background
+            dimBackground()
+            // turn on headlights
+            headlights.transition().duration(tEnd*2)
+              .style("opacity",0.6)
               .on("start", () => {
-                encountered[1].style("opacity",0.8)
-                  .transition().duration(t[1]).ease(d3.easeLinear)
-                  .styleTween("stroke-dasharray",tweenDash)
+                d3.timeout(() => {
+                  // if (confirm("Ready?")) {
+                    // d3.timerFlush() // necessary?
+                    // disable free zooming
+                    svg.on('.zoom',null)
+                    // call initial point transition, passing simplified path
+                    goOnNow(scale,lastIdentity,zoomArc)
+                  // }
+                }, tEnd)
               })
-          }
-        } else {
-          encountered.style("opacity",0.8)
-            .transition().duration(t).ease(d3.easeLinear)
-            .styleTween("stroke-dasharray",tweenDash)
-        }
-      } else if (type === "polygon") {
-        // FOR NOW
-        encountered.transition().duration(t).ease(d3.easeLinear)
-          .style("opacity", 1)
-        // animate radial gradient outward from i0
-      } else {  // type === "point"
-        encountered.transition().duration(t).ease(d3.easeLinear)
-            .attr("r",1)
-            .style("opacity", 1)  // initial glow effect?
-          .transition().duration(t)
-            .style("opacity",0.8)
-      }
+          })
 
     }
+
+    function dimBackground() {
+      // temporarily dim background, admin, rail, urban during animation (to focus visualization / ease problem solving and reduce load until performance improved)
+      let toDim = [d3.select("#admin-base"),d3.select("#hydro-base"),d3.select("#urban-base"),d3.select("#rail-base")];
+      toDim.forEach(selection => {
+        let currentOpacity = selection.style("opacity")
+        selection // .selectAll("*")
+          .transition().duration(2400)
+          .style("opacity", currentOpacity * 0.4)
+          // .on("end", () => {
+          //   selection.selectAll("*").remove();
+          // })
+        });
+
+      // // partial dim #admin-base elements
+      // [d3.select("#continent-mesh"), d3.select("#country-borders"), d3.select("#state-borders")].forEach(selection => {
+      //   let currentFill = selection.style("fill"),
+      //       currentStroke = selection.style("stroke");
+      //   if ((currentFill) && (currentFill !== "none")) {
+      //     selection.transition().duration(2400)
+      //       .style("fill", chroma(currentFill).darken(3))
+      //       .style("opacity",0.4)
+      //   }
+      //   if ((currentStroke) && (currentStroke !== "none")) {
+      //     selection.transition().duration(2400)
+      //       .style("stroke", chroma(currentStroke).darken(3))
+      //       .style("opacity",0.4)
+      //   }
+      // });
+    }
+
+    function goOnNow(scale,lastIdentity,simpPath) {
+      dispatch.call("depart", this)
+      // transition train along entire route
+    	point.transition().delay(tEnd).duration(tFull).ease(d3.easeSinInOut)
+  		  .attrTween("transform", translateAlong(fullPath))
+        // point transition triggers additional elements
+        .on("start", () => {
+          // kick off global timer!
+          timer = d3.timer(animate)
+          // keep headlights on, allowing lookAhead() for triggerPts
+          headlights.transition().duration(tFull).ease(d3.easeSinInOut)
+            .attrTween("transform", bearWithMe(semiSimp,azimuth0))
+          // illuminate path traversed as train progresses
+          fullPath.style("opacity", 1)
+            .transition().duration(tFull).ease(d3.easeSinInOut)
+              .styleTween("stroke-dasharray",tweenDash)
+          // zoomFollow if necessary
+          if (simpPath) { // (firstThree[1] !== lastThree[1]) {
+            g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
+              .attrTween("transform", zoomAlong(simpPath,scale))
+          }
+        })
+       .on("end", () => {
+         // ensure final alignment
+         g.attr("transform",lastIdentity.toString())
+         // dispatch custom "arrive" event
+         dispatch.call("arrive", this)
+         // inform d3 zoom behavior of final transform value and reenable free zooming
+         svg.call(zoom.transform, lastIdentity)
+         svg.call(zoom)
+       });
+    }
+
+    function animate(elapsed) {
+      // dispatch another move event
+      dispatch.call("move", point)
+    }
+
+  }
+
+  let prevLocation, prevExtent, searchExtent, transformString;
+  let extentVis, rhombusVis; // temporary visualizations
+  function trainMoved() {
+
+    let trainTransform = this.node().transform.animVal[0].matrix,
+       currentLocation = [trainTransform.e, trainTransform.f],
+            headlights = g.select("#headlights");
+
+    if (!searchExtent) {  // get first time only
+
+      let sectorBBox = headlights.node().getBBox(),
+            arcWidth = sectorBBox.width,
+           arcHeight = sectorBBox.height;
+
+      // MAKE RHOMBUS AROUND ARC FOR EXTENT VISUALIZATION
+
+      // ** can adjust rhombusHeight such that furthermost point is far enough to counteract lag in triggerPt/fullGeom visualization **
+      let rhombusHeight = (arcHeight * 4/5) // * 2;
+
+      let origin = [0,0], // use SVG transforms to position
+       reflected = [origin[0], origin[1] - rhombusHeight],  // subtracts height to account for SVG reflection
+      clockwise0 = [reflected[0] - arcWidth/2, reflected[1] + rhombusHeight/2],
+      clockwise1 = [reflected[0] + arcWidth/2, reflected[1] + rhombusHeight/2];
+
+      let rhombus = turf.convex(turf.featureCollection([
+        turf.point(origin),
+        turf.point(clockwise0),
+        turf.point(reflected),
+        turf.point(clockwise1),
+        turf.point(origin)
+      ]));
+
+      let rhombusExtent = [[-arcWidth/2,-rhombusHeight],[arcWidth/2,0]]
+
+      // CALCULATE SEARCH EXTENT FOR QUADTREE
+      // theoretically min x,y, max x,y
+        // due to SVG y reflection, must switch min/max y's for numeric comparison within quadtree
+      // searchExtent = [[currentLocation[0] - arcWidth/2, currentLocation[1] - rhombusHeight],[currentLocation[0] + arcWidth/2, currentLocation[1]]]
+
+      // TRYING MUCH SMALLER EXTENT SINCE ALL TRIGGER PTS NOW ON ROUTE
+      let x = 2,
+          y = 2;
+      searchExtent = [[currentLocation[0] - x, currentLocation[1] - y],[currentLocation[0] + x, currentLocation[1] + y]]
+
+      // VISUALIZE TRANSFORMED SEARCH EXTENT AND RHOMBUS
+      let rotate0 = headlights.property("azimuth0");
+
+      transform0 = "translate(" + currentLocation[0] + "," + currentLocation[1] + ") rotate(" + rotate0 + ")";
+
+      // extentVis = g.select("#route").append("rect")
+      //   .datum(rhombusExtent)
+      //   .attr("id","extent-vis")
+      //   .attr("x", d => { return d[0][0]; })
+      //   .attr("y", d => { return d[0][1]; })
+      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+      //   .attr("transform",transform0)
+      //   .style("fill","steelblue")
+      //   .style("stroke","whitesmoke")
+      //   .style("stroke-width","0.3px")
+      //   .style("stroke-dash-array",origDash)
+      //   .style("opacity",0.2)
+      // rhombusVis = g.select("#route").append("path")
+      //   .datum(rhombus)
+      //   .attr("d",nullPath) // y is already reflected
+      //   .attr("transform",transform0)
+      //   .style("fill","tomato")
+      //   .style("stroke","silver")
+      //   .style("stroke-width","0.3px")
+      //   .style("stroke-dash-array",origDash)
+      //   .style("opacity",0.4)
+
+      // upon train arrival, schedule fade/remove of headlights + each extentVis node
+      dispatch.on("arrive", () => {
+        // extentVis.transition().duration(tPause)
+        //          .style("opacity",0)
+        //          .on("end", () => {
+        //            extentVis.classed("none",true)
+        //            extentVis.remove()
+        //          })
+        // rhombusVis.transition().duration(tPause)
+        //           .style("opacity",0)
+        //           .on("end", () => {
+        //             rhombusVis.classed("none",true)
+        //             rhombusVis.remove()
+        //           })
+        headlights.transition().duration(tPause)
+                  .style("opacity",0)
+                  .on("end", () => {
+                    headlights.classed("none",true)
+                    headlights.remove()
+                  })
+      })
+
+      headlights.raise() // keep headlights on top of extent visualizations
+
+      this.raise(); // keep train on top of extentVis
+
+    } else {  // get adjusted transformString and searchExtent on each trainMove
+
+      let rotate = headlights.node().transform.animVal[1].angle,
+              dx = currentLocation[0] - prevLocation[0],
+              dy = currentLocation[1] - prevLocation[1],
+              tx = currentLocation[0] + dx,
+              ty = currentLocation[1] + dy;
+
+      let translatedExtent = translateExtent(prevExtent,dx,dy);
+      searchExtent = translatedExtent;  // works but lags and too narrow
+
+      // let rotatedExtent = rotateExtent(prevExtent,rotate),
+      //   rotatedThenTranslated = translateExtent(rotatedExtent,dx,dy)
+      // searchExtent = rotatedThenTranslated;  // BEST? though rotate still not exact
+
+      // ALT OPTION:
+      // scrap quadtree and boolean search for triggerPt in rhombus polygon (how much slower?)
+        // or will this run into same issues? *** how to rotate individual pts?? or otherwise calculate new coordinates of transformed svg element? ***
+
+      // // individual extent visualizations (TEMPORARY)
+      // let tempVis = g.select("#route").append("rect")
+      //   .datum(searchExtent)
+      //   .attr("x", d => { return d[0][0]; })
+      //   .attr("y", d => { return d[0][1]; })
+      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+      //   .style("fill","magenta")
+      //   .style("stroke","whitesmoke")
+      //   .style("stroke-width","0.3px")
+      //   .style("opacity",0.6)
+      //
+      // d3.timeout(() => {
+      //   tempVis.transition().duration(600)
+      //          .style("opacity",0)
+      //          .on("end", () => {
+      //            tempVis.classed("none",true)
+      //            tempVis.remove()
+      //          })
+      // }, 600);
+
+      function translateExtent(extent,dx,dy) {
+        return extent.map(d => { return [d[0]+dx, d[1]+dy] });
+      }
+      function rotateExtent(extent,degrees) {
+
+        let angle = turf.degreesToRadians(degrees),
+            width = extent[1][0]-extent[0][0],
+           height = Math.abs(extent[1][1]-extent[0][1]),
+              // pt0 = extent[0],
+              // pt1 = extent[1],
+            midPt = [extent[0][0]+width/2,extent[0][1]+height/2];
+
+        let point = midPt,
+            pivot = currentLocation;
+        let rotatedPt = rotatePt(point,angle,pivot);
+
+        // get differences relative to midPt
+        let deltaX = rotatedPt[0]-point[0],
+            deltaY = rotatedPt[1]-point[1];
+
+        // adjust extent pts accordingly // DEFINITELY NOT EXACT
+        let rotatedExtent = extent.map(d => { return [d[0]+deltaX,d[1]+deltaY] });
+
+        // let point0 = pt0,
+        //     point1 = pt1;
+        // pivot = midPt;
+        //
+        // // rotate point around pivot
+        // let rotatedPt0 = rotatePt(point0,angle,pivot),
+        //     rotatedPt1 = rotatePt(point1,angle,pivot);
+        //
+        // let rotatedExtent2 = [rotatedPt0,rotatedPt1]
+        //
+        // return rotatedExtent2;
+
+        return rotatedExtent;
+
+        // adapted from stackoverflow answer https://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
+        function rotatePt(point,angle,pivot = [0,0]) {  // angle in radians
+
+          // translate point back to origin
+          let origin = [point[0] - pivot[0], point[1] - pivot[1]],
+                 sin = Math.sin(angle),
+                 cos = Math.cos(angle);
+
+          // rotate point
+          let x = origin[0] * cos - origin[1] * sin,
+              y = origin[0] * sin + origin[1] * cos;
+
+          // translate back to pivot pt
+          let rotated = [x + pivot[0], y + pivot[1]]
+
+          return rotated;
+
+        }
+
+      }
+
+      transformString = "translate(" + tx + "," + ty + ") rotate(" + rotate +")"
+
+    }
+
+    lookAhead(searchExtent); // initiate quadtree search
+
+    // save newly determined values as previous values
+    prevLocation = currentLocation,
+      prevExtent = searchExtent;
+
+    // // update transform of extentVis
+    // extentVis.attr("transform",transformString)
+    // rhombusVis.attr("transform",transformString)
+
+  }
+
+  function departed() {
+    console.log("train departing @ " + performance.now())
+    d3.timerFlush() // necessary?
+  }
+
+  function arrived() {
+    console.log("train arrived @ " + performance.now())
+    timer.stop()
+    // observer.disconnect()
+  }
+
+
+//// TRANSITIONS AND TWEENS
+
+  function tweenDash() {
+    var l = this.getTotalLength(),
+        i = d3.interpolateString("0," + l, l + "," + l);
+    return function(t) { return i(t); };
+  }
+
+  // function dashBack() {
+  //   var l = this.getTotalLength(),
+  //       i = d3.interpolateString(l + ",0", "0," + l);
+  //   return function(t) { return i(t); };
+  // }
+
+  function drawDashed() {
+    var l = this.getTotalLength();
+    var i = d3.interpolateString(-l,"0"); // results in 0=>dashed in wrong direction
+    return function(t) { return i(t); };
+  }
+
+  // TRANSLATE ONLY
+  function zoomAlong(path,k = currentView.scale) {
+    var l = path.node().getTotalLength();
+    return function(d, i, a) {
+      return function(t) {
+        // KEEP NODE P IN CENTER OF FRAME
+        var p = path.node().getPointAtLength(t * l);
+        // calculate translate necessary to center data within extent
+        let tx = -k * p.x + initial.width/2,  // what if window resized during animation??
+            ty = -k * p.y + initial.height/2;
+
+        // // ????
+        // // clip projected data to minimize shift/render calculations?
+        // let clipExtent = [[-(tx ** 2), -(ty ** 2)], [tx ** 2, ty ** 2]]; // extend for leeway around edges?
+        // identity.clipExtent(clipExtent)
+        // projection.clipExtent(clipExtent)
+
+        return "translate(" + tx + "," + ty + ") scale(" + k + ")";
+      }
+    }
+  }
+
+  // function returns value for translating point along path
+  function translateAlong(path) {
+    var l = path.node().getTotalLength(); // orig 'this'
+    return function(d, i, a) {
+      return function(t) {
+      	var p = path.node().getPointAtLength(t * l);
+        return "translate(" + p.x + "," + p.y + ")";
+			}
+    }
+  }
+
+  function bearWithMe(path,azimuth0) {
+    var l = path.node().getTotalLength();
+    return function(d, i, a) {
+      let rotate = azimuth0,
+             pt0 = path.node().getPointAtLength(0);
+      // additional rotate interpolator for smoother transitions?
+      // address any jumps between, eg., -179 and 179
+      return function(t) {
+        let pt1 = path.node().getPointAtLength(t * l);  // svg pt
+        if (!(pt0.x === pt1.x)) rotate = getRotate(pt0,pt1);
+        pt0 = pt1;  // shift pt values pt0 >> pt1
+        return transform = "translate(" + pt1.x + "," + pt1.y + ") rotate(" + rotate + ")";
+      }
+    }
+  }
+
+  function reverseSVGPath(pathStr) {
+    return ["M",pathStr.split('M')[1].split('L').reverse().join('L')].join('');
+  }
+
+  function getDashStr(along,length,dash = dash1) {
+    let dashSum = dash.split(" ").map(x => +x)
+                     .reduce((accumulator, currentVal) =>
+                       accumulator + currentVal, 0
+                     ),
+      dashTimes = Math.ceil(length/dashSum),
+       dashFill = new Array(dashTimes + 1).join(dash + ' '),
+        dashStr = dashFill + ", " + length;
+    return dashStr;
+  }
+
+  // function animateDashed(along,t) {
+  //
+  //   // see https://bl.ocks.org/kafunk/91f7b870b79c2f104f1ebacf4197c9dc for more commentary
+  //
+  //   let reversedAlong = along.clone(),
+  //              length = reversedAlong.node().getTotalLength();
+  //
+  //   let dashStr = getDashStr(reversedAlong,length,dash1);
+  //
+  //   // REVERSE PATH for proper direction
+  //   let reversedPath = reverseSVGPath(reversedAlong.attr("d"));
+  //
+  //   reversedAlong.attr("d", reversedPath)
+  //                .attr("id", "full-route-reversed")
+  //
+  //   // dashed path initially blank
+  //   reversedAlong.style("stroke-dasharray", dashStr)
+  //                .style("stroke-dashoffset", -length)
+  //                .style("opacity", 0.6)
+  //
+  //   reversedAlong.transition()
+  //                .duration(t)
+  //                .styleTween("stroke-dashoffset",drawDashed)
+  //
+  // }
+
+//// REVEAL ENCOUNTERED
+
+  function encountered() {
+
+    // console.log("reached encountered() at " + performance.now())
+
+    let defaultT = tpm * 10, id = this, id1, encountered1;
+
+    if (Array.isArray(this)) {
+      id = this[0],
+      id1 = this[1],
+      encountered1 = g.select(`#${id1}`);
+      encountered1.classed("waiting",false);
+    }
+
+    // FIND full feature(s) by id
+    let encountered = g.select(`#${id}`);
+    // remove waiting class upon intersect
+    encountered.classed("waiting",false);
+
+    // DETERMINE TYPE, CALCULATE T, VISUALIZE
+    if (id.startsWith('ln')) {  // line feature
+      let t, tFactor = tpm, tFactor1 = tpm, vectorAdjust = 0.5 // ??
+      // where possible, t calculated based on route distance (travel time) from triggerPt => triggerPt
+      if (encountered1) {
+        // even if multiple segments starting from i0 (linegons), keep t equal for both lines (so they arrive together at i1)
+        if (encountered.vectorFlag) {
+          tFactor *= vectorAdjust;
+        } else if (encountered1.vectorFlag) {
+          tFactor1 *= vectorAdjust;
+        }
+        // for linegons with same pair of route-intersecting start/end pts, these should work out to be the same
+        t0 = encountered.datum().properties.tDistance * tFactor,
+        t1 = encountered1.datum().properties.tDistance * tFactor1,
+        t = [t0,t1],
+        encountered = [encountered,encountered1];
+      } else {
+        if (encountered.vectorFlag) tFactor *= vectorAdjust;
+        t = encountered.datum().properties.tDistance * tFactor;
+      }
+      if (t === 0) {
+        // console.log("t === 0")
+        // console.log(encountered[0].node().getTotalLength())
+        t = Math.pow(encountered[0].node().getTotalLength(),2);
+      } else if (Array.isArray(t) && t.includes(0)) {
+        // console.log("initial t includes(0)")
+        t[0] = Math.pow(encountered[0].node().getTotalLength(),2)
+        t[1] = Math.pow(encountered[1].node().getTotalLength(),2)
+        // console.log("new t",t)
+      }
+      reveal(encountered,"line",t)
+    } else if (id.startsWith('py')) { // polygon feature
+      // if no i1, calculate t dynamically based on polygon area
+      // otherwise, calc t based on time train will need to travel from i0 to i1 (use tpm global)
+      let t;
+      reveal(encountered,"polygon",t)
+    } else {  // point feature
+      // let tFactor = tpm/2,
+      //   t = Math.pow(encountered.datum().properties.tDistance,2) * tFactor;
+      reveal(encountered,"point",defaultT * 2)
+    }
+
+    output(encountered[0] || encountered)
+
+  }
+
+  function reveal(encountered,type,t = tPause) {
+
+    // all styling basics should already be in place;
+    // just need to trigger appropriate transitions based on type
+
+    if (type === "line") {
+      // watersheds: animateDashed within varying dashArrays and thickness; higher levels thinner and with more intricate/subtle patterns
+      // rivers and streams: animatedSolid in both directions with continual branching outward (will be necessarily limited by data pool, filtered to certain level of watershed)
+      // FOR NOW
+      if (Array.isArray(encountered)) { // multiTrigger
+        if (encountered[0].property("category") === "Watershed") {
+
+          // console.log(encountered[0].node())
+          // console.log(encountered[1].node())
+          // console.log(encountered[0].style("stroke-dasharray"))
+          // console.log(encountered[1].style("stroke-dasharray"))
+
+          // TODO attune dashArrays (get/pass current?)
+
+          let length0 = encountered[0].node().getTotalLength(),
+              length1 = encountered[1].node().getTotalLength(),
+             dashStr0 = getDashStr(encountered[0], length0),
+             dashStr1 = getDashStr(encountered[1], length1)
+
+          encountered[0].style("stroke-dasharray", dashStr0)
+                        .style("stroke-dashoffset", -length0)
+                        .style("opacity", 0.6)
+                        .transition().duration(t[0]).ease(d3.easeLinear)
+                        .styleTween("stroke-dashoffset",drawDashed)
+                        .on("start", () => {
+                          encountered[1].style("stroke-dasharray", dashStr1)
+                            .style("stroke-dashoffset", -length1)
+                            .style("opacity", 0.6)
+                            .transition().duration(t[1]).ease(d3.easeLinear)
+                            .styleTween("stroke-dashoffset",drawDashed)
+                        })
+        } else {
+          encountered[0].style("opacity",0.8)
+            .transition().duration(t[0]).ease(d3.easeLinear)
+            .styleTween("stroke-dasharray",tweenDash)
+            .on("start", () => {
+              encountered[1].style("opacity",0.8)
+                .transition().duration(t[1]).ease(d3.easeLinear)
+                .styleTween("stroke-dasharray",tweenDash)
+            })
+        }
+      } else {
+        encountered.style("opacity",0.8)
+          .transition().duration(t).ease(d3.easeLinear)
+          .styleTween("stroke-dasharray",tweenDash)
+      }
+    } else if (type === "polygon") {
+      // FOR NOW
+      encountered.transition().duration(t).ease(d3.easeLinear)
+        .style("opacity", 1)
+      // animate radial gradient outward from i0
+    } else {  // type === "point"
+      encountered.transition().duration(t).ease(d3.easeLinear)
+          .attr("r",1)
+          .style("opacity", 1)  // initial glow effect?
+        .transition().duration(t)
+          .style("opacity",0.8)
+    }
+
+  }
 
 //// OUTPUT AND ALERT incl DASHBOARD
 
-    function output(encountered) {
+  function output(encountered) {
 
-      // current
-      if ((!encountered.datum().properties.segmentFlag) && (encountered.property("name"))) {
-        let output = encountered.property("name");
-        if (encountered.property("category") === "Watershed") {
-          output += `, Level ${encountered.property("level")} Watershed`
-        } else if (["Lake Centerline","River (Intermittent)"].includes(encountered.property("category"))) {
-          // do nothing
-        } else {
-          output += ` ${encountered.property("category")}`
-        }
-        console.log(`now passing ${output}`);
+    // current
+    if ((!encountered.datum().properties.segmentFlag) && (encountered.property("name"))) {
+      let output = encountered.property("name");
+      if (encountered.property("category") === "Watershed") {
+        output += `, Level ${encountered.property("level")} Watershed`
+      } else if (["Lake Centerline","River (Intermittent)"].includes(encountered.property("category"))) {
+        // do nothing
+      } else {
+        output += ` ${encountered.property("category")}`
       }
+      console.log(`now passing ${output}`);
+    }
 
-      // future
-        // temp popups/tooltips fade in/out
-          // points:
-            // flash tiny offset tooltip with basic info (name, category)
-            // animate cursive writing?
-        // legend-log populated
-        // dashboard/trackers updated
+    // future
+      // temp popups/tooltips fade in/out
+        // points:
+          // flash tiny offset tooltip with basic info (name, category)
+          // animate cursive writing?
+      // legend-log populated
+      // dashboard/trackers updated
 
-    }
-    function dashUpdate(current) {
-      // update dashboard elements: compass visual?, mileage tracker, elevation?
-      // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
-      log()
-    }
-    function log(encounter) {
-      // initial element type/symbol, plus counter +=1 on each subsequent
-      // subsequent encounters
-        // add 1 to log count
-    }
+  }
+
+  function dashUpdate(current) {
+    // update dashboard elements: compass visual?, mileage tracker, elevation?
+    // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
+    log()
+  }
+
+  function log(encounter) {
+    // initial element type/symbol, plus counter +=1 on each subsequent
+    // subsequent encounters
+      // add 1 to log count
+  }
 
 //// HTML/CSS VISIBILITY MANAGEMENT
 
-    // TODO: add functionality to info icon, which appears only on small screens
-    function feature(element) {
-      // passed 'about'
-      // have sidebar content expand upward (from about text at bottom of screen) into modal
-    }
-    function unfeature(element) {
-      // passed 'about'
-      // collapse sidebar content downward
-    }
+  // function feature(element) {
+  //   // passed 'about'
+  //   // have sidebar content expand upward (from about text at bottom of screen) into modal
+  // }
+  // function unfeature(element) {
+  //   // passed 'about'
+  //   // collapse sidebar content downward
+  // }
 
-    d3.selectAll(".expand-trigger").on("click", e=> {
-      expand(e.target.for); // controls?
-      hide(e.target);  // hide the icon that prompted expansion, once expansion is attained
-    });
+  function noneClass() {
+    d3.select(this).classed("none", true)
+  }
+  function expand(elementStr,direction = ["up"]) {
 
-    function expand(elementStr,direction = ["left"]) {
+    // if window too short to reasonably fit more content, expand modal instead
+    if (window.innerHeight < 500) {
 
-      let toExpand = d3.select(`#${elementStr}`),
-        expandLabel = d3.select(`#${elementStr}-expand`),
-        collapseLabel = d3.select(`#${elementStr}-collapse`);
+      oOpen("modal-plus",elementStr)
 
-      if (elementStr == "dashboard") {
-        expandBtn = d3.select(`#${elementStr}-expand-btn`),
-        collapseBtn = d3.select(`#${elementStr}-collapse-btn`);
-        expandLabel.classed("h6", true);
-        expandLabel.classed("h18 mb6-ml my-green", false);
-        expandBtn.classed("none", true);
-        collapseBtn.classed("none", false);
-        d3.select("#dashplus").classed("my-green",false);
-        d3.select("#sidebar-collapse").classed("mt6", true);
-      } else {
-        expandLabel.classed("none", true);
-        collapseLabel.classed("none", false);
-        collapseLabel.classed("mt0", true);
-      }
+    } else {
 
-      // regardless
-      toExpand.classed(`disappear-${direction} none`, false);
+      d3.select(`#${elementStr}`).classed(`disappear-${opposite(direction)}`, false)
+      d3.select(`#${elementStr}-collapse`).classed("none", false);
+      d3.select(`#${elementStr}-expand`).classed("none", true);
 
-      // remove previously set featured element-specific event listener
-      thisWindow.on("resize.hidden", null);
-
-    }
-
-    function collapse(elementStr, direction = "left") {
-
-      let toCollapse = d3.select(`#${elementStr}`),
-        expandLabel = d3.select(`#${elementStr}-expand`),
-        collapseLabel = d3.select(`#${elementStr}-collapse`);
-
-      if (elementStr == "dashboard") {
-        expandBtn = d3.select(`#${elementStr}-expand-btn`),
-        collapseBtn = d3.select(`#${elementStr}-collapse-btn`);
-        expandLabel.classed("h18 mb6-ml", true);
-        expandLabel.classed("h6", false);
-        expandBtn.classed("none", false);
-        collapseBtn.classed("none", true);
-        d3.select("#dashplus").classed("my-green",true);
-        d3.select("#sidebar-collapse").classed("mt6", false);
-      } else {
-        collapseLabel.classed("none", true);
-        expandLabel.classed("none", false);
-        expandLabel.classed("mt0", true);
-      }
-
-      // regardless
-      toCollapse.classed(`disappear-${direction}`, true);
-
-      // set up event listener in case window expanded beyond mm while element hidden
-      thisWindow.on("resize.hidden", function() {
-        if (this.innerWidth < 800) {
-          expand(elementStr,direction);
+      // size- and element-specific toggles upon expand/collapse of various elements
+      if (elementStr === "about") {
+        if (window.innerWidth > 1200) {
+          d3.select("#section-wrapper").classed("relative", true);
+          d3.select("#attribution").classed("mr24", false);
+        } else {
+          d3.select("#dash-up").classed("mt-neg6", false);
+          d3.select("#dash-up").classed("mt-neg18", true);
+          d3.select("#dash-expand-btn").classed("h24", false)
+          // d3.select("#dash-expand-btn").classed("h18", true)
         }
-      });
-
-    }
-
-    d3.selectAll(".hide-trigger").on("click", e => {
-      hide(e.target.for); // controls? (for as attribute containing id of element to hide)
-      // with the exception of the modal hide-trigger (and all submit buttons)
-      if (e.target.type != "submit") {
-        // expand something else? (expand-trigger icon?)
+      } else if (elementStr === "dash") {
+        d3.select("#attribution").classed("mt-neg24", false)
+        // d3.select("#attribution").classed("mt-neg6",true)
+        if (window.innerWidth > 1200) {
+          d3.select("#dash-expand-btn").classed("h24", false)
+          d3.select("#dash-expand-btn").classed("h18", true)
+        }
       }
-    });
 
-    function hide() {
-      d3.select(this)
-        .classed("none", true);
+      function opposite(direction) {
+        const opposites = {
+          up: "down",
+          down: "up",
+          right: "left",
+          left: "right"
+        };
+        return opposites[direction];
+      }
+
     }
-    function show() {
-      d3.select(this)
-        .classed("none", false);
+  }
+
+  function collapse(elementStr, direction = "down") {
+
+    d3.select(`#${elementStr}`).classed(`disappear-${direction}`, true);
+    d3.select(`#${elementStr}-expand`).classed("none", false);
+    d3.select(`#${elementStr}-collapse`).classed("none", true);
+
+    // allow `disappear-${direction}` transition to complete before adding "none" class
+    // d3.timeout(() => {
+    //   d3.select(`#${elementStr}`).classed("none", true)
+    // }, 600);
+
+    // size- and element-specific toggles upon expand/collapse of various elements
+    if (elementStr === "about") {
+      if (window.innerWidth > 1200) {
+        d3.select("#section-wrapper").classed("relative", false);
+        d3.select("#attribution").classed("mr24", true);
+      } else {
+        d3.select("#dash-up").classed("mt-neg6", true); // prev mt-neg12
+        d3.select("#dash-up").classed("mt-neg18", false);
+        d3.select("#dash-expand-btn").classed("h24", true)
+        // d3.select("#dash-expand-btn").classed("h18", false)
+      }
+    } else if (elementStr === "dash") {
+      d3.select("#attribution").classed("mt-neg24", true)
+      // d3.select("#attribution").classed("mt-neg6", false)
+      if (window.innerWidth > 1200) {
+        d3.select("#dash-expand-btn").classed("h24", true)
+        // d3.select("#dash-expand-btn").classed("h18", false)
+      }
     }
 
-  // UI DRIVEN
-    function oOpen(elementStr) {
-      // grab caller element
-      let toOpen = d3.select(`#${elementStr}`);
-      // change element visibility via class toggle
-          toOpen.classed("none", false);
+  }
+
+  function oOpen(elementStr, subContent) {
+
+    if (subContent) {
+      d3.select(`#${subContent}`).classed("none", false);
+      if (elementStr === "modal-plus") {
+        // TOGGLE form/about modal content
+        if (subContent === "modal-about") {
+          collapse("about","down");
+          d3.select("#getInitOptions").classed("none", true)
+        } else if (subContent === "getInitOptions") {
+          d3.select("#modal-about").classed("none", true)
+        }
+      }
+      // doesn't register as a resize event but map may need adjustments following subContent collapse
+      resize()
     }
-    function xClose(elementStr) {
-      // grab caller element's parent
-      let toClose = d3.select(`#${elementStr}`);
-      // change element visibility via class toggle
-      toClose.classed("none", true);
-      // in case veil is still obscuring underlayers
-      d3.select('#veil').classed("none", true);
-    }
+
+    d3.select(`#${elementStr}`).classed("none", false);
+
+  }
+
+  function xClose(elementStr) {
+    d3.select(`#${elementStr}`).classed("none", true);
+  }
 
 //// BUTTONS & FUNCTIONAL ICONS
 
@@ -2916,63 +3017,33 @@
         return;
       }
     }
-    // in animation finished/canceled or select new confirmed
-      // perform variety of resets
-      d3.select("#submit-btn-txt").classed("none",false);
-      d3.select("#submit-btn-load").classed("none",true);
-      experience.initiated = false;
-      // resetZoom();
-      // open selection form
-      oOpen('modal');
+    // if animation finished/canceled or select new confirmed
+    // perform variety of resets
+    d3.select("#submit-btn-txt").classed("none",false);
+    d3.select("#submit-btn-load").classed("none",true);
+    experience.initiated = false;
+    // resetZoom();
+    // open selection form
+    oOpen('modal');
   }
 
-//// OTHER EVENT LISTENERS & VISUAL AFFORDANCES
+//// PIZAZZ
 
-  // (can be passed e event allowing access to e.target and e.type)
+  // TOOLTIPS
+  function onMouseover(d) {
 
-    // initial call to action
-    thisWindow.on("load", function () {
-      if (!('optionsReceived' in localStorage)) {
-        initPrompt();
-      }
-    });
-
-    // thisWindow.on("reload", *)
-    // svg.on("move", rerender);
-    // svg.on("viewreset", rerender);
-    // thisWindow.on("resize.map", resize);
-
-    d3.select("#getInitOptions").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
-                                .on("blur", function (e) { e.target.style.background = "#fafafa" })
-
-    // d3.select("#play-pause").on("click", remoteControl.playPause(e))
-
-  // PIZAZZ: TOOLTIPS
-  function onMouseover(e) {
-    onMouseenter(e);
-  }
-  function onMouseenter(d) {
-    // d is target node
-    // d3.select(d.properties.id) is target selection
-    // d3.event is event
-    // console.log(d)
-    // console.log(d3.event)
-    // console.log(d3.select(d))
-    // console.log(d3.select(`#${d.properties.id}`))
-
-    let eTarget = d3.select(`#${d.properties.id}`);
     // visual affordance for element itself
-    // d3.select(this).classed("hover", true).raise();
     // d3.select(d).classed("hover", true).raise();
 
     // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
-    let tooltip = d3.select("body").append("div")
-      .datum(d)
-      // .attr("id", d => d.properties.id)
+    let tooltip = d3.select("#map").append("div") // ("body").append("div")
+      // .datum(d)
       .attr("class","tooltip")
-      .html(getTooltipContent(eTarget)) // d.properties.name
-      .style("left", (d3.event.pageX + 10) + "px")
-      .style("top", (d3.event.pageY - 30) + "px")
+      .html(getTooltipContent(d3.select(this)))
+      .style("left", (d3.event.layerX + 10) + "px")
+      .style("top", (d3.event.layerY - 30) + "px")
+      // .style("left", (d3.event.pageX + 10) + "px")
+      // .style("top", (d3.event.pageY - 30) + "px")
       .style("fill", "honeydew")
       .style("stroke", "dimgray")
       .style("opacity", 0) // initially
@@ -2982,7 +3053,7 @@
       .style("opacity", 1)
 
     function getTooltipContent(d) {
-      let content = d.property("name"); // for now
+      let content = `<span>${d.property("name")}</span>` // for now
       // let content = `
       //   <span class="category">Facility Name: </span>
       //   <span class="align-r">${titleCase(d.Facility_Name)}</span>
@@ -2996,6 +3067,7 @@
       return content;
     }
   }
+
   function onMouseout(d) {
 
     // d3.select("#current-hover").remove();
@@ -3020,103 +3092,82 @@
     tooltip.exit().remove();
   }
 
-  // PIZAZZ: COLOR
+  // COLOR
 
-  // PIZAZZ: TRANSITIONS
+  // TRANSITIONS
 
 
 //// OTHER HELPER FUNCTIONS
 
-  // RESET, RESIZE, REDRAW
-    function clearDOM() { }
-    function resize() {
-      console.log('resizing..')
-      // update current dimensions
-            height = parentWindow.clientHeight,
-             width = parentWindow.clientWidth;
-      // resize map container
-      svg.attr("width", width)
-         .attr("height", height)
-      rerender()
-    }
-    function redraw(layerGroupSelector){
-      d3.selectAll(`g${layerGroupSelector}`) // could be # or .
-        .selectAll("path")
-          .attr("d",projPath)
-    }
-    function redrawMap() {
-      g.selectAll("path.rendered.projectedOTF").attr("d", projPath);
-      g.selectAll("path.rendered").attr("d", projPath);
-    }
-    function rerender(content = "map") {
-      // select content from DOM
-      // parse as necessary
-      // redraw(content)
-        // g.style / transform attr..
-    }
-    function dynamicallySimplify() {
-      minZ = 1 / scale * scale;
-      // minZi, minZp
-    }
+  // CLEANING UP
+  function clearDOM() { }
 
-  // DEFAULT PREVENTION
-    function nozoom() {
-      d3.event.preventDefault();
-    }
-    d3.select("#submit-btn").on("click", function() {
-      d3.event.preventDefault();
-      d3.select("#submit-btn-txt").classed("none",true);
-      d3.select("#submit-btn-load").classed("none",false);
-    })
+  function endall(transition,callback) {
+    var n = 0;
+    transition.each(function() { ++n; })
+              .each("end", function() { if (!--n) callback.apply(this, arguments); });
+  }
+
+  // function dynamicallySimplify() {
+  //   minZ = 1 / scale * scale;
+  //   // minZi, minZp
+  // }
+
 
   // THE PARSING OF THINGS
-    function replaceCommas(string){
-      let commaFree = string.replace(/\s*,\s*|\s+,/g, '%2C');
-      return commaFree;
-    }
-    function titleCase(str) {
-      return str.toLowerCase().split(' ').map(function(word) {
-        // TODO create titleCase exceptions for LLCs, US, initials, words in paretheses
-        if (word == 'llc' || word == 'us' || /(\.[a-z]\.)/.test(word)) {
-          return word.toUpperCase();
-        } else if (['(',')','-',':','/'].includes(word[0])) {
-          return (' ' + word.charAt(0) + word.charAt(1).toUpperCase() + word.slice(2));
-        } else {
-          return capitalize(word);
-        }
-      }).join(' ');
-    }
-    function capitalize(word) {
+  function replaceCommas(string){
+    let commaFree = string.replace(/\s*,\s*|\s+,/g, '%2C');
+    return commaFree;
+  }
+
+  function titleCase(str) {
+    return str.toLowerCase().split(' ').map(function(word) {
+      // TODO create titleCase exceptions for LLCs, US, initials, words in paretheses
+      if (word == 'llc' || word == 'us' || /(\.[a-z]\.)/.test(word)) {
+        return word.toUpperCase();
+      } else if (['(',')','-',':','/'].includes(word[0])) {
+        return (' ' + word.charAt(0) + word.charAt(1).toUpperCase() + word.slice(2));
+      } else {
+        return capitalize(word);
+      }
+    }).join(' ');
+  }
+
+  function capitalize(word) {
       return (word.charAt(0).toUpperCase() + word.slice(1));
     }
 
   // BROADLY APPLICABLE OR NOT AT ALL
-    function uniqueOn(array,prop = "properties",subProp = "id") {
-      // largely from https://reactgo.com/removeduplicateobjects/
-      let unique = array.map(d => d[prop][subProp])
-                        .map((d, i, final) => final.indexOf(d) === i && i)         // store the keys of the unique objects
-                        .filter(d => array[d])  // eliminate the dead keys
-                        .map(d => array[d])     // restore unique objects
-      return unique;
-    }
+  function uniqueOn(array,prop = "properties",subProp = "id") {
+    // largely from https://reactgo.com/removeduplicateobjects/
+    let unique = array.map(d => d[prop][subProp])
+                      .map((d, i, final) => final.indexOf(d) === i && i)         // store the keys of the unique objects
+                      .filter(d => array[d])  // eliminate the dead keys
+                      .map(d => array[d])     // restore unique objects
+    return unique;
+  }
+  // prevent window reprompt on apps with lots of moving parts
+  // function localStore() {
+  //   // add somewhere to prevent reprompt
+  //   localStorage.optionsReceived = true;
+  //   ////
+  //   // let bigVVal = capitalize(val);
+  //   // var element = d3.select(`#get${bigVVal}`);
+  //   // localStorage.setItem(val, element.value); // sessionStorage?
+  //   // var stored = localStorage.getItem(val);
+  //   // return stored;
+  // }
 
-    // function store(val){
-    //   let bigVVal = capitalize(val);
-    //   var element = d3.select(`#get${bigVVal}`);
-    //   localStorage.setItem(val, element.value); // sessionStorage?
-    //   var stored = localStorage.getItem(val);
-    //   return stored;
-    // }
-    // function perfCheck(fx,params) {
-    //   let t0 = performance.now();
-    //   fx(params)
-    //   let t1 = performance.now();
-    //   let elapsed = t1 - t0;
-    //   console.log(`${fx}-ing to ${params} took ${elapsed} milliseconds`)
-    // }
+  // function perfCheck(fx,params) {
+  //   let t0 = performance.now();
+  //   fx(params)
+  //   let t1 = performance.now();
+  //   let elapsed = t1 - t0;
+  //   console.log(`${fx}-ing to ${params} took ${elapsed} milliseconds`)
+  // }
 
   // ERRORS
-    function onError(error) {
+  function onError(error) {
       console.log(error);
     }
 
@@ -3138,3 +3189,15 @@
 // improve dashArrays
 // max river strokewidth => smaller
 // triangle symbols on getRoute form, @media screen small => bigger
+///
+// on @media screen up to ml, #about collapsed with icon?
+// change onclick functions to toggle structure https://developer.mozilla.org/en-US/docs/Web/Events/toggle
+// add functionality to info icon, which appears only on small screens
+///
+// many more interspersed COMBAKs, FIXMEs, TODOs
+// lots of other things
+///
+
+// d3.select("#map"), adjust neg margins?
+// close #about on trainmove
+// open #dash on trainmove 
