@@ -79,28 +79,42 @@ svg path { stroke-linejoin: round; } /* shape-rendering: optimizeSpeed; } */
 .visible { }
 .hidden { }
 
-.svg-content {
+/* .svg-content {
   display: inline-block;
   position: absolute;
   top: 0;
   left: 0;
-}
+} */
 
-.trigger-pt {
+/* TRIGGER PTS and other quadtree data */
+/* .trigger-pt {
+  radius: 3;
+  stroke-width: 0.9px;
+  opacity: 0.8;
+  fill: darkgoldenrod;
+  stroke: goldenrod;
+} */
+.quad-datum {
+  radius: 3;
+  stroke-width: 0.1px;
+  opacity: 0.6;
   fill: darkgoldenrod;
   stroke: goldenrod;
 }
-.trigger-pt--scanned {
+.quad-datum--scanned {
   fill: lightgreen;
   stroke: darkgoldenrod;
+  transition: 0.6s all;
 }
-.trigger-pt--selected {
+.quad-datum--selected {
   fill: tomato;
   stroke: darksalmon;
+  transition: 0.6s all;
 }
-.trigger-pt--removed {
+.quad-datum--removed {
   fill: darksalmon;
   stroke: dimgray;
+  transition: 0.6s all;
 }
 
 /* MEDIA QUERIES */
