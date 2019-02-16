@@ -87,19 +87,17 @@ svg path { stroke-linejoin: round; } /* shape-rendering: optimizeSpeed; } */
 } */
 
 /* TRIGGER PTS and other quadtree data */
-/* .trigger-pt {
-  radius: 3;
-  stroke-width: 0.9px;
-  opacity: 0.8;
-  fill: darkgoldenrod;
-  stroke: goldenrod;
-} */
 .quad-datum {
-  radius: 3;
+  radius: 0.5;
   stroke-width: 0.1px;
   opacity: 0.6;
   fill: darkgoldenrod;
   stroke: goldenrod;
+}
+.trigger-pt {
+  opacity: 0.8;
+  fill: darkmagenta;
+  stroke: lightgreen;
 }
 .quad-datum--scanned {
   fill: lightgreen;
