@@ -711,6 +711,8 @@
     //  .attr("fill","slateblue")
     //  .attr("stroke","black")
 
+// COMBAK work on this so no unnecessary promises being passed along/returned
+
     let confirmedEnrich = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
 
     let enrichTriggers = Promise.all([triggerPtPool,confirmedEnrich]).then(distillTriggers,onError);
@@ -721,7 +723,7 @@
     let bound = Promise.all([enrichTriggers,updatedEnrich]).then(bindEnriching,onError)
 
     chosen.enrichData = {
-      triggerPts: enrichTriggers.then(() => { chosen.enrichData.triggerPts = enrichTriggers }),
+      triggerPts: enrichTriggers.then(d => chosen.enrichData.triggerPts = d.triggerPts ),
     withinBuffer: bufferedRoute
     }
 
@@ -739,7 +741,7 @@
 
       let quadtree = makeQuadtree(quadtreeData, dataExtent) // bufferedRoute?
 
-      // // optional data viz:
+      // // optional data viz: // COMBAK a few points that should be selected are not being so; extent dataExtent/quadBounds? (east-west mostly)
       // bindQuadtree(quadtree);
       // bindQuadtreeData(quadtreeData);
 
@@ -1328,25 +1330,6 @@
 
       // let begin = performance.now();
 
-      var enrichLayer = g.append("g")
-        .attr("id","enrich-layer")
-
-      // const enrichPolys = enrichLayer.append("g")
-      //   .attr("id", "enrich-polygons")
-      //   .selectAll(".enrich-poly")
-      //   .data(polys)
-      //   .enter().append("path")
-      //     .classed("enrich-poly polygon waiting", true)
-      //     .attr("d", projPath)
-      //     .attr("id", d => { return d.properties.id })
-      //     .property("name", d => { return d.properties.NAME })
-      //     .property("category", d => { return d.properties.CATEGORY })
-      //     .property("level", d => { return d.properties.LEVEL})
-      //     .property("more-info", d => { return d.properties.MORE_INFO })
-      //     .property("description", d => { return d.properties.DESCRIPTION })
-      //     .style("fill", d => { return d3.interpolateSinebow(Math.random()); })
-      //     .style("stroke", "none")
-
       let colorAssignments = {};
 
       let oceanIds = [...new Set(lines.filter(d => { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "II" }).map(d => { return d.properties.OCEAN_ID }))],
@@ -1419,6 +1402,27 @@
           return riverBlue;
         }
       }
+
+      ////
+      const enrichLayer = g.append("g")
+        .attr("id","enrich-layer")
+
+      const enrichPolys = enrichLayer.append("g")
+        .attr("id", "enrich-polygons")
+        .selectAll(".enrich-poly")
+        .data(polys)
+        .enter().append("path")
+          .classed("enrich-poly polygon waiting", true)
+          .attr("d", projPath)
+          .attr("id", d => { return d.properties.id })
+          .property("name", d => { return d.properties.NAME })
+          .property("category", d => { return d.properties.CATEGORY })
+          .property("level", d => { return d.properties.LEVEL})
+          .property("more-info", d => { return d.properties.MORE_INFO })
+          .property("description", d => { return d.properties.DESCRIPTION })
+          .style("fill", d => { return chroma.random() }) // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
+          .style("stroke", "none")
+          .style("opacity",0)
 
       const enrichLines = enrichLayer.append("g")
         .attr("id", "enrich-lines")
@@ -2303,8 +2307,8 @@
           // uncomment for visual of grid
             .style("fill", chroma.random())
             .style("stroke", "whitesmoke")
-            .style("stroke-width", "0.8px")
-            .style("opacity", "0.4")
+            .style("stroke-width", "0.4px")
+            .style("opacity", 0.3)
 
     // Collapse the quadtree into an array of rectangles.
     function nodes(quadtree) {
@@ -2337,7 +2341,7 @@
         // .property("name", d => { return d.properties.NAME; })
         // .property("category", d => { return d.properties.CATEGORY; })
         // .style("fill","none") // temporarily visualized within styles doc
-        .style("r",0.6)
+        .style("r",0.1)
         // .style("z-index",5)
         // .on("mouseover", onMouseover)
         // .on("mouseout", onMouseout)
@@ -2480,18 +2484,17 @@
     routeQuadtree =
     makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
 
-    console.log(enrichData.triggerPts)
-    console.log(routeQuadtree)
+    // console.log(enrichData.triggerPts)
+    // console.log(routeQuadtree.data())
 
     // // optional binding/visualization:
-    bindQuadtree(routeQuadtree)
+    // bindQuadtree(routeQuadtree)
     bindQuadtreeData(enrichData.triggerPts,true) // triggerPtFlag === true
 
     // turn on headlights
     headlights.transition().duration(tEnd*2)
       .style("opacity",0.6)
       .on("start", () => {
-        // dim background
         dimBackground()
       })
       .on("end", () => {
@@ -2595,25 +2598,25 @@
 
       // console.log(searchExtent[0],searchExtent[1])
 
-      // TEMPORARY SEARCH/HEADLIGHT EXTENT VISUALIZATIONS
-      let tempVis = g.select("#route").append("rect")
-        .datum(searchExtent)
-        .attr("x", d => { return d[0][0]; })
-        .attr("y", d => { return d[0][1]; })
-        .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        .style("fill",chroma.random())
-        .style("stroke","whitesmoke")
-        .style("stroke-width","0.3px")
-        .style("opacity",0.4)
-      d3.timeout(() => {
-        tempVis.transition().duration(600)
-               .style("opacity",0)
-               .on("end", () => {
-                 tempVis.classed("none",true)
-                 tempVis.remove()
-               })
-      }, 600);
+      // // TEMPORARY SEARCH/HEADLIGHT EXTENT VISUALIZATIONS
+      // let tempVis = g.select("#route").append("rect")
+      //   .datum(searchExtent)
+      //   .attr("x", d => { return d[0][0]; })
+      //   .attr("y", d => { return d[0][1]; })
+      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+      //   .style("fill",chroma.random())
+      //   .style("stroke","whitesmoke")
+      //   .style("stroke-width","0.3px")
+      //   .style("opacity",0.4)
+      // d3.timeout(() => {
+      //   tempVis.transition().duration(600)
+      //          .style("opacity",0)
+      //          .on("end", () => {
+      //            tempVis.classed("none",true)
+      //            tempVis.remove()
+      //          })
+      // }, 600);
 
       // upon train arrival, schedule fade/remove of headlights + each extentVis node
       dispatch.on("arrive", () => {
@@ -2658,25 +2661,25 @@
 
       // console.log(searchExtent[0],searchExtent[1])
 
-      // TEMPORARY SEARCH/HEADLIGHT EXTENT VISUALIZATIONS
-      let tempVis = g.select("#route").append("rect")
-        .datum(searchExtent)
-        .attr("x", d => { return d[0][0]; })
-        .attr("y", d => { return d[0][1]; })
-        .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        .style("fill",chroma.random())
-        .style("stroke","whitesmoke")
-        .style("stroke-width","0.3px")
-        .style("opacity",0.4)
-      d3.timeout(() => {
-        tempVis.transition().duration(600)
-               .style("opacity",0)
-               .on("end", () => {
-                 tempVis.classed("none",true)
-                 tempVis.remove()
-               })
-      }, 600);
+      // // TEMPORARY SEARCH/HEADLIGHT EXTENT VISUALIZATIONS
+      // let tempVis = g.select("#route").append("rect")
+      //   .datum(searchExtent)
+      //   .attr("x", d => { return d[0][0]; })
+      //   .attr("y", d => { return d[0][1]; })
+      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+      //   .style("fill",chroma.random())
+      //   .style("stroke","whitesmoke")
+      //   .style("stroke-width","0.3px")
+      //   .style("opacity",0.4)
+      // d3.timeout(() => {
+      //   tempVis.transition().duration(600)
+      //          .style("opacity",0)
+      //          .on("end", () => {
+      //            tempVis.classed("none",true)
+      //            tempVis.remove()
+      //          })
+      // }, 600);
 
     }
 
@@ -2902,8 +2905,14 @@
         t = [t0,t1],
         encountered = [encountered,encountered1];
       } else {
-        if (encountered.vectorFlag) tFactor *= vectorAdjust;
-        t = encountered.datum().properties.tDistance * tFactor;
+        if (encountered.vectorFlag) {
+          tFactor *= vectorAdjust;
+        }
+        if (encountered.node()) {
+          t = encountered.datum().properties.tDistance * tFactor;
+        } else {
+          // console.log("error averted?")
+        }
       }
       if (t === 0) {
         // console.log("t === 0")
@@ -2918,8 +2927,11 @@
       reveal(encountered,"line",t)
     } else if (id.startsWith('py')) { // polygon feature
       // if no i1, calculate t dynamically based on polygon area
-      // otherwise, calc t based on time train will need to travel from i0 to i1 (use tpm global)
-      let t;
+      // otherwise, calc t based on time train will need to travel from i0 to i1 (use tpm global) // COMBAK store this as tDistance within triggerPt?
+      let sqPixels = projPath.area(encountered.datum());
+      // esp while i am only styling opacity, keep t within smaller range?
+      let t = Math.min(24000,dT * sqPixels / 2);
+      // console.log("polygon t",t)
       reveal(encountered,"polygon",t)
     } else {  // point feature
       // let tFactor = tpm/2,
@@ -2985,7 +2997,7 @@
     } else if (type === "polygon") {
       // FOR NOW
       encountered.transition().duration(t).ease(d3.easeLinear)
-        .style("opacity", 1)
+        .style("opacity", 0.6)
       // animate radial gradient outward from i0
     } else {  // type === "point"
       encountered.transition().duration(t).ease(d3.easeLinear)
@@ -3001,28 +3013,33 @@
 
   function output(encountered) {
 
-    // current
-    if ((!encountered.datum().properties.segmentFlag) && (encountered.property("name"))) {
-      let output = encountered.property("name");
-      if (encountered.property("category") === "Watershed") {
-        output += (encountered.property("level") === "IV") ? " Watershed" : " Drainage Basin"
-      } else if (["Lake Centerline","River (Intermittent)"].includes(encountered.property("category"))) {
-        // do nothing
-      } else if (encountered.property("id").slice(0,2) === "pt") {
-        output += ` ${encountered.property("description")}`
-      } else {
-        output += ` ${encountered.property("category")}`
+    if (encountered.node()) {
+      // current
+      if ((!encountered.datum().properties.segmentFlag) && (encountered.property("name"))) {
+        let output = encountered.property("name");
+        if (encountered.property("category") === "Watershed") {
+          output += (encountered.property("level") === "IV") ? " Watershed" : " Drainage Basin"
+        } else if (["Lake Centerline","River (Intermittent)"].includes(encountered.property("category"))) {
+          // do nothing
+        } else if (encountered.property("id").slice(0,2) === "pt") {
+          output += ` ${encountered.property("description")}`
+        } else {
+          output += ` ${encountered.property("category")}`
+        }
+        console.log(`now passing ${output}`);
       }
-      console.log(`now passing ${output}`);
-    }
 
-    // future
-      // temp popups/tooltips fade in/out
-        // points:
-          // flash tiny offset tooltip with basic info (name, category)
-          // animate cursive writing?
-      // legend-log populated
-      // dashboard/trackers updated
+      // future
+        // temp popups/tooltips fade in/out
+          // points:
+            // flash tiny offset tooltip with basic info (name, category)
+            // animate cursive writing?
+        // legend-log populated
+        // dashboard/trackers updated
+
+    } else {
+      // console.log("error averted this time??")
+    }
 
   }
 
@@ -3336,7 +3353,7 @@
 // })
 
 
-// TODO
+// NOTES / TODO
 // remove stns: shriver (schriver?) LA,  sault ste marie on, barachois qc, labrador city lb, Kitimat-Stikine BC, saratoga springs?, la sarre, QC, hearst ON, phoenix AZ, perce QC?
 // *Charleston SC*
 // mobile al
@@ -3345,24 +3362,23 @@
 // chandler QC
 // clemson sc, cincinnatti??, aldershot ON
 // greenville SC
-
-// segment issues: somewhere in ON
-
-// MAKE ROUTE QUADTREE EARLIER?? (search extent pretty much in line with projection from beginning)
-
-// oriole ON == segment issue; la sarre qc ; gaspe qc; ft madison IA
-// make enrichdata brighter close up
-// make regLines faster
+// oriole ON == segment issue; gaspe qc; ft madison IA
 // segment issue - richmond ca?
-// pts not making it out of getTriggerData??
-// if intersections not working:
-  // triggerPts all go in as unprojected lng, lat
-  // make sure quadtree is not made until zooming/projection adjustments complete?
+
+// make enrichdata brighter close up
+
+// why pts not making it out of getTriggerData??
+
+// improve polygon triggering (not so central?)
 
 // veil: pointer-events, none?
 // screen mxl, about window OPEN, fixed position OFF
 
-// ITS THE REGLINES THAT TAKE A LONG TIME ***
+// * ITS THE REGLINES THAT TAKE A LONG TIME UPFRONT *
+
+// CHROMA ERRORS MESSIN ME UP
+
+// MANUALLY FOUND BUFFER INTERSECT PTS NEED TO BE SNAPPED BACK TO ROUTE BEFORE RETURNING AS TRIGGER PTS... :( OR SEARCH EXTENT WIDENED
 
 // new color for modal
 // remove excess saved route data / ticks etc
@@ -3374,7 +3390,6 @@
 
 // fix watershed color scale (stable shades of silver/light grey?)
 // improve dashArrays on watersheds
-// max river strokewidth => smaller
 
 // on @media screen up to ml, #about collapsed with icon?
 
@@ -3394,23 +3409,20 @@
 // wishlist features:
 // "choose random" @ initial prompt
 // choose cities by location (clicking on stn pt within map)
+// sliders for user to control speed, etc
 
-      // NEED HELP
-        // canceling/pausing/resetting
-        // removing unneeded elements from DOM as animation progresses
-        // removing everything from DOM at end of experience
-        // creating toggle structure for various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
-          // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
-        // *** searching/filtering data on backend; avoid bringing all of north america's enrichData into the browser every time ***
-          // speed up filtering process; quadtree vs turf methods
-        // *** managing state ***
-          // user chosen routes, Rome2Rio returns
-          // animation frame / rendered reveal
-        // *** animation speed ***
-          // stardust.js?
-          // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
-          // https://github.com/kafunk/eco-rails/issues/1
-
-
-  // everything is spatial // everything sings
-  //       this is gravity // this is god
+    // *** NEED HELP ***
+      // canceling/pausing/resetting selected animation
+      // removing unneeded elements from DOM as animation progresses
+      // removing everything from DOM at end of experience
+      // creating toggle structure for various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
+        // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
+      // *** searching/filtering data on backend; avoid bringing all of north america's enrichData into the browser every time ***
+        // speed up filtering process ESP for regLines
+      // *** managing state ***
+        // user chosen routes, Rome2Rio returns
+        // animation frame / rendered reveal
+      // *** animation speed ***
+        // stardust.js?
+        // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
+        // https://github.com/kafunk/eco-rails/issues/1
