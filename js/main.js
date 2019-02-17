@@ -824,8 +824,7 @@
 
       let triggerData = getTriggerData(triggerPtPool,massagedEnrich.pts,massagedEnrich.regLines,massagedEnrich.linegons,massagedEnrich.polys,chosen.lineString,bufferedRoute);
 
-      console.log(triggerData)
-      console.log(massagedEnrich)
+      console.log("triggerData",triggerData)
 
       return triggerData;
 
@@ -838,17 +837,8 @@
           polys: []
         };
 
-        // separate multilinestrings
         // separate out lines into LINEGONS (aka a polygon I want to style as a line, eg watersheds; pronounced liney-gons; not to be confused with polylines) and regular lines:
         confirmed.lines.forEach((d,i) => {
-          // if (d.geometry.type === "MultiLineString") {
-          //   console.log(d)
-          //   // console.log(turf.lineString(merge(turf.flatten(d).features)).geometry)
-          //   // console.log(turf.lineString(turf.coordAll(d)).geometry)
-          //   // console.log()
-          //   // d.geometry = turf.lineString(merge(turf.flatten(d).features)).geometry
-          //   // d.geometry = turf.lineString(turf.coordAll(d)).geometry;
-          // }
           let coords = d.geometry.coordinates  // shorthand
           if (coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {  // ie if line === closed
             massagedEnrich.linegons.push(d)
@@ -857,7 +847,7 @@
           }
         })
 
-        // explode polys => linestrings even if not originally multipolygons for purposes of extracting triggerData and styling associated features; will remain flagged as "polygons" within enrichData object
+        // polys => linestrings for purposes of extracting triggerData and styling associated features; will remain flagged as "polygons" within enrichData object
         confirmed.polys.forEach(d => {
           if (d.geometry.type === "MultiPolygon") {
             d = turf.multiLineString(turf.flatten(turf.polygonToLine(d)).features.map(d => d.geometry.coordinates),d.properties)
@@ -868,7 +858,9 @@
           }
           massagedEnrich.polys.push(d);
         })
+
         return massagedEnrich;
+
       }
 
       function getTriggerData(triggerPtPool,pts,regLines,linegons,polys,route,buffer) {
@@ -950,27 +942,26 @@
                 } else {
 
                   bufferIntersectPts = featurePool.filter(d => {
-                    return d.properties.buffer_int // && turf.booleanPointInPolygon(d,buffer);
+                    return d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
                   }).sort((a,b) => {
                     return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
                   })
 
                   if (bufferIntersectPts.length) {
-                    console.log("bufferIntPts found",bufferIntersectPts.slice())
+                    console.log("bufferIntPts filtered from pool",bufferIntersectPts.slice())
                   }
-                  // with two conditions, a small handful of buffer_int: true pts
-                  // with just one:
 
                   // if still no intersectPts, get them manually
                   if (isEmpty(bufferIntersectPts)) {
                     let bufferLines = turf.polygonToLine(buffer);
                     bufferIntersectPts = turf.lineIntersect(d.geometry,bufferLines).features;
+                    console.log("bufferIntPts found by turf",bufferIntersectPts.slice())
                   }
 
                   // // save middle-ish intersect pt as i0
                   // i0 = bufferIntersectPts[Math.floor(bufferIntersectPts.length/2)];
-                  // save *first* intersect pt as i0
-                  i0 = bufferIntersectPts[0];
+                  // save *first* intersect pt as i0 snapped to route
+                  i0 = turf.nearestPointOnLine(route,bufferIntersectPts[0]);
 
                 }
 
@@ -978,7 +969,7 @@
                 if (["linegons","polygons"].includes(geomGroup.type)) {
 
                   // find index of i0 (or closest to it) on d
-                  let nearest = turf.nearestPointOnLine(d,i0,{units:"miles"}),
+                  let nearest = turf.nearestPointOnLine(d,i0),
                        index0 = nearest.properties.index;
 
                   // shift line geometry to start (and end) at i0
@@ -1005,7 +996,7 @@
 
                   let index1,
                     shiftedCoords = turf.coordAll(shifted.geometry);
-                  if (!i1) {
+                  if (!i1) {  // no route intersect pts, so base i1 on actual length of linegon/polygon
                     // catch Recalculate?
                     // calculate approx midpt on closed line (i0-i0) and save as i1
                     i1 = turf.point(shiftedCoords[Math.floor(shiftedCoords.length/2)]),
@@ -1016,8 +1007,6 @@
                       // i0 & i1 route intersect points were identical or nearly so, such that turf.nearestPointOnLine is returning the same point for both;
                       // solution: recalculate index1 and i1 as though there were only ever one routeIntersect pt
                       // throw Recalculate?
-                      // index1 = Math.floor(shifted.geometry.coordinates.length/2),
-                      //     i1 = shifted.geometry.coordinates[index1];
                       i1 = turf.point(shiftedCoords[Math.floor(shiftedCoords.length/2)]),
                       index1 = (shifted.geometry.type === "MultiLineString") ? getNestedIndex(shifted,i1) : Math.floor(shiftedCoords.length/2);
                     }
@@ -1025,33 +1014,9 @@
 
                   if (geomGroup.type === "linegons") {
 
-                    // LINEGONS ONLY: create new geoJSON features with sub-geometries for individual line segment animation
-                    let gjA,gjB;
-                    if (d.geometry.type === "MultiLineString") {
-                      let coordGrpA = [],
-                          coordGrpB = [],
-                          midPtFound = false;
-                      shifted.geometry.coordinates.forEach((arr,i) => {
-                        console.log("*******",index1.outer)
-                        if (i === index1.outer) {
-                          console.log("******",index1.inner)
-                          coordGrpA.push(arr.slice(0,index1.inner+1)),
-                          coordGrpB.push(arr.slice(index1).reverse()),
-                          midPtFound = true;
-                        } else if (midPtFound) {
-                          coordGrpB.push(arr.reverse());
-                        } else {
-                          coordGrpA.push(arr);
-                        }
-                      })
-                      gjA = turf.multiLineString(coordGrpA),
-                      gjB = turf.multiLineString(coordGrpB); // note reverse made above
-                    } else {
-                      gjA = turf.lineString(shifted.geometry.coordinates.slice(0,index1+1)),
+                    // create new geoJSON features with sub-geometries for individual line segment animation
+                    let gjA = turf.lineString(shifted.geometry.coordinates.slice(0,index1+1)),
                       gjB = turf.lineString(shifted.geometry.coordinates.slice(index1).reverse());
-                    }
-
-                    // let onRouteTrigger = turf.nearestPointOnLine(route,i0,{units:"miles"});
 
                     // return one trigger pt representing both i0->i1 segments
                     triggerPts.push(turf.point(i0.geometry.coordinates,{
@@ -1059,12 +1024,11 @@
                       id: origId + "-1",
                       i1: i1,
                       triggers: "linegon",
+                      baseT: turf.length(turf.lineSlice(i0,i1,route),{units:"miles"}),
                       multiTrigger: true
                     }));
 
                     // save properties to repspective GJs and push to outer function's replaceGJs to ensure alignment between triggering and triggered
-                    let tDistance = turf.length(turf.lineSlice(i0,i1,route),{units:"miles"});
-
                     let gjs = [gjA,gjB];
                     gjs.forEach((gj,i) => {
 
@@ -1082,11 +1046,14 @@
                     })
 
                   } else { // polygons
+
                     triggerPts.push(turf.point(i0.geometry.coordinates,{
                       id: origId,
                       i1: i1,
-                      triggers: "polygon"
+                      triggers: "polygon",
+                      baseT: turf.length(turf.lineSlice(i0,i1,route),{units:"miles"}),
                     }));
+
                   }
 
                   function getNestedIndex(multiGeom,pt) {
@@ -1110,6 +1077,7 @@
 
                   // get intersection0 -> intersection1 pairs (earlier i0/i1 basically scrapped)
 
+// tDistance on GJS replacing with baseT on triggerPt
                   // if no actual route intersect pts, use every other buffer intersect pt starting @ index 0 as a new i0
                   let intersectPts = (bufferIntersectPts) ? bufferIntersectPts.filter((d,i) => { return i % 2 === 0; }) : routeIntersectPts;
 
@@ -3426,3 +3394,20 @@
 
 // ** MAKE SURE BIGGEST POLYGONS ON BOTTOM ** so they don't obscure others
 // see screenshots for many more issues to fix
+
+// zIndexes will become relevant. from bottom to top:
+  // basemap
+  // polygons large->small (slightly transparent)
+  // linegons
+  // regLines
+  // route
+  // headlights
+  // train
+  // enrichPts
+  // dashboard
+  // tooltips
+
+// polygon opacity also based on level
+  // lines too?
+// enrichPts smaller
+// get rid of trailing spaces on certain enrichPt names
