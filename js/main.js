@@ -887,10 +887,10 @@
         triggerPtPool = topojson.feature(triggerPtPool,triggerPtPool.objects.triggerPts).features;
 
         let prefixes = {
-          pts: "pt",
+          points: "pt",
           regLines: "ln",
           linegons: "ln",
-          polys: "py"
+          polygons: "py"
         };
 
         let replaceGJs = [];  // should be lines/linegons only
@@ -920,22 +920,14 @@
 
               if (geomGroup.type === "points") {
 
-                // triggerPts = featurePool.filter(d => {
-                //   // COMBAK pts already passed through this filter?
-                //   return turf.booleanPointInPolygon(d,buffer);  // filter out of bounds
-                // })
-
                 triggerPts = featurePool.sort((a,b) => {
                   return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
                 }).map(d => {
                   return turf.point(d.geometry.coordinates,{
                     id: origId,
                     triggers: "point"
-                  }); // ...d.properties}
+                  });
                 });
-
-                // console.log("triggerPts",triggerPts)
-                // COMBAK FIXME why always empty?
 
               } else {
 
@@ -951,17 +943,23 @@
 
                   // store first encountered as i0, last encountered as i1 (i.e. if route enters/exits a geometry 3 different times, save only first enter and last exit)
                   // for polygons and linegons: actual route intersects should come in even numbers (2+ or none at all)
-                  // if only 1 actual route intersect (regardless of geom type), identifical i1 will be accounted for later in script
+                  // if only 1 actual route intersect (regardless of geom type), repetitive/identifical i1 assigned below will be accounted for later in script
                   i0 = routeIntersectPts[0],
                   i1 = routeIntersectPts[routeIntersectPts.length-1];
 
                 } else {
 
                   bufferIntersectPts = featurePool.filter(d => {
-                    return d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
+                    return d.properties.buffer_int // && turf.booleanPointInPolygon(d,buffer);
                   }).sort((a,b) => {
                     return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
                   })
+
+                  if (bufferIntersectPts.length) {
+                    console.log("bufferIntPts found",bufferIntersectPts.slice())
+                  }
+                  // with two conditions, a small handful of buffer_int: true pts
+                  // with just one:
 
                   // if still no intersectPts, get them manually
                   if (isEmpty(bufferIntersectPts)) {
@@ -969,14 +967,17 @@
                     bufferIntersectPts = turf.lineIntersect(d.geometry,bufferLines).features;
                   }
 
-                  // save middle-ish intersect pt as i0
-                  i0 = bufferIntersectPts[Math.floor(bufferIntersectPts.length/2)];
+                  // // save middle-ish intersect pt as i0
+                  // i0 = bufferIntersectPts[Math.floor(bufferIntersectPts.length/2)];
+                  // save *first* intersect pt as i0
+                  i0 = bufferIntersectPts[0];
 
                 }
 
                 // LINEGONS and POLYGONS ONLY: shift enrich datum geometry to get i1
                 if (["linegons","polygons"].includes(geomGroup.type)) {
 
+                  // find index of i0 (or closest to it) on d
                   let nearest = turf.nearestPointOnLine(d,i0,{units:"miles"}),
                        index0 = nearest.properties.index;
 
@@ -3402,10 +3403,6 @@
 
 // orig options: sort matching by distance
 
-// d3.select("#map"), adjust neg margins?
-// close #about on trainmove
-// open #dash on trainmove
-
 // wishlist features:
 // "choose random" @ initial prompt
 // choose cities by location (clicking on stn pt within map)
@@ -3426,3 +3423,6 @@
         // stardust.js?
         // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
         // https://github.com/kafunk/eco-rails/issues/1
+
+// ** MAKE SURE BIGGEST POLYGONS ON BOTTOM ** so they don't obscure others
+// see screenshots for many more issues to fix
