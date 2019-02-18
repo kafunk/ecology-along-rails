@@ -923,14 +923,6 @@
                   baseT: baseT
                 }));
 
-                // triggerPts = featurePool.map(d => {
-                //   return turf.point(d.geometry.coordinates,{
-                //     id: origId,
-                //     triggers: "point",
-                //     baseT: dT  // default, same for all
-                //   })
-                // })
-
               } else {
 
                 let i0, i1,
@@ -1152,23 +1144,6 @@
                     segmentFlag: true
                   }));
 
-                  // // get intersection0 -> intersection1 pairs (earlier i0/i1 basically scrapped)
-
-                  // // if no actual route intersect pts, use every other buffer intersect pt starting @ index 0 as a new i0
-                  // let intersectPts = (bufferIntersectPts) ? bufferIntersectPts.filter((d,i) => { return i % 2 === 0; }) : routeIntersectPts;
-
-                  // // iterate through remaining intersect points, creating i0,i1 pairs for every segment; that is, while intersect pts remaining, last ending becomes new beginning in next i0,i1 pair
-                  // let prevEnd;
-                  // while (intersectPts.length > 1) {
-                  //   let i0 = prevEnd || Object.assign({},intersectPts.shift()),
-                  //       i1 = Object.assign({},intersectPts.shift());
-                  //   triggerPts.push(turf.point(i0.geometry.coordinates,{
-                  //     i1: turf.point(i1.geometry.coordinates), // secures current i1
-                  //     baseT: Math.max(1200,turf.length(turf.lineSlice(i0,i1,route),{units:"miles"}))
-                  //   }));
-                  //   prevEnd = i1;
-                  // }
-
                   // save properties to respective GJs and push to outer function's replaceGJs to ensure alignment between triggering and triggered
                   triggerPts.forEach((triggerPt,i) => {
 
@@ -1212,13 +1187,6 @@
 
                   })
 
-                  // // after all (2-3) GJs made, return only necessary pts as multitriggering representatives
-                  // if (i0First.geometry.coordinates === i0Last.geometry.coordinates) {
-                  //   triggerPts = [triggerPts[0]];
-                  // } else {
-                  //   triggerPts = [triggerPts[0],triggerPts[2]] // segment trigger omitted
-                  // }
-
                 }
 
               }
@@ -1254,36 +1222,6 @@
               }
               return turf.point(coords[index]);
             }
-
-            // function getTBase() {
-            //   getTDistance()
-            //   getTArea()
-            //   // for polygons and linegons with 0 route intersections (or somehow only 1): calc t dynamically based on area (?)
-            //   function getTArea() {}
-            //   // function getTDistance(segmentDistance) {
-            //   //   if (segmentDistance) {
-            //   //     // where multiple route intersect points, return tDistance based on length of route itself from i0 to i1 (such that t can be calculated using tpm global)
-            //   //     return segmentDistance; // i.e., along route
-            //   //   } else {
-            //   //     // otherwise, return tDistance based on enrichLine distance (should only be used for i0First => lineStart and i0Last => lineEnd)
-            //   //     return turf.length(gj,{units:"miles"})
-            //   //   }
-            //   // }
-            // }
-
-            // function getRefreshed(i0,i1) {}
-
-            // function splitLineFeatures() {}
-
-            // function getSegmentDistance(triggerPts) {
-            //   let i0First = triggerPts[0],
-            //        i0Last = triggerPts[triggerPts.length-1],
-            //            gj = turf.lineSlice(i0First,i0Last,route),
-            //            // gj = turf.lineSlice(turf.nearestPointOnLine(route,i0First,{units:"miles"}),turf.nearestPointOnLine(route,i0Last,{units:"miles"}),route),
-            //     totalDistance = turf.length(gj,{units:"miles"}),
-            //     segmentNum = triggerPts.length - 2;
-            //   return totalDistance/segmentNum;
-            // }
 
           });
 
@@ -1346,7 +1284,8 @@
       let oceanIds = [...new Set(lines.filter(d => { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "II" }).map(d => { return d.properties.OCEAN_ID }))],
           baseHues = chroma.scale('Spectral').colors(oceanIds.length);
 
-      console.log(baseHues)
+      console.log(baseHues.slice())
+
       // oceanIds.forEach((oceanId,i) => {
       //   colorAssignments[oceanId] = {
       //     "I": baseHues.shift()
@@ -1479,8 +1418,6 @@
           .style("opacity", 0.6)
 
       // let done = performance.now();
-
-      console.log(baseHues.slice())
 
       function getColor(level,oceanId) { // ,subId) {
         if (!colorAssignments[oceanId]) {
@@ -2013,9 +1950,6 @@
 
 //// PROJECTIONS & PATHS
 
-  // function getScaleAtZoomLevel(zoomLevel, tileSize = 256) {
-  //   return tileSize * 0.5 / Math.PI * Math.pow(2, zoomLevel);
-  // }
 
 //// GEOJSON + TOPOJSON HELPERS
 
@@ -2433,14 +2367,6 @@
 
             selected.push(d)
 
-            // let toRemove = allData.filter(f => f.properties.id === d.properties.id)
-            //
-            // quadtree.removeAll(toRemove) // remove all other triggerPts that reference/represent the same feature
-            //
-            // toRemove.forEach(d => {
-            //   g.selectAll(".quadtree-data").selectAll(`.quad-datum.${d.properties.id}`).classed("quad-datum--removed",true)
-            // })
-
           }
 
         } while (node = node.next);
@@ -2640,18 +2566,6 @@
 
       // upon train arrival, schedule fade/remove of headlights + each extentVis node
       dispatch.on("arrive", () => {
-        // extentVis.transition().duration(tPause)
-        //          .style("opacity",0)
-        //          .on("end", () => {
-        //            extentVis.classed("none",true)
-        //            extentVis.remove()
-        //          })
-        // rhombusVis.transition().duration(tPause)
-        //           .style("opacity",0)
-        //           .on("end", () => {
-        //             rhombusVis.classed("none",true)
-        //             rhombusVis.remove()
-        //           })
         headlights.transition().duration(tPause)
                   .style("opacity",0)
                   .on("end", () => {
@@ -2736,18 +2650,6 @@
 
       // adjust extent pts accordingly // DEFINITELY NOT EXACT
       let rotatedExtent = extent.map(d => { return [d[0]+deltaX,d[1]+deltaY] });
-
-      // let point0 = pt0,
-      //     point1 = pt1;
-      // pivot = midPt;
-      //
-      // // rotate point around pivot
-      // let rotatedPt0 = rotatePt(point0,angle,pivot),
-      //     rotatedPt1 = rotatePt(point1,angle,pivot);
-      //
-      // let rotatedExtent2 = [rotatedPt0,rotatedPt1]
-      //
-      // return rotatedExtent2;
 
       return rotatedExtent;
 
@@ -2892,8 +2794,6 @@
 
   function encountered(baseT,segmentFlag = false) {
 
-    // if (segmentFlag) { console.log("SEGMENT") }
-
     let t = Math.max(minT,baseT * tpm);
       // baseT is # en route miles from i0 to i1, OR
       // # miles from snapped route i0 to off route i1
@@ -2915,52 +2815,13 @@
     encountered.classed("waiting",false);
 
     // DETERMINE TYPE, CALCULATE T, VISUALIZE
-    if (id.startsWith('ln')) {  // line feature
-      // let t //, tFactor = tpm, tFactor1 = tpm //, vectorAdjust = 0.5 // ??
-      // where possible, t calculated based on route distance (travel time) from triggerPt => triggerPt
-      if (encountered1) {
-        // // even if multiple segments starting from i0 (linegons), keep t equal for both lines (so they arrive together at i1)
-        // if (encountered.vectorFlag) {
-        //   tFactor *= vectorAdjust;
-        // } else if (encountered1.vectorFlag) {
-        //   tFactor1 *= vectorAdjust;
-        // }
-        // for linegons with same pair of route-intersecting start/end pts, these should work out to be the same
-        // t0 = baseT * tFactor, //encountered.datum().properties.tDistance * tFactor,
-        // t1 = baseT * tFactor1 // encountered1.datum().properties.tDistance * tFactor1,
-        // t = [t0,t1],
-        encountered = [encountered,encountered1];
-      } // else {
-        // if (encountered.vectorFlag) {
-        //   tFactor *= vectorAdjust;
-        // }
-        // if (encountered.node()) {
-        //   t = baseT * tFactor; // encountered.datum().properties.tDistance * tFactor;
-        // } else {
-        //   // console.log("error averted?")
-        // }
-      // }
-      // if (t === 0) {
-      //   console.log("t === 0")
-      //   console.log(encountered[0].node()) //.getTotalLength())
-      //   console.log(encountered.node())
-      //   t = Math.pow(encountered.node().getTotalLength(),2);
-      // } else if (Array.isArray(t) && t.includes(0)) {
-      //   // console.log("initial t includes(0)")
-      //   t[0] = Math.pow(encountered[0].node().getTotalLength(),2)
-      //   t[1] = Math.pow(encountered[1].node().getTotalLength(),2)
-      //   // console.log("new t",t)
-      // }
+      // currently separated for geom-specific styling and transitions, but may be no need..
+    if (id.startsWith('ln')) {
+      if (encountered1) { encountered = [encountered,encountered1]; }
       reveal(encountered,"line",t)
-    } else if (id.startsWith('py')) { // polygon feature
-      // if no i1, calculate t dynamically based on polygon area
-      // otherwise, calc t based on time train will need to travel from i0 to i1 (use tpm global) // COMBAK store this as tDistance within triggerPt?
-      // let sqPixels = projPath.area(encountered.datum());
-      // let t = Math.min(24000,dT * sqPixels / 2);
+    } else if (id.startsWith('py')) {
       reveal(encountered,"polygon",t)
     } else {  // point feature
-      // let tFactor = tpm/2,
-      //   t = Math.pow(encountered.datum().properties.tDistance,2) * tFactor;
       reveal(encountered,"point",t)
     }
 
@@ -3052,8 +2913,6 @@
         output += ` ${encountered.property("category")}`
       }
       console.log(`now passing ${output}`);
-    } else {
-      // console.log("error averted this time?")
     }
 
     // future
@@ -3351,14 +3210,6 @@
   //   // var stored = localStorage.getItem(val);
   //   // return stored;
   // }
-
-  // function perfCheck(fx,params) {
-  //   let t0 = performance.now();
-  //   fx(params)
-  //   let t1 = performance.now();
-  //   let elapsed = t1 - t0;
-  //   console.log(`${fx}-ing to ${params} took ${elapsed} milliseconds`)
-  // }
   function isEmpty(obj) {
     for (var key in obj) {
       if (obj.hasOwnProperty(key)) {
@@ -3438,7 +3289,6 @@
         // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
         // https://github.com/kafunk/eco-rails/issues/1
 
-// ** MAKE SURE BIGGEST POLYGONS ON BOTTOM ** so they don't obscure others
 // see screenshots for many more issues to fix
 
 // zIndexes will become relevant. from bottom to top:
