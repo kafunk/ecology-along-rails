@@ -31,8 +31,7 @@
 
     </header>
 
-      <!-- grows vertically in the middle -->
-
+    <!-- grows vertically in the middle -->
     <main id="main" class="flex-child flex-child--grow bg-main">
 
       <!-- inner horizontal wrapper (all except modal/veil)-->
@@ -53,39 +52,37 @@
                 <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl"> <!-- elements individually classed as z4 to prevent blocking access to map itself -->
 
                   <!-- top left // Custom Data UI Elements -->
-                  <!-- <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx3 my6 txt-xs txt-s-mm txt-m-mxl z4 none'>
-                    <button id="replay" class='btn round bg-lighten75 replay mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl'><del>Replay</del></button>
+                  <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z4 none'>
+                    <button disabled id="replay" class='btn round bg-lighten75 replay mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl'><del>Replay</del></button>
                     <!-- keep route choice, reset counter, reset data reveal, begin again -->
-                    <!-- <button id="play-pause" class='btn round bg-lighten75 play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl'><del>Play/Pause</del></button> -->
-                      <!-- stop/init counter without data resets -->
-                    <!-- <button id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl' onclick="selectNew()"><del>Select New?</del></button> -->
-                      <!-- prompt user: do you wish to select a new route? + follow through -->
-                  <!-- </div> -->
+                    <button disabled id="play-pause" class='btn round bg-lighten75 play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl'><del>Play/Pause</del></button>
+                    <!-- stop/init counter without data resets -->
+                    <button id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl' onclick="selectNew()">Select New Route</button>
+                    <!-- prompt user: do you wish to select a new route? + follow through -->
+                  </div>
 
                   <!-- top right // About/Info icon on small screens -->
-                  <div id="info" class="absolute top right mr-neg6 z4 none-mm">
-                    <label for="toggle-about">
-                      <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round' onclick="oOpen('modal-plus','modal-about')">
-                        <svg class='icon h24 w24 h30-mm w30-mm h36-mxl 236-mxl'><use xlink:href='#icon-info'/></svg>
-                      </button>
-                    </label>
+                  <div id="info" class="absolute top right mx-neg6 mt-neg1 py3 py6-mm px3 px6-mm z4 none-ml">
+                    <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round mt-neg3-mm mr-neg3-mm' onclick="toggleModal('modal-about')">
+                      <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
+                    </button>
                   </div>
 
                   <!-- bottom right // Basic/Expected Map Elements -->
-                  <!-- <div id="attribution" class='absolute bottom right mt-neg18 color-lighten50 bg-darken25 px6 round-tl round-bl px18-mm txt-xs txt-s-mxl txt-shadow-lighten10 z4'> -->
-                    <!-- mx3 my3 mx6-mxl my6-mxl px3 px6-ml py3-ml -->
-                    <!-- Attribution * NOW POSITIONED RELATIVE TO DASH PANEL -->
-                    <!-- <span> Map data from &ltsource&gt |</span>
-                    <span>| Visualized with D3.js |</span>
-                    <span>| Routing via to Rome2Rio  </span>
+                  <!-- <div id="attribution" class='absolute bottom right mt-neg18 color-lighten50 bg-darken50 px6 round-tl round-bl px12-mm px18-mxl mr-neg3-mm mr-neg6-mxl txt-xs txt-s-mxl txt-shadow-lighten10 z4'> -->
+                    <!-- Attribution * ALSO POSITIONED RELATIVE TO DASH PANEL * should be visualized here only when dash hidden -->
+                    <!-- <span>Visualized with D3.js</span>
+                    <span class="px3">||</span>
+                    <span>Routing via to Rome2Rio</span>
                   </div> -->
 
-                  <!-- bottom left // Zoom buttons, maybe -->
-                  <!-- <div id="zoom" class='absolute bottom top-mm right-mm mx6 my6 txt-s txt-m-ml z4'>
-                    <button class="btn bg-lighten75 color-darken50 bg-darken25-on-hover bg-darken75-on-active round px6 py0 px12-mm pb3-mm">
-                      <span>+</span>
-                      <span class="px3 px6-mm">|</span>
-                      <span>=</span>
+                  <!-- bottom left // Zoom buttons, maybe, eventually -->
+                  <!-- <div id="zoom" class="absolute bottom right h18 h24-mm flex-parent-inline mx6 mb24 z4">
+                    <button disabled class="btn btn--disabled btn--pill btn--pill-hl bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round px3 px6-mm py0">
+                      <svg class='icon link color-darken50'><use xlink:href='#icon-plus'></use></svg>
+                    </button>
+                    <button disabled class="btn btn--disabled btn--pill btn--pill-hr bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round px3 px6-mm py0 py3-mm mr3">
+                      <svg class='icon link color-darken50'><use xlink:href='#icon-minus'></use></svg>
                     </button>
                   </div> -->
 
@@ -101,7 +98,7 @@
             </div>
 
             <!-- dash pane -->
-            <div id="dash-plus" class="absolute bottom w-full none"> <!-- ** remove 'absolute' to keep separate from map; engage earlier for overlay ** --> <!-- absolute-mxl bottom-mxl -->
+            <div id="dash-plus" class="absolute bottom w-full"> <!-- ** remove 'absolute' to keep separate from map; engage earlier for overlay ** --> <!-- absolute-mxl bottom-mxl -->
 
               <!-- dash toggles and content group -->
               <div class="flex-parent flex-parent--column flex-parent--stretch-cross flex-parent--center-main">
@@ -111,28 +108,23 @@
                   <div class="flex-parent flex-parent--center-cross flex-parent--center-main relative">
 
                     <!-- dash expand triggers -->
-                    <label id="dash-expand" for="toggle-dash" class="flex-child h24 z3 none">
+                    <label id="dash-expand" class="flex-child h24 z3">
                       <!-- dash expand triangle--u -->
                       <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 color-darken25-on-hover color-darken75-on-active round-t-full h18 w-full' onclick="expand('dash','up')">
-                        <span id="dash-up" class='icon triangle-l triangle-l--u mx-auto mt-neg18 mt-neg6-mxl'>
-                          <!-- <svg class='icon absolute bg-transparent color-darken75 h36 w36 ml-neg18 pb12 z5'><use xlink:href='#icon-info'/></svg> -->
-                        </span>
+                        <span id="dash-up" class='icon triangle-l triangle-l--u mx-auto mt-neg18 mt-neg6-mxl'></span>
                       </button>
                     </label>
 
-                    <label id="dash-collapse" for="toggle-dash" class="flex-child h12 z3 opacity0">
+                    <label id="dash-collapse" class="flex-child h12 z3 none">
                       <!-- dash collapse triangle--d -->
                       <button class='absolute left right btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround w-full h18' onclick="collapse('dash','down')">
-                        <span class='icon triangle-l triangle-l--d mx-auto'></span>
+                        <span class='icon triangle-l triangle-l--d mx-auto mt-neg6 mt6-mm'></span>
                       </button>
                     </label>
 
-                    <div id="attribution" class='absolute right mt-neg6 color-lighten50 bg-darken50 px6 round-tl round-bl px18-mm txt-xs txt-s-mxl txt-shadow-lighten10 z4'> <!-- to highlight within dash toggle: mt3-ml -->
-                        <!-- mx3 my3 mx6-mxl my6-mxl px3 px6-ml py3-ml
-                      <!-- Attribution -->
-                      <!-- <span> Map data from &ltsource&gt |</span> -->
+                    <div id="attribution" class='absolute right color-lighten50 bg-darken50 round-tl round-bl px6 px12-mm px18-mxl mt-neg6 mt-neg24 txt-xs txt-s-mxl txt-shadow-lighten10 z4'> <!-- double mt-neg is intentional (mt-neg6 is minimum when expanded, mt-neg24 minimum when collapsed). to highlight within dash toggle: mt3-ml -->
                       <span>Visualized with D3.js</span>
-                      <span class="px3">||</span>
+                      <span class="px3-mm">||</span>
                       <span>Routing via to Rome2Rio</span>
                     </div>
 
@@ -147,35 +139,34 @@
                   <div id="dash-wrapper" class='flex-parent flex-parent--stretch-cross'>
 
                     <!-- dash content group -->
-                    <div id="dash-content" class='flex-child bg-lighten25 round-mm shadow-darken25-mm w-full mx12-mm mx0-mxl my0-mxl'> <!--mx0-ml'-->
+                    <div id="dash-content" class='flex-child bg-lighten25 round-mm shadow-darken25-mm w-full mx6-mm bg-transparent'>
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main px6 py6 px12-mxl py12-mxl'>
+                      <div class='flex-parent flex-parent--column flex-parent--center-main px6-mm py12-mm'>
 
                         <!-- Dash--Header -->
-                        <!-- <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl round-tr hmin18 pb6 pt12">
-                          <h3 class='txt-h4 txt-bold txt-em'>Dashboard</h3>
-                        </div> -->
+                        <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl-mm round-tr-mm hmin18 pb3 pt6">
+                          <h3 class='txt-h4 txt-bold txt-em pt3'>Dashboard</h3>
+                        </div>
 
                         <!-- Dash--Main -->
-                        <div class="flex-child flex-child-grow bg-lighten50 txt-xs txt-s-mm txt-m-ml round-bl round-br">
+                        <div class="flex-child flex-child-grow bg-lighten50 txt-xs txt-s-mm txt-m-ml round-bl-mm round-br-mm">
 
                           <!-- main content inner wrapper -->
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid'> <!--px12 py6 py12-mm py12-ml-->
 
                             <!-- Narration -->
-                            <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--4-ml bg-lighten25 px12 pl12 pr6-ml pt12 pb6 py12-ml">
+                            <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--4-ml bg-lighten25 px6 pt6 pb3 px12-mm pt12-mm pb6-mm pl12-mm pr6-ml py12-ml">
 
                               <div class="flex-parent flex-parent--column round flex-parent--center-main h-full">
 
                                 <!-- header -->
-                                <div id="narration-header" class="flex-child flex-child--no-shrink py6 bg-darken25 color-lighten75 round-tl round-tr">
-                                  <h5 class="txt-fancy txt-em align-center">You are currently:</h5>
+                                <div id="narration-header" class="flex-child flex-child-no-shrink bg-darken25 align-center round-tl round-tr color-lighten75 py3">
+                                  <h5 class='txt-h6 txt-fancy txt-em txt-bold'>You are currently:</h5>
                                 </div>
 
-                                <div id="narration-txt" class="flex-child flex-child--grow px12 bg-lighten50">
-                                  <div class="flex-parent flex-parent--row-reverse
-                                  flex-parent--center-cross flex-parent--column-reverse-ml">
+                                <div id="narration-txt" class="flex-child flex-child--grow px12 bg-lighten50 flex-parent-ml flex-parent--center-cross flex-parent--center-main">
+                                  <div class="flex-child flex-parent flex-parent--row-reverse flex-parent--center-cross flex-parent--column-reverse-ml">
                                     <div id="p3" class="flex-child flex-child--grow">
                                       <p>Traversing special places</p>
                                     </div>
@@ -193,7 +184,7 @@
                             </div> <!-- end of narration -->
 
                             <!-- Compass + -->
-                            <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--4-ml bg-lighten25 pl12 pr6 pb12 pt6 px6-ml py12-ml">
+                            <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--4-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml">
 
                               <div class="flex-parent--column h-full flex-parent round flex-parent--end-main">
 
@@ -227,13 +218,13 @@
                             </div> <!-- end of compass+ -->
 
                             <!-- Legend-Log -->
-                            <div id="legend-log" class="flex-child flex-child--grow bg-lighten25 col col--7 col--4-ml pl6 pr12 pt6 pb12 py12-ml">
+                            <div id="legend-log" class="flex-child flex-child--grow bg-lighten25 col col--7 col--4-ml pl3 pr6 pb6 pt3 pl6-mm pr12-mm pt6-mm pb12-mm py12-ml">
 
                               <div class="flex-parent flex-parent--column round flex-parent--space-between-main h-full flex-parent--stretch-cross">
 
                                 <!-- header -->
-                                <div id="legend-log-header" class="flex-child flex-child--no-shrink hmin12 bg-darken25 py3 color-lighten75 round-tl round-tr">
-                                  <h4 class="align-center txt-fancy txt-em">Journey Log</h4>
+                                <div id="legend-log-header" class="flex-child flex-child-no-shrink bg-darken25 align-center round-tl round-tr color-lighten75 py3">
+                                  <h5 class='txt-h6 txt-fancy txt-em txt-bold'>Journey Log</h5>
                                 </div>
 
                                 <!-- main content / dynamically populated legend items  -->
@@ -286,7 +277,7 @@
           <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross"><!--  flex-parent--space-between-main, stretch-cross?
 
             <!-- about/sources pane -->
-            <div id="about-plus" class="flex-child"> <!-- relative? scroll-hidden? --> <!-- w-full relative mb-neg6 mb0-ml">
+            <div id="about-plus" class="flex-child bg-lighten75-mxl"> <!-- relative? scroll-hidden? --> <!-- w-full relative mb-neg6 mb0-ml">
 
               <!-- about toggles and content group -->
               <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross">
@@ -297,7 +288,7 @@
                   <div class="flex-parent flex-parent--center-cross flex-parent--center-main">
 
                     <!-- about expand triggers -->
-                    <label id="about-expand" for="toggle-about" class="flex-child h24 w24-mxl z3 none">
+                    <label id="about-expand" class="flex-child h24 w24-mxl z3 none">
 
                       <!-- about expand triangle--u -->
                       <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 color-darken25-on-hover color-darken75-on-active unround h24 w-full none-mxl' onclick="expand('about','up')"><!-- unround or round-t-full? border-t? -->
@@ -313,7 +304,7 @@
                     </label>
 
                     <!-- about collapse triggers -->
-                    <label id="about-collapse" for="toggle-about" class="flex-child h12 w6-mxl z3">
+                    <label id="about-collapse" class="flex-child h12 w6-mxl z3">
 
                       <!-- about collapse triangle--d -->
                       <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround w-full h18 none-mxl' onclick="collapse('about','down')">
@@ -331,7 +322,7 @@
 
                 </div>
 
-                <div id="about" class="flex-child">
+                <div id="about" class="flex-child wmax360-mxl">
 
                   <!-- about inner wrapper -->
                   <div id="about-wrapper" class='flex-parent flex-parent--column-mxl flex-parent--stretch-cross py12-mxl px12-mxl'>
@@ -343,8 +334,8 @@
                       <div class='flex-parent flex-parent--column flex-parent--center-main h-full-mxl px6 py6'>
 
                         <!-- About--Header -->
-                        <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl round-tr hmin18 pb6 pt12">
-                          <h3 class='txt-h4 txt-bold txt-em'>About This Map</h3>
+                        <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl round-tr hmin18 pb3 pt6">
+                          <h3 class='txt-h4 txt-bold txt-em pt3 pt0-mxl'>About This Map</h3>
                         </div>
 
                         <!-- About--Main -->
@@ -406,36 +397,36 @@
       </div> <!-- end of main-innerwrapper -->
 
       <!-- modal/veil/loader group -->
-      <div id="modal-plus" class="none">
+      <div id="modal-plus none">
 
         <div id="veil" class="fixed top bottom right left z4 opacity75 bg-darken25"></div>
 
-        <div id="modal" class="fixed top bottom left right flex-parent flex-parent--center-cross bg-lighten25 z5"> <!--flex-parent--center-main relative-->
+        <div id="modal-bg" class="fixed top bottom left right flex-parent flex-parent--center-cross bg-lighten25 z5"> <!--flex-parent--center-main relative-->
 
           <!-- modal content options -->
-          <div id="modal-content" class="flex-child flex-child--grow mx36 my36 round">
+          <div id="modal" class="flex-child flex-child--grow mx36 my36 round">
 
             <!-- inner modal wrapper -->
             <div class='flex-parent flex-parent--center-cross grid wmax600 mx-auto round relative'><!--flex-parent--stretch-cross flex-parent--space-between-main -->
 
               <!-- featured content // Modal About -->
-              <div id="modal-about" class='flex-child flex-child--grow col col--12 wmax600 shadow-darken75 round px12 py12 mx-auto bg-base none'>
+              <div id="modal-about" class='flex-child flex-child--grow col col--12 wmax600 shadow-darken75 round px12 py12 mx-auto bg-modal none'>
 
                 <!-- inner vertical wrapper -->
                 <div class='flex-parent flex-parent--column flex-parent--center-main'>
 
                   <!-- About--Header -->
                   <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl round-tr hmin18 pb6 pt12">
-                    <h3 class='txt-h4 txt-h3-ml txt-bold txt-em'>About This Map</h3>
+                    <h3 class='txt-h4 txt-bold txt-em'>About This Map</h3>
                   </div>
 
                   <!-- About--Main -->
-                  <div class="flex-child flex-child-grow bg-lighten75 txt-m txt-l-ml round-bl round-br scroll-auto">
+                  <div class="flex-child flex-child-grow bg-lighten75 txt-m round-bl round-br scroll-auto">
                     <!-- inner content wrapper -->
                     <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross grid px24 py18 px36-mm py24-mm">
                       <!-- main about text, orientation, etc -->
                       <div class='flex-child col col--offl2 col--10 align-r py3'>
-                        <h4 class="txt-h4 txt-h3-ml txt-bold py3">Some words</h4>
+                        <h4 class="txt-h4 txt-bold py3">Some words</h4>
                         <p class="py3">This map visualizes ~~~~~~.</p>
                         <p class="py3">Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam.</p>
                       </div>
@@ -447,7 +438,7 @@
                       </div>
                       <!-- data sources, sub-about, furthermore -->
                       <div class='flex-child col col--offr2 col--10 py3'>
-                        <h4 class="txt-h4 txt-h3-ml txt-bold py3">Data sources</h4>
+                        <h4 class="txt-h4 txt-bold py3">Data sources</h4>
                         <ul class="py3">
                           <li class="txt-li">
                             <div class="triangle triangle--r color-symbol inline-block mb-neg2"></div>
@@ -471,7 +462,7 @@
               </div>
 
               <!-- GET START/END FORM -->
-              <form id="getInitOptions" class="flex-child flex-child--grow col col--12 wmax600 shadow-darken75 round px12 py12 mx-auto bg-base">
+              <form id="get-options" class="flex-child flex-child--grow col col--12 wmax600 shadow-darken75 round px12 py12 mx-auto bg-modal">
                 <div class="flex-parent flex-parent--center-cross grid bg-lighten50">
                   <!-- Form Header-->
                   <legend class="flex-child col col--12 col--6-mm col--5-mxl my24 align-center px24 px12-ml color-darken75">
@@ -533,8 +524,8 @@
               </form>
 
               <!-- modal close button -->
-              <label id="modal-close" for="toggle-modal">
-                <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active px0 py0 mt-neg12 mr-neg12 mt-neg18-mm mr-neg18-mm' onclick="xClose('modal-plus')">
+              <label id="modal-close">
+                <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active px0 py0 mt-neg12 mr-neg12 mt-neg18-mm mr-neg18-mm' onclick="toggleModal()">
                   <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-close'/></svg>
                 </button>
               </label>
@@ -573,7 +564,7 @@
         </div>
         <!-- social media -->
         <div class="flex-child col col--5">
-          <div class="flex-parent flex-parent--end-main flex-parent--center-cross">
+          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr-neg3">
             <a target="_blank" href="mailto:kafunk@gmail.com">
               <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="email"><use xlink:href='#icon-mail'/></svg>
             </a>

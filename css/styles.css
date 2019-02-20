@@ -16,8 +16,8 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 /* #aside, #about-toggles, #about-expand, #about-collapse, #about, #about-wrapper, #about-content, #dashboard, #dash-toggles, #dash-wrapper, #dash-content, #modal-plus, #modal, #veil, #modal-about { transition: 0.6s all; } */
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
-#veil,#modal { pointer-events: none; }
-#getInitOptions {pointer-events: all; }
+#veil,#modal-bg { pointer-events: none; }
+#modal-about,#get-options,#modal-close { pointer-events: all; }
 
 #map {  /* i.e. .svg-container */
   top:0;
@@ -35,15 +35,21 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 
 /* CSS VARIBLES */
 :root {
-  --bg-main: slategray;
+  --bg-main: #999fad;
+  --bg-dark1: #45516a;
+  --bg-dark2: #472e37;
+  --bg-accent1: #dbd99f;
+  --bg-accent2: #5d7876;
 }
+
 .bg-base { background: #2A4C48; } /* #dbd99f; } */
 /* .bg-main {} */
-.bg-map { background: var(--bg-main); }
-.bg-section { background: var(--bg-main); }
-.bg-aside { background: var(--bg-main); }
-.bg-accent1 { background: #dbd99f; }
-.bg-accent2 { background: #5d7876; }
+.bg-map { background: var(--bg-dark1); }
+.bg-section { background: var(--bg-dark1); }
+.bg-aside { background: var(--bg-dark1); }
+.bg-modal { background: #adbab8; }
+.bg-accent1 { background: var(--bg-accent1); }
+.bg-accent2 { background: var(--bg-accent2); }
 .txt-fancy { font-family: 'Raleway Dots', cursive; }
 .color-symbol { color: #2A4C48; }
 
@@ -54,7 +60,7 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   position: fixed; bottom: -600px; transition: 0.6s all;
 }
 .disappear-right {
-  position: fixed; right: -960px; transition: 0.8s all;
+  position: fixed; right: -600px; transition: 0.6s all;
 }
 .disappear-left {
   position: fixed; left: -600px; transition: 0.6s all;
@@ -78,8 +84,8 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .legend-symbol { }
 .legend-text { }
 .hover { stroke: #d8ff00; stroke-width: 1; opacity: 1}  /* make more dynamic */
-.visible { }
-.hidden { }
+.visible { visibility: visible; }
+.hidden { visibility: hidden; }
 
 /* .svg-content {
   display: inline-block;
