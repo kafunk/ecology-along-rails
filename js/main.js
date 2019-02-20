@@ -29,27 +29,19 @@
 
 // ASSORTED VARIABLE DECLARATION
 
-  var tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower); eventually should be user-adjustable
-     minT = tpm * 10;
-       // dT = tpm * 10; // default
-  // add for easy access/adjustment: headlight radius, ?
-
-  // CLEAN UP, CLEAN UP..
-  var dash0 = "0.8 1.6",
-      dash1 = "0.1 0.4",
-      dash2 = "0.05 0.1",
-     rrDash = "0.1 0.2",
-     wDash1 = "32 4",
-     wDash2 = "64 4",
-     wDash3 = "128 4",
-     wDash4 = "256 4",
-   origDash = "4 8 16 8";
+  // FOR EASY ACCESS/ADJUSTMENT:
+  var arcSteps = 500 // how fine tuned SVG path animation
+    headlightRadius = 6,
+    tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower); eventually should be user-adjustable via slider
+    minT = tpm * 10,
+    tPause = 2400;  // standard delay time for certain transitions
 
   var padX = 0,
       padY = 0;
       // marginX = 0,
       // marginY = 0;
 
+  // SVG SIZING
   var initial = calcSize();
 
   // console.log("initial height",initial.height)
@@ -60,8 +52,7 @@
        scale0 = 0.9, // initial overview scale
        scale1 = 12;  // standard scale during animation (and maximum routeBounds)
 
-  var tPause = 2400;      // standard pause/transition time
-
+  // CURRENT STATE (NOT IDEAL)
   let experience = { initiated: false, animating: false };
 
 // SET UP SVG
@@ -152,9 +143,10 @@
 
 // COLORS
 
-  let riverBlues = d3.interpolate({colors: ["rosybrown","mediumaquamarine"]},{colors: ["cadetblue","darkcyan"]}),
+  // let riverBlues = d3.interpolate({colors: ["rosybrown","mediumaquamarine"]},{colors: ["cadetblue","darkcyan"]}),
        // riverBlue = riverBlues(Math.random());
-       riverBlue = "cyan";
+  const riverBlue = "cyan",
+         lakeBlue = "cadetblue";
 
   var linearGradientScale = d3.scaleLinear()
     .range(["#2c7bb6", "#00a6ca","#00ccbc","#90eb9d","#ffff8c",
@@ -213,12 +205,10 @@
   // rail
         railBase = d3.json("data/final/railways.json"),
         // passRail = d3.json("data/final/pass_railways.json"),
-        // railStns = d3.json("data/final/na_main_rr_stns.json"),
         railStns = d3.json("data/final/na_rr_stns.json"),
-       // prBuffers = d3.json("data/final/pass_rail_buffers.json");
   // merged enrich data
-     // enrichPolys = d3.json("data/final/enrich_polys.json"),
-     enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
+     enrichPolys = d3.json("data/final/enrich_polys.json"),
+     // enrichPolys = d3.json("data/final/enrich_polys_slimmed.json"),
      enrichLines = d3.json("data/final/enrich_lines.json"),
        enrichPts = d3.json("data/final/enrich_pts.json"),
   // quadtree ready
@@ -455,7 +445,7 @@
 
     function onBlur() {
 
-      let focused = event.target, // event undefined in Firefox
+      let focused = event.target, // COMBAK event undefined in Firefox
           blurred,
          received,
         selection;
@@ -553,7 +543,7 @@
 
       // if no rail-only routes found, reprompt user;
       // otherwise, proceed with drawing/zooming to chosen route
-      if (returned[0] == null) {  // TODO occasionally segments === null?
+      if (returned[0] == null) {
         d3.select("#submit-btn-load").classed("none",true);
         d3.select("#submit-btn-txt").classed("none",false);
         initPrompt()
@@ -624,77 +614,63 @@
   function parseReceived(raw) {
 
     let route = raw.routes[0],
-       places = raw.places,
-     agencies = raw.agencies,
-           gj = newFeatureCollection(route.segments),
-     mergedGJ = makeFeature(merge(gj.features),"LineString");
+     mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat());
 
     let thisRoute = {
-      from: places[0],
-      to: places[1],
+      from: raw.places[0],
+      to: raw.places[1],
       totalDistance: route.distance, // in miles,
       totalTime: route.totalTransitDuration, // not including transfers
       lineString: mergedGJ,
-      segments: [],
-      allStops: [],
-      overallBearing: turf.bearing([places[0].lng,places[0].lat],[places[1].lng,places[1].lat]),
-      gj: gj,
-      getArcPts(steps = 500) {
-        let breaks = getBreaks(thisRoute.lineString,thisRoute.totalDistance,steps);
-        return [...breaks].map(point => projection(point));
-      },
-      getMileMarkers() {
-        let miles = Math.floor(this.totalDistance);
-        return [...getBreaks(this.lineString,this.totalDistance,miles)].map(point => projection(point));
+      segments: route.segments.map(storeSegmentDetails),
+      allStops: raw.places,
+      overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
+      arcPts: getArcPts(arcSteps)
+    }
+
+    function getArcPts(steps = 500) {
+
+      let lineChunks = turf.lineChunk(mergedGJ,route.distance/steps,{units:"miles"}).features,
+         firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
+           lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
+           lastCoord = lastChunk[lastChunk.length-1];
+
+      let allCoords = firstCoords.concat([lastCoord]).map(d=>projection(turf.truncate(turf.point(d),{precision:5,mutate:true}).geometry.coordinates)),
+         getBearing = function(i) {
+          let prevPt = this.coordinates[i-1] || this.coordinates[i],
+              nextPt = this.coordinates[i+1] || this.coordinates[i];
+          return turf.bearing(projection.invert(prevPt),projection.invert(nextPt));
+           // FOR ELSEWHERE
+           // getOrientation(i) {}, // cardinal
+           // getElevation(i) {}
+         };
+
+      return {
+        coordinates: allCoords,
+        orient: getBearing // receives i as parameter (plus implicit this)
+      };
+
+    }
+
+    // likely will not need all this information
+    function storeSegmentDetails(segment) {
+
+      if (!segment) { // debugging, temporary
+        console.log("no route segments?")
+        console.log("route:",raw.routes[0])
       }
-    }
 
-    // is there a better way to do this? trying to allow for access to mileMarkers value as either property or method (recalculated on the fly)
-    thisRoute.mileMarkers = thisRoute.getMileMarkers(),
-         thisRoute.arcPts = thisRoute.getArcPts()
-
-    if (!route.segments) { // debugging, temporary
-      console.log("no route segments?")
-      console.log("route",route)
-    }
-    // ALL STOPS
-    route.segments.forEach(segment => {
-      let stops = [];
-      segment.stops.forEach(stop => {
-        stops.push(places[stop.place]);
-      });
-      thisRoute.allStops = thisRoute.allStops.concat(stops);
-    });
-
-    // PER RETURNED R2R (MEANINGFUL) SEGMENT
-    for (var i = 0; i < route.segments.length; i++) {
-      thisRoute.segments[i] = {
-          agency: agencies[route.segments[i].agencies[0].agency],
-        lineName: route.segments[i].agencies[0].lineNames[0],
-      lineString: polyline.toGeoJSON(route.segments[i].path),
-        distance: route.segments[i].distance,
-           stops: route.segments[i].stops,
-       departing: places[route.segments[i].depPlace],
-        arriving: places[route.segments[i].arrPlace]
+      return {
+          agency: raw.agencies[segment.agencies[0].agency],
+        lineName: segment.agencies[0].lineNames[0],
+      lineString: polyline.toGeoJSON(segment.path),
+        distance: segment.distance,
+           stops: segment.stops,
+       departing: raw.places[segment.depPlace],
+        arriving: raw.places[segment.arrPlace]
       }
-    }
 
-    // // ALL TICKS
-    // for (var i = 0; i < thisRoute.arcPts.length; i++) {
-    //   thisRoute.ticks[i] = {
-    //     point: thisRoute.arcPts[i],
-    //     // coords: projection.invert(thisRoute.arcPts[i]),
-    //     getPrevPt() { return thisRoute.arcPts[i-1] || this.point },
-    //     // getPrevCoords() { return projection.invert(this.getPrevPt()) },
-    //     getNextPt() { return thisRoute.arcPts[i+1] || this.point },
-    //     // getNextCoords() { return projection.invert(this.getNextPt()) },
-    //     // getBearing() {
-    //     //   return turf.bearing(this.getPrevCoords(),this.getNextCoords());
-    //     // },
-    //     // getOrientation() // cardinal
-    //     // getElevation()
-    //   }
-    // }
+    }
 
     return thisRoute;
 
@@ -703,8 +679,10 @@
   // Relate route waypts/nodes/links to spatially intersecting (given buffer) data for interesting and illuminating route experience
   function enrichRoute(chosen) {
 
-    // keeps radius consistent with filtered pool of enrichData
-    let bufferedRoute = turf.buffer(chosen.lineString, 0.5, {units: "degrees", steps: 12});
+    let headlightDegrees = 1.5; // was 0.5; play around with approximate conversion of degrees -> pixels given projPath? (some combo of projPath.measure() and projection.invert()?)
+
+    // keep radius consistent with filtered pool of enrichData
+    let bufferedRoute = turf.buffer(chosen.lineString, headlightDegrees, {units: "degrees", steps: 12});
 
     // // optional buffer viz
     // g.append("path")
@@ -713,8 +691,6 @@
     //  .attr("fill","slateblue")
     //  .attr("stroke","black")
 
-// COMBAK work on this so no unnecessary promises being passed along/returned
-
     let confirmedEnrich = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
 
     let enrichTriggers = Promise.all([triggerPtPool,confirmedEnrich]).then(distillTriggers,onError);
@@ -722,7 +698,7 @@
     let updatedEnrich = Promise.all([enrichTriggers,confirmedEnrich]).then(updateInAccordance,onError)
 
     // bind all updated, trigger-pt-associated full geometries to DOM
-    let bound = Promise.all([enrichTriggers,updatedEnrich]).then(bindEnriching,onError)
+    let bound = Promise.all([updatedEnrich]).then(bindEnriching,onError)
 
     chosen.enrichData = {
       triggerPts: enrichTriggers.then(d => chosen.enrichData.triggerPts = d.triggerPts ),
@@ -741,24 +717,48 @@
       let begin = performance.now();
       console.log("making quadtree @",begin)
 
-      let quadtree = makeQuadtree(quadtreeData, dataExtent) // bufferedRoute?
+      let quadtree = makeQuadtree(quadtreeData, dataExtent)
 
-      // // optional data viz: // COMBAK a few points that should be selected are not being so; extent dataExtent/quadBounds? (east-west mostly)
+      // // optional data viz
       // bindQuadtree(quadtree);
       // bindQuadtreeData(quadtreeData);
 
-      let searchExtent = projPath.bounds(bufferedRoute),
-        filteredEnrich = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
+      let searchExtent = padExtent(projPath.bounds(bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad; uncomment below for visual
+
+      // g.append("rect")
+      //   .datum(searchExtent)
+      //   .attr("x", d => { return d[0][0]; })
+      //   .attr("y", d => { return d[0][1]; })
+      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+      //   .style("fill","orange")
+      //   .style("stroke","whitesmoke")
+      //   .style("stroke-width","0.3px")
+      //   .style("opacity",0.4)
+      //
+      // g.append("rect")
+      //   .datum(projPath.bounds(bufferedRoute))
+      //   .attr("x", d => { return d[0][0]; })
+      //   .attr("y", d => { return d[0][1]; })
+      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+      //   .style("fill","lightyellow")
+      //   .style("stroke","whitesmoke")
+      //   .style("stroke-width","0.3px")
+      //   .style("opacity",0.4)
+
+      let filteredEnrich = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
 
       let end = performance.now();
       console.log("quadtree construction + search took", end-begin, "ms")
 
       console.log("num filtered",filteredEnrich.length)
-      // removeNodes(filtered,quadtree); // won't speed up search because all filtering complete by this point; keep quadtree in tact in case it could be reutilized within same session?
+
+      // removeQuadtreeNodes(filtered,quadtree); // won't speed up search because all filtering complete by this point; keep quadtree in tact in case it could be reutilized within same session?
 
       let possibleFeatures = [...new Set(filteredEnrich.map(d => d.properties.id))];
 
-      console.log("possibleFeatures",possibleFeatures.length)
+      console.log("unique possibleFeatures",possibleFeatures.length)
 
       let confirmedEnrich = Promise.all([enrichPts,enrichLines,enrichPolys]).then(filterFurther,onError);
 
@@ -1268,9 +1268,9 @@
 
     }
 
-    function bindEnriching([triggers,updated]) {
+    function bindEnriching([updated]) {
 
-      console.log(updated)
+      console.log("enrichData",updated)
 
       // filter null geometries
       let pts = updated.pts.filter(d => d.geometry.coordinates.length > 0),
@@ -1284,36 +1284,28 @@
       let oceanIds = [...new Set(lines.filter(d => { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "II" }).map(d => { return d.properties.OCEAN_ID }))],
           baseHues = chroma.scale('Spectral').colors(oceanIds.length);
 
-      console.log(baseHues.slice())
-
-      // oceanIds.forEach((oceanId,i) => {
-      //   colorAssignments[oceanId] = {
-      //     "I": baseHues.shift()
-      //   }
-      // })
-
-      const levelStyles = {
+      const levelStyles = {  // used for watersheds and ecoregions
         "I": {
-          dash: wDash1,
-          width: 0.15,
+          dash: "0.1 0.4",
+          width: 0.01,
           zIndex: 5
         },
         "II": {
-          dash: wDash2,
-          width: 0.2,
+          dash: "0.3 0.4",
+          width: 0.05,
           zIndex: 4
         },
         "III": {
-          dash: wDash3,
-          width: 0.25,
+          dash: "0.3 0.1 0.2 0.1",
+          width: 0.05,
           zIndex: 3
         },
         "IV": {
-          dash: wDash4,
-          width: 0.3,
+          dash: "0.1 0.2 0.4 0.2",
+          width: 0.1,
           zIndex: 2
         },
-        "V": {  // some ecoregions?
+        "V": {  // some ecoregions
           zIndex: 1
         }
       }
@@ -1340,12 +1332,32 @@
       }
 
       const getZIndex = function(d) {
-        let zIndex = 6,  // default for non-watershed lines
+        let zIndex = 6,  // default for non-watershed lines, non-ecoregion polygons
             props = d.properties;  // shorthand
         if (props.LEVEL) {  // watersheds
           zIndex = levelStyles[props.LEVEL].zIndex;
         }
         return zIndex;
+      }
+
+      // NEEDS UPDATING TO INCLUDE POLYGONS
+      const getColor = function(level,oceanId) { // ,subId) {
+        if (!colorAssignments[oceanId]) {
+          colorAssignments[oceanId] = {
+            "II": baseHues.shift()
+          }
+        }
+        if (!colorAssignments[oceanId][level]) {
+          if (!colorAssignments[oceanId]["II"]) {  // occasionally undefined; debugging
+            console.log(oceanIds)
+            console.log(colorAssignments)
+            console.log("basehues",baseHues.slice())
+            console.log(lines.filter(d=> { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "I" }).map(d => d.properties.OCEAN_ID))
+          }
+          // deriveColor as brighter level I color assignment
+          colorAssignments[oceanId][level] = chroma(colorAssignments[oceanId]["II"]).brighten(unromanize(level))
+        }
+        return colorAssignments[oceanId][level];
       }
 
       const getStroke = function(d) {
@@ -1354,6 +1366,16 @@
           return getColor(props.LEVEL,props.OCEAN_ID);
         } else { // if (props.CATEGORY === "River") {
           return riverBlue;
+        }
+      }
+
+      const getFill = function(d) {
+        let props = d.properties; // shorthand
+        if (props.CATEGORY === "Ecoregion") {
+          return chroma.random() // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
+          //return getColor(props.LEVEL,props.OCEAN_ID);
+        } else { // if (props.CATEGORY === "Lake") {
+          return lakeBlue;
         }
       }
 
@@ -1367,16 +1389,18 @@
         .enter().append("path")
           .classed("enrich-poly polygon waiting", true)
           .attr("d", projPath)
-          .attr("id", d => { return d.properties.id })
-          .property("name", d => { return d.properties.NAME })
-          .property("category", d => { return d.properties.CATEGORY })
-          .property("level", d => { return d.properties.LEVEL})
-          .property("more-info", d => { return d.properties.MORE_INFO })
-          .property("description", d => { return d.properties.DESCRIPTION })
-          .style("fill", d => { return chroma.random() }) // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
+          .attr("id", d => d.properties.id)
+          .property("name", d => d.properties.NAME)
+          .property("category", d => d.properties.CATEGORY)
+          .property("level", d => d.properties.LEVEL)
+          .property("more-info", d => d.properties.MORE_INFO)
+          .property("description", d => d.properties.DESCRIPTION)
+          .style("fill", d => chroma.random()) //getFill)
           .style("stroke", "none")
-          .style("z-index",d => { return (getZIndex(d) - 4); }) // temp, to keep polygons in order
+          .style("z-index",d => (getZIndex(d) - 4)) // temp, to keep polygons in order under lines
           .style("opacity",0)
+          .style("visibility","hidden")          .on("mouseover",onMouseover)
+          .on("mouseout",onMouseout)
 
       const enrichLines = enrichLayer.append("g")
         .attr("id", "enrich-lines")
@@ -1393,9 +1417,12 @@
           .style("stroke", getStroke)
           .style("stroke-width", getStrokeWidth)
           .style("stroke-dasharray", getDashArray)
-          // .style("stroke-linecap", "round")
+          .style("stroke-linecap", "round")
           .style("z-index",getZIndex)
           .style("opacity", 0)
+          .style("visibility","hidden")
+          .on("mouseover", onMouseover)
+          .on("mouseout", onMouseout)
 
       const enrichPoints = enrichLayer.append("g")
           .attr("id", "enrich-pts")
@@ -1404,35 +1431,23 @@
         .enter().append("circle")
           .classed("enrich-pt point waiting", true)
           .attr("r", 0)
-          .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-          .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
-          .attr("id", d => { return d.properties.id })
-          .property("name", d => { return d.properties.NAME })
-          .property("category", d => { return d.properties.CATEGORY })
-          .property("description", d => { return d.properties.DESCRIPTION })
-          .property("more-info", d => { return d.properties.MORE_INFO })
-          .style("fill", d => { return d3.interpolateSpectral(Math.random()); })
+          .attr("cx", d => projection(d.geometry.coordinates)[0])
+          .attr("cy", d => projection(d.geometry.coordinates)[1])
+          .attr("id", d => d.properties.id)
+          .property("name", d => d.properties.NAME)
+          .property("category", d => d.properties.CATEGORY)
+          .property("description", d => d.properties.DESCRIPTION)
+          .property("more-info", d => d.properties.MORE_INFO)
+          .style("fill", d => chroma.random()) // for now
           .style("stroke", "whitesmoke")
           .style("stroke-width", "0.05px")
           .style("z-index",7)
           .style("opacity", 0.6)
+          .style("visibility","hidden")
+          .on("mouseover", onMouseover)
+          .on("mouseout", onMouseout)
 
       // let done = performance.now();
-
-      function getColor(level,oceanId) { // ,subId) {
-        if (!colorAssignments[oceanId]) {
-          colorAssignments[oceanId] = {
-            "II": baseHues.shift()
-          }
-        }
-        if (!colorAssignments[oceanId][level]) {
-          // deriveColor as brighter level I color assignment
-          console.log(colorAssignments)
-          console.log(colorAssignments[oceanId]["II"]) // occasionally undefined
-          colorAssignments[oceanId][level] = chroma(colorAssignments[oceanId]["II"]).brighten(unromanize(level))
-        }
-        return colorAssignments[oceanId][level];
-      }
 
       function unromanize(romanNum) {
         // for now
@@ -1577,7 +1592,7 @@
           allStns.exit().remove();
         })
 
-    let arcPts = received.arcPts;
+    let arcPts = received.arcPts.coordinates;
 
     // LINE/ROUTE
     // faint underlying solid
@@ -1598,7 +1613,7 @@
       .style("stroke", "darkmagenta") // fiddle/improve
       .style("stroke-width", 0.3)
       .style("opacity",0)
-      .style("stroke-dasharray", dash0)
+      .style("stroke-dasharray", "0.8 1.6")
       // .style("stroke-linecap", "round")
 
     // semiSimp path for headlights/eventual compass to follow
@@ -1619,8 +1634,7 @@
         radians0 = 0,            // start with unrotated arc
              tau = 2 * Math.PI,  // 100% of a circle
          arcSpan = 0.16 * tau,   // hardcode as desired (in radians)
-          radius = 6,            // will otherwise default to 10 if not hardcoded here
-         sector0 = getSector(radians0,arcSpan,6);
+         sector0 = getSector(radians0,arcSpan,headlightRadius);
 
     // add headlights as DOM node (opacity transitions in from 0)
     var headlights = g.select("#route").append("path")
@@ -1639,7 +1653,7 @@
     	.style("stroke-width", 0.4)
       .style("stroke","brown")
       .style("stroke-opacity",0.6)
-      .style("stroke-dasharray",dash2)
+      .style("stroke-dasharray","0.05 0.1")
       .attr("transform", "translate(" + arcPts[0] + ")")
 
     // UNDERLYING TICKS/TIES
@@ -1650,7 +1664,7 @@
       .style("fill", "none")
       .style("stroke","gainsboro")
       .style("stroke-width",0.6)
-      .style("stroke-dasharray", rrDash)
+      .style("stroke-dasharray", "0.1 0.2")
 
     // // SIMP TICKS
     // let simpTicks = route.append("g")
@@ -1660,7 +1674,7 @@
     //   .style("fill", "none")
     //   .style("stroke", "cyan")
     //   .style("stroke-width",1.6)
-    //   .style("stroke-dasharray", dash1)
+    //   .style("stroke-dasharray", "0.1 0.4")
 
   }
 
@@ -1971,34 +1985,11 @@
     }
   }
 
-  // COMBAK don't rely on polyline.js
-  function newFeatureCollection(data) {
-    let gj = {
-      "type": "FeatureCollection",
-      "features": data ? populateFeatures(data) : []  // ONLY IN THIS CONTEXT / CALLS ON POLYLINE.JS (FIXME)
-    }
-    return gj;
-  }
-
   function emptyFeatureCollection() {
     return {
       "type": "FeatureCollection",
       "features": []
     }
-  }
-
-  // newData and existingFeatures (if applicable) should be typeOf Array
-  function populateFeatures(segments,existingFeatures = null) {
-    let features = existingFeatures || [];
-    segments.forEach(function(segment) {
-      features.push({
-        "type": "Feature",
-        // use mapbox polyline.js function to decode received path string as geoJSON
-        "geometry": polyline.toGeoJSON(segment.path),
-        "properties": { }
-      });
-    });
-    return features;
   }
 
   function makeFeature(coords, type = "Point") {
@@ -2031,7 +2022,7 @@
     let breaks = new Set();
     if (lineString.geometry.coordinates.length > 0) {
       for (var i = 0; i < distance; i += distance / steps) {
-        breaks.add(turf.along(lineString, i, { units: "miles" }).geometry.coordinates);
+        breaks.add(turf.along(lineString, i, {units: "miles"}).geometry.coordinates);
       }
     }
     return breaks;
@@ -2158,7 +2149,7 @@
 
   function getTransform(bounds, extent = extent0, padding = 0.1) {
 
-    // COMBAK rework double default parameters;
+    // COMBAK double default parameters not ideal; use options object?
 
     let b0,b1;
 
@@ -2231,13 +2222,16 @@
              y0 = pathBox[0][1], // ymin
              x1 = pathBox[1][0], // xmax
              y1 = pathBox[1][1]; // ymax
+           // padX = headlightRadius,
+           // padY = headlightRadius;
 
     // initiate quadtree with specified x and y functions
     const projectX = d => { return projection(d.geometry.coordinates)[0] },
           projectY = d => { return projection(d.geometry.coordinates)[1] };
 
     let quadtree = d3.quadtree(data,projectX,projectY)
-      .extent([[x0 - 1, y0 - 1], [x1 + 1, y1 + 1]])
+      .extent([[x0, y0], [x1, y1]])
+      // .extent([[x0 - padX, y0 - padY], [x1 + padX, y1 + padY]])
 
     return quadtree;
   }
@@ -2282,7 +2276,6 @@
 
     let quadtreeData = g.append("g")
       .classed("quadtree-data", true)
-      // .attr("id","quadtree-data")
 
     quadtreeData.selectAll(".quad-datum")
       .data(data)
@@ -2290,12 +2283,12 @@
         .attr("class", d => { return "quad-datum " + d.properties.id})
         .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
         .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+        .attr("r", 0.2)
         .property("feature_id", d => { return d.properties.id; })
         // .property("name", d => { return d.properties.name || d.properties.NAME; })
         // .property("category", d => { return d.properties.CATEGORY; })
-        .style("fill","none") // temporarily visualized within styles doc
-        // .style("r",0.1)
-        // // .style("z-index",5)
+        .style("fill","none")  // COMMENT THIS OUT TO VISUALIZE
+        .style("stroke","none")  // COMMENT THIS OUT TO VISUALIZE
         // .on("mouseover", onMouseover)
         // .on("mouseout", onMouseout)
 
@@ -2307,7 +2300,7 @@
 
   }
 
-  function removeNodes(selected,quadtree) {
+  function removeQuadtreeNodes(selected,quadtree) {
 
     if (selected.length) {
 
@@ -2331,11 +2324,10 @@
   function searchQuadtree(quadtree, x0, y0, x3, y3) {
 
     let selected = [];
-         // allData = quadtree.data();
 
     quadtree.visit(function(node, x1, y1, x2, y2) {
 
-      if (!node.length) { // if node is not an array of nodes (i.e. has content)
+      if (!node.length) { // if node is not an array of nodes (i.e. has point content)
 
         do {
 
@@ -2379,6 +2371,10 @@
 
     return selected;
 
+  }
+
+  function padExtent(extent, padX = headlightRadius/2, padY = padX) {
+    return [[extent[0][0] - padX, extent[0][1] - padY], [extent[1][0] + padX, extent[1][1] + padY]];
   }
 
 //// ANIMATION
@@ -2429,12 +2425,9 @@
     routeQuadtree =
     makeQuadtree(enrichData.triggerPts,enrichData.withinBuffer);
 
-    // console.log(enrichData.triggerPts)
-    // console.log(routeQuadtree.data())
-
     // optional binding/visualization:
     // bindQuadtree(routeQuadtree)
-    // non-option binding, optional visualization:
+    // non-optional binding, optional visualization:
     bindQuadtreeData(enrichData.triggerPts,true) // triggerPtFlag === true
 
     // turn on headlights
@@ -2620,7 +2613,8 @@
     // initiate quadtree search
     let newlySelected = searchQuadtree(routeQuadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1]);
 
-    removeNodes(newlySelected,routeQuadtree);
+    // remove data as they are selected/revealed; (not sure if this helps performance any, but it doesn't hurt)
+    removeQuadtreeNodes(newlySelected,routeQuadtree);
 
     // save newly determined values as previous values
     prevLocation = currentLocation,
@@ -2753,7 +2747,10 @@
     return ["M",pathStr.split('M')[1].split('L').reverse().join('L')].join('');
   }
 
-  function getDashStr(along,length,dash = dash1) {
+  function getDashStr(along,length,dash = "0.1 0.4") {
+
+    dash = dash.split(",").join(""); // standardize, in case passed dash includes commas
+
     let dashSum = dash.split(" ").map(x => +x)
                      .reduce((accumulator, currentVal) =>
                        accumulator + currentVal, 0
@@ -2761,7 +2758,9 @@
       dashTimes = Math.ceil(length/dashSum),
        dashFill = new Array(dashTimes + 1).join(dash + ' '),
         dashStr = dashFill + ", " + length;
+
     return dashStr;
+
   }
 
   // function animateDashed(along,t) {
@@ -2771,7 +2770,7 @@
   //   let reversedAlong = along.clone(),
   //              length = reversedAlong.node().getTotalLength();
   //
-  //   let dashStr = getDashStr(reversedAlong,length,dash1);
+  //   let dashStr = getDashStr(reversedAlong,length);
   //
   //   // REVERSE PATH for proper direction
   //   let reversedPath = reverseSVGPath(reversedAlong.attr("d"));
@@ -2806,13 +2805,15 @@
       id = this[0],
       id1 = this[1],
       encountered1 = g.select(`#${id1}`);
-      encountered1.classed("waiting",false);
+      // encountered1.classed("waiting",false);
+      encountered1.style("visibility","visible")
     }
 
     // FIND full feature(s) by id
     let encountered = g.select(`#${id}`);
+    encountered.style("visibility","visible")
     // remove waiting class upon intersect
-    encountered.classed("waiting",false);
+    // encountered.classed("waiting",false);
 
     // DETERMINE TYPE, CALCULATE T, VISUALIZE
       // currently separated for geom-specific styling and transitions, but may be no need..
@@ -2837,36 +2838,28 @@
     // just need to trigger appropriate transitions based on type
 
     if (type === "line") {
-      // watersheds: animateDashed within varying dashArrays and thickness; higher levels thinner and with more intricate/subtle patterns
-      // rivers and streams: animatedSolid in both directions with continual branching outward (will be necessarily limited by data pool, filtered to certain level of watershed)
-      // FOR NOW
       if (Array.isArray(encountered)) { // multiTrigger
         if (encountered[0].property("category") === "Watershed") {
 
-          // console.log(encountered[0].node())
-          // console.log(encountered[1].node())
-          // console.log(encountered[0].style("stroke-dasharray"))
-          // console.log(encountered[1].style("stroke-dasharray"))
-
-          // TODO attune dashArrays (get/pass current?)
-
-          let length0 = encountered[0].node().getTotalLength(),
-              length1 = encountered[1].node().getTotalLength(),
-             dashStr0 = getDashStr(encountered[0], length0),
-             dashStr1 = getDashStr(encountered[1], length1)
+          let dashArr0 = encountered[0].style("stroke-dasharray"),
+              dashArr1 = (encountered[1].style("stroke-dasharray")),
+               length0 = encountered[0].node().getTotalLength(),
+               length1 = encountered[1].node().getTotalLength(),
+              dashStr0 = getDashStr(encountered[0], length0, dashArr0),
+              dashStr1 = getDashStr(encountered[1], length1, dashArr1);
 
           encountered[0].style("stroke-dasharray", dashStr0)
-                        .style("stroke-dashoffset", -length0)
-                        .style("opacity", 0.6)
-                        .transition().duration(t).ease(d3.easeLinear)
-                        .styleTween("stroke-dashoffset",drawDashed)
-                        .on("start", () => {
-                          encountered[1].style("stroke-dasharray", dashStr1)
-                            .style("stroke-dashoffset", -length1)
-                            .style("opacity", 0.6)
-                            .transition().duration(t).ease(d3.easeLinear)
-                            .styleTween("stroke-dashoffset",drawDashed)
-                        })
+            .style("stroke-dashoffset", -length0)
+            .style("opacity", 0.6)
+            .transition().duration(t).ease(d3.easeLinear)
+            .styleTween("stroke-dashoffset",drawDashed)
+            .on("start", () => {
+              encountered[1].style("stroke-dasharray", dashStr1)
+                .style("stroke-dashoffset", -length1)
+                .style("opacity", 0.6)
+                .transition().duration(t).ease(d3.easeLinear)
+                .styleTween("stroke-dashoffset",drawDashed)
+            })
 
         } else {
           encountered[0].style("opacity",0.8)
@@ -3083,53 +3076,72 @@
   function onMouseover(d) {
 
     // visual affordance for element itself
-    // d3.select(d).classed("hover", true).raise();
+    d3.select(this).classed("hover", true).raise();
 
-    // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
-    let tooltip = d3.select("#map").append("div") // ("body").append("div")
-      // .datum(d)
-      .attr("class","tooltip")
-      .html(getTooltipContent(d3.select(this)))
-      .style("left", (d3.event.layerX + 10) + "px")
-      .style("top", (d3.event.layerY - 30) + "px")
-      // .style("left", (d3.event.pageX + 10) + "px")
-      // .style("top", (d3.event.pageY - 30) + "px")
-      .style("fill", "honeydew")
-      .style("stroke", "dimgray")
-      .style("opacity", 0) // initially
+    if (d3.select(this).property("name")) {
+      // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
+      let tooltip = d3.select("#map").append("div") // ("body").append("div")
+        // .datum(d)
+        .attr("class","tooltip")
+        .html(getTooltipContent(d3.select(this)))
+        .style("left", (d3.event.layerX + 10) + "px")
+        .style("top", (d3.event.layerY - 30) + "px")
+        // .style("left", (d3.event.pageX + 10) + "px")
+        // .style("top", (d3.event.pageY - 30) + "px")
+        .style("fill", "honeydew")
+        .style("stroke", "dimgray")
+        .style("opacity", 0) // initially
 
-    // bring tooltip into full opacity
-    tooltip.transition().duration(300)
-      .style("opacity", 1)
+      // bring tooltip into full opacity
+      tooltip.transition().duration(300)
+        .style("opacity", 1)
+    }
 
+    // FIXME: significant overlap with current output() function
     function getTooltipContent(d) {
-      let content = `<span>${d.property("name")}</span>` // for now
-      // let content = `
-      //   <span class="category">Facility Name: </span>
-      //   <span class="align-r">${titleCase(d.Facility_Name)}</span>
-      //   <br />
-      //   <span class="category">Location: </span>
-      //   <span class="align-r">${titleCase(d.City)}, ${d.State}</span>
-      //   <br />
-      //   <span class="category">2018 Percent Voter Turnout: </span>
-      //   <span class="align-r">${Math.floor(d.Total).toLocaleString()} metric tons</span>
-      // `
+
+      let content = `<span class="name txt-spacing1">${d.property("name")}`
+      if (d.property("level")) {
+        if (d.property("category") === "Watershed") {
+          content += (d.property("level") === "IV") ? ` Watershed</span>` : ` Drainage Basin</span>`
+        } else {  // ecoregion
+          content += `</span>
+          <br />
+          <span class="name-ii txt-em">Level ${d.property("level")} Ecoregion</span>
+          `
+        }
+      // } else if (["Lake Centerline","River (Intermittent)"].includes(d.property("category"))) {
+      //   // do nothing
+      } else if (d.property("id").slice(0,2) === "pt") {
+        content += ` ${d.property("description")}</span>`
+      } else {
+        content += ` ${d.property("category")}</span>`
+      }
+
+      if (d.property("more-info")) {
+        content += `
+        <br />
+        <span class="more-info txt-s">${d.property("more-info")}</span>
+        `
+      }
+
       return content;
     }
+
   }
 
   function onMouseout(d) {
 
     // d3.select("#current-hover").remove();
 
-    // console.log(d) // gj
+    // console.log(d) // feature gj
+    // console.log(this) // dom node (svg)
     // console.log(d3.event) // event
-    // console.log(d3.select(`#${d.properties.id}`).node()) // circle
     // console.log(d3.select("body").selectAll(".tooltip").node()) // tooltip
     // console.log(d3.select("body").selectAll(".tooltip").nodes()) // array of all tooltips
 
     // reset visual affordances
-    // node.classed("hover", false)
+    d3.select(this).classed("hover", false);
 
     // access existing
     let tooltip = d3.select("body").selectAll(".tooltip") //.datum(d => { return d.properties.id; }) // key function? match by id
@@ -3169,22 +3181,22 @@
     return commaFree;
   }
 
-  function titleCase(str) {
-    return str.toLowerCase().split(' ').map(function(word) {
-      // TODO create titleCase exceptions for LLCs, US, initials, words in paretheses
-      if (word == 'llc' || word == 'us' || /(\.[a-z]\.)/.test(word)) {
-        return word.toUpperCase();
-      } else if (['(',')','-',':','/'].includes(word[0])) {
-        return (' ' + word.charAt(0) + word.charAt(1).toUpperCase() + word.slice(2));
-      } else {
-        return capitalize(word);
-      }
-    }).join(' ');
-  }
+  // function titleCase(str) {
+  //   return str.toLowerCase().split(' ').map(function(word) {
+  //     // TODO create titleCase exceptions for LLCs, US, initials, words in paretheses
+  //     if (word == 'llc' || word == 'us' || /(\.[a-z]\.)/.test(word)) {
+  //       return word.toUpperCase();
+  //     } else if (['(',')','-',':','/'].includes(word[0])) {
+  //       return (' ' + word.charAt(0) + word.charAt(1).toUpperCase() + word.slice(2));
+  //     } else {
+  //       return capitalize(word);
+  //     }
+  //   }).join(' ');
+  // }
 
-  function capitalize(word) {
-    return (word.charAt(0).toUpperCase() + word.slice(1));
-  }
+  // function capitalize(word) {
+  //   return (word.charAt(0).toUpperCase() + word.slice(1));
+  // }
 
   // BROADLY APPLICABLE OR NOT AT ALL
   function toggle(i) {
@@ -3226,97 +3238,88 @@
 
 // })
 
+//// INCOMPLETE TODO ////
 
-// NOTES / TODO
-// remove stns: shriver (schriver?) LA,  sault ste marie on, barachois qc, labrador city lb, Kitimat-Stikine BC, saratoga springs?, la sarre, QC, hearst ON, phoenix AZ, perce QC?
-// *Charleston SC*
-// mobile al
-// westlake gladstone?
-// alexandria ON, chapleau ON
-// chandler QC
-// clemson sc, cincinnatti??, aldershot ON
-// greenville SC
-// oriole ON == segment issue; gaspe qc; ft madison IA
-// segment issues - richmond ca? ft lauderdale?
-
-// make enrichdata brighter close up
-
-// veil: pointer-events, none?
-// screen mxl, about window OPEN, fixed position OFF
-
-// CHROMA ERRORS MESSIN ME UP
-
-// new color for modal
-// remove excess saved route data / ticks etc
-
-// problem solve directionality:
-  // which paths need to be reversed? what is rule?
-    // drawDashed
-    // north/right of line?
-
-// fix watershed color scale (stable shades of silver/light grey?)
-// improve dashArrays on watersheds
-
-// on @media screen up to ml, #about collapsed with icon?
-
-// many more interspersed COMBAKs, FIXMEs, TODOs
-// lots of other things
-
-  // TODO:
+// LITTLE THINGS, SOON
+  // add intial texture to non-ecoregion polys
+  // fix a few more layout issues
+    // see issues folder with a few more screenshots of layout issues to fix
+    // resolve initial balance between "About" and route prompt
     // FIX ABOUT EXPAND BUTTON ON MXL
     // TURN DASH EXPAND / ABOUT COLLAPSE INTO TRANSITIONS
+    // on @media screen up to ml, #about collapsed with icon?
+    // screen mxl, about window OPEN, fixed position OFF
+    // gaspeX peninsula watershed character
+    // keep cleaning data (polys mostly, lines if time)
+      // remove repetitive stuff ("lake michigan lake") and prepare for dash/log output
 
-// orig options: sort matching by distance
+// ONGOING / AS POSSIBLE:
+  // remove/fix problem cities
+    // FIX
+      // Sault Ste Marie, ON
+      // Charleston, SC
+      // Cincinnatti, OH
+      // Greenville, SC
+    // REMOVE
+      // Lynn Lake, MB
+    // SEGMENT ISSUES?
+      // Richmond, CA
+      // Ft Lauderdale, FL
+      // Oriole, ON
+  // fix occasional chroma.js/baseHues issue
+  // fix console errors (in Chrome)
+    // "Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist."
+    // "[Violation] Forced reflow while executing JavaScript took 39ms"
 
-// wishlist features:
-// "choose random" @ initial prompt
-// choose cities by location (clicking on stn pt within map)
-// sliders for user to control speed, etc
+// STYLING NOTES:
+  // visual affordances on hover
+  // new color for modal
+  // make enrichLines brighter close up?
+  // fix watershed color scale (stable shades of silver/light grey?)
+  // polygon opacity also based on level
+    // lines too?
+  // zIndexes will become relevant. from bottom to top:
+    // basemap
+    // polygons large->small (slightly transparent)
+    // linegons
+    // regLines
+    // route
+    // headlights
+    // train
+    // enrichPts
+    // dashboard
+    // tooltips
 
-    // *** NEED HELP ***
-      // canceling/pausing/resetting selected animation
-      // removing unneeded elements from DOM as animation progresses
-      // removing everything from DOM at end of experience
-      // creating toggle structure for various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
-        // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
-      // *** searching/filtering data on backend; avoid bringing all of north america's enrichData into the browser every time ***
-        // speed up filtering process ESP for regLines
-      // *** managing state ***
-        // user chosen routes, Rome2Rio returns
-        // animation frame / rendered reveal
-      // *** animation speed ***
-        // stardust.js?
-        // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
-        // https://github.com/kafunk/eco-rails/issues/1
+// MAJOR TO DO'S; *** = NEED HELP!
+  // *** performance improvement! (see next section below) ***
+  // *** create rewind,ff,play/pause,cancel buttons for user control over animation (state management a huge implicit -- animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData)). including reverse animation??
+  // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
+    // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
+  // resolve all dash output / user information INCL legend/log (lots of data clumping)
+  // resolve all colors, stroke-dasharrays, textures, styling issues of every kind
+  // restructure line trigger/reveal such that watersheds trigger all inner lakes and streams in predetermined reveal order (timing same as watershed overall, but possible continued silver/blue flickering in flow direction), OR, only 1 intersection per feature, triggerPts adjusted accordingly (given streams a headstart such that they reach i0 concurrently) and each animated in flow direction
 
-// see screenshots for many more issues to fix
+// PERFORMANCE IMPROVEMENT IDEAS
+  // removing unneeded elements from DOM as animation progresses
+  // removing everything from DOM at end of experience
+  // should all turf.length() calculations be projPath.measure(d) or projPath.area(d) calculations?? (FASTER?) how would pixel units translate to time?
+  // *** searching/filtering data on backend; avoid bringing all of north america's enrichData into the browser every time ***
+    // speed up filtering process ESP for regLines
+  // *** animation speed ***
+    // stardust.js?
+    // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
+    // ----->>>> https://github.com/kafunk/eco-rails/issues/1 <<<<-----
+  // taken from github issue notes:
+    // * redraw SVG (supported by use of `clipExtent()` or similar?) at certain moments within script
+    // * appropriately truncate coordinates and other values wherever possible
+    // * slim library imports / take only what I need
 
-// zIndexes will become relevant. from bottom to top:
-  // basemap
-  // polygons large->small (slightly transparent)
-  // linegons
-  // regLines
-  // route
-  // headlights
-  // train
-  // enrichPts
-  // dashboard
-  // tooltips
+// WISHLIST/FUN
+  // orig options: sort matching by distance
+  // "choose random" @ initial prompt
+  // choose cities by location (clicking on stn pt within map)
+  // sliders for user to control speed of train, other variable
 
-// polygon opacity also based on level
-  // lines too?
-
-// get rid of trailing spaces on certain enrichPt names
-
-// should all turf.length() calculations be projPath.measure(d) or projPath.area(d) calculations?? (FASTER?) how would pixel units translate to time?
-
-
-// PRIORITIZE AM:
-// fix chroma.js (baseHues) issue
-// make random color return a little more coordinated
-// lots of doc cleanup
-// polygons can only be ecoregions for now -- others (habitat etc) will need texture?
-// fix dash arrays
-// dash doesn't need to expand yet
-// slim ecoregion and watershed levels?
-// soon: output to dash
+// MAYBE
+  // visualize fewer ecoregion and watershed levels
+  // low priority: remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
