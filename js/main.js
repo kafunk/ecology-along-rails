@@ -57,9 +57,6 @@
 
 // SET UP SVG
 
-  // d3.select("#map")
-  //   .style("padding-bottom", (Math.ceil(initial.height/initial.width * 50) + "%"))
-
   var svg = d3.select("#map").append("svg")
     .attr("width", initial.width)
     .attr("height", initial.height)
@@ -69,6 +66,16 @@
 
   // space to define elements for later <use></use>
   var defs = svg.append("defs");
+
+  var background = svg.append("rect")
+    .attr("id", "background")
+    .attr("width", initial.width)
+    .attr("height", initial.height)
+    .style("fill", "none")
+    .style("pointer-events", "all")
+    .on("dblclick", function() {
+      resetZoom() // having this in function avoids error from not yet having declared var active
+    })
 
   // all rendered/zoomable content
   var g = svg.append("g")
@@ -116,16 +123,9 @@
     // .scaleExtent([scale0*0.5, scale0*64])
     .on("zoom", zoomed)
 
-  var background = svg.append("rect")
-    .attr("id", "background")
-    .attr("width", initial.width)
-    .attr("height", initial.height)
-    .style("fill", "none")
-    // .style("pointer-events", "all")
-    .on("dblclick", resetZoom());
-
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
+     .on("dblclick.zoom", null) // for now; at least while modal is open
 
 // SET UP CUSTOM DISPATCH BEHAVIOR
 
@@ -146,7 +146,7 @@
   // let riverBlues = d3.interpolate({colors: ["rosybrown","mediumaquamarine"]},{colors: ["cadetblue","darkcyan"]}),
        // riverBlue = riverBlues(Math.random());
   const riverBlue = "cyan",
-         lakeBlue = "cadetblue";
+         lakeBlue = "teal";
 
   var linearGradientScale = d3.scaleLinear()
     .range(["#2c7bb6", "#00a6ca","#00ccbc","#90eb9d","#ffff8c",
@@ -387,8 +387,9 @@
   }
 
 //// ON INITIAL LOAD
+
   function initPrompt() {
-    d3.select("#modal-plus").classed("none",false);
+    d3.select("#modal-plus").classed("none",false)
   }
 
   function populateOptions(allOptions) {
@@ -528,7 +529,6 @@
 
     // opt0 == from, opt1 == to
 
-    // Rome2Rio doesn't recognize CHI as state; remove as relevant
     let testOpt0 = opt0.split(', '),  // note space after comma
         testOpt1 = opt1.split(', ');
     if (testOpt0[testOpt0.length-1] === 'CHI') {
@@ -554,9 +554,6 @@
           if (!experience.initiated) {
             initExp(newData[0])
           }
-          // } else {
-          //   updateMap(newData[0])
-          // }
         }, onError);
 
       }
@@ -567,10 +564,10 @@
 
   // provide user feedback that map content is loading
   function toggleLoading() {
-    d3.select("#modal-plus").classed("none", true);
+    toggleModal()
+    d3.select("#veil").classed("none", true);
     d3.select("#map-init-load").classed("none", false);
   }
-
 
 //// API / DATA-PROCESSING RELATED
   function queryAPI(opt0,opt1) {
@@ -606,463 +603,570 @@
   }
 
   function processReceived(data) {
+
     var parsed = parseReceived(data),
       enriched = enrichRoute(parsed);
+
     return enriched;
-  }
 
-  function parseReceived(raw) {
+    function parseReceived(raw) {
 
-    let route = raw.routes[0],
-     mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat());
+      let route = raw.routes[0],
+       mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat());
 
-    let thisRoute = {
-      from: raw.places[0],
-      to: raw.places[1],
-      totalDistance: route.distance, // in miles,
-      totalTime: route.totalTransitDuration, // not including transfers
-      lineString: mergedGJ,
-      segments: route.segments.map(storeSegmentDetails),
-      allStops: raw.places,
-      overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
-      arcPts: getArcPts(arcSteps)
-    }
-
-    function getArcPts(steps = 500) {
-
-      let lineChunks = turf.lineChunk(mergedGJ,route.distance/steps,{units:"miles"}).features,
-         firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
-           lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
-           lastCoord = lastChunk[lastChunk.length-1];
-
-      let allCoords = firstCoords.concat([lastCoord]).map(d=>projection(turf.truncate(turf.point(d),{precision:5,mutate:true}).geometry.coordinates)),
-         getBearing = function(i) {
-          let prevPt = this.coordinates[i-1] || this.coordinates[i],
-              nextPt = this.coordinates[i+1] || this.coordinates[i];
-          return turf.bearing(projection.invert(prevPt),projection.invert(nextPt));
-           // FOR ELSEWHERE
-           // getOrientation(i) {}, // cardinal
-           // getElevation(i) {}
-         };
-
-      return {
-        coordinates: allCoords,
-        orient: getBearing // receives i as parameter (plus implicit this)
-      };
-
-    }
-
-    // likely will not need all this information
-    function storeSegmentDetails(segment) {
-
-      if (!segment) { // debugging, temporary
-        console.log("no route segments?")
-        console.log("route:",raw.routes[0])
+      let thisRoute = {
+        from: raw.places[0],
+        to: raw.places[1],
+        totalDistance: route.distance, // in miles,
+        totalTime: route.totalTransitDuration, // not including transfers
+        lineString: mergedGJ,
+        segments: route.segments.map(storeSegmentDetails),
+        allStops: raw.places,
+        overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
+        arcPts: getArcPts(arcSteps)
       }
 
-      return {
-          agency: raw.agencies[segment.agencies[0].agency],
-        lineName: segment.agencies[0].lineNames[0],
-      lineString: polyline.toGeoJSON(segment.path),
-        distance: segment.distance,
-           stops: segment.stops,
-       departing: raw.places[segment.depPlace],
-        arriving: raw.places[segment.arrPlace]
+      function getArcPts(steps = 500) {
+
+        let lineChunks = turf.lineChunk(mergedGJ,route.distance/steps,{units:"miles"}).features,
+           firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
+             lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
+             lastCoord = lastChunk[lastChunk.length-1];
+
+        let allCoords = firstCoords.concat([lastCoord]).map(d=>projection(turf.truncate(turf.point(d),{precision:5,mutate:true}).geometry.coordinates)),
+           getBearing = function(i) {
+            let prevPt = this.coordinates[i-1] || this.coordinates[i],
+                nextPt = this.coordinates[i+1] || this.coordinates[i];
+            return turf.bearing(projection.invert(prevPt),projection.invert(nextPt));
+             // FOR ELSEWHERE
+             // getOrientation(i) {}, // cardinal
+             // getElevation(i) {}
+           };
+
+        return {
+          coordinates: allCoords,
+          orient: getBearing // receives i as parameter (plus implicit this)
+        };
+
       }
 
+      // likely will not need all this information
+      function storeSegmentDetails(segment) {
+
+        if (!segment) { // debugging, temporary
+          console.log("no route segments?")
+          console.log("route:",raw.routes[0])
+        }
+
+        return {
+            agency: raw.agencies[segment.agencies[0].agency],
+          lineName: segment.agencies[0].lineNames[0],
+        lineString: polyline.toGeoJSON(segment.path),
+          distance: segment.distance,
+             stops: segment.stops,
+         departing: raw.places[segment.depPlace],
+          arriving: raw.places[segment.arrPlace]
+        }
+
+      }
+
+      return thisRoute;
+
     }
 
-    return thisRoute;
+    // Relate route waypts/nodes/links to spatially intersecting (given buffer) data for interesting and illuminating route experience
+    function enrichRoute(chosen) {
 
-  }
+      let headlightDegrees = 1.5; // was 0.5; play around with approximate conversion of degrees -> pixels given projPath? (some combo of projPath.measure() and projection.invert()?)
 
-  // Relate route waypts/nodes/links to spatially intersecting (given buffer) data for interesting and illuminating route experience
-  function enrichRoute(chosen) {
+      // keep radius consistent with filtered pool of enrichData
+      let bufferedRoute = turf.buffer(chosen.lineString, headlightDegrees, {units: "degrees", steps: 12});
 
-    let headlightDegrees = 1.5; // was 0.5; play around with approximate conversion of degrees -> pixels given projPath? (some combo of projPath.measure() and projection.invert()?)
+      // // optional buffer viz
+      // g.append("path")
+      //  .attr("id","route-buffer")
+      //  .attr("d", line(bufferedRoute.geometry.coordinates[0].map(d => projection(d))))
+      //  .attr("fill","slateblue")
+      //  .attr("stroke","black")
 
-    // keep radius consistent with filtered pool of enrichData
-    let bufferedRoute = turf.buffer(chosen.lineString, headlightDegrees, {units: "degrees", steps: 12});
+      let confirmedEnrich = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
 
-    // // optional buffer viz
-    // g.append("path")
-    //  .attr("id","route-buffer")
-    //  .attr("d", line(bufferedRoute.geometry.coordinates[0].map(d => projection(d))))
-    //  .attr("fill","slateblue")
-    //  .attr("stroke","black")
+      let enrichTriggers = Promise.all([triggerPtPool,confirmedEnrich]).then(distillTriggers,onError);
 
-    let confirmedEnrich = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
+      let updatedEnrich = Promise.all([enrichTriggers,confirmedEnrich]).then(updateInAccordance,onError)
 
-    let enrichTriggers = Promise.all([triggerPtPool,confirmedEnrich]).then(distillTriggers,onError);
+      // bind all updated, trigger-pt-associated full geometries to DOM
+      let bound = Promise.all([updatedEnrich]).then(bindEnriching,onError)
 
-    let updatedEnrich = Promise.all([enrichTriggers,confirmedEnrich]).then(updateInAccordance,onError)
+      chosen.enrichData = {
+        triggerPts: enrichTriggers.then(d => chosen.enrichData.triggerPts = d.triggerPts ),
+      withinBuffer: bufferedRoute
+      }
 
-    // bind all updated, trigger-pt-associated full geometries to DOM
-    let bound = Promise.all([updatedEnrich]).then(bindEnriching,onError)
+      return chosen;
 
-    chosen.enrichData = {
-      triggerPts: enrichTriggers.then(d => chosen.enrichData.triggerPts = d.triggerPts ),
-    withinBuffer: bufferedRoute
-    }
+      function getIntersected([quadReps,quadBounds]) {
 
-    return chosen;
+        // FIRST make a quadtree of all representative enrich data pts draped over North America
 
-    function getIntersected([quadReps,quadBounds]) {
+        let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features,
+              dataExtent = topojson.feature(quadBounds,quadBounds.objects.bounds).features[0];
 
-      // FIRST make a quadtree of all representative enrich data pts draped over North America
+        let begin = performance.now();
+        console.log("making quadtree @",begin)
 
-      let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features,
-            dataExtent = topojson.feature(quadBounds,quadBounds.objects.bounds).features[0];
+        let quadtree = makeQuadtree(quadtreeData, dataExtent)
 
-      let begin = performance.now();
-      console.log("making quadtree @",begin)
+        // // optional data viz
+        // bindQuadtree(quadtree);
+        // bindQuadtreeData(quadtreeData);
 
-      let quadtree = makeQuadtree(quadtreeData, dataExtent)
+        let searchExtent = padExtent(projPath.bounds(bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad; uncomment below for visual
 
-      // // optional data viz
-      // bindQuadtree(quadtree);
-      // bindQuadtreeData(quadtreeData);
+        // g.append("rect")
+        //   .datum(searchExtent)
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .style("fill","orange")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.3px")
+        //   .style("opacity",0.4)
+        //
+        // g.append("rect")
+        //   .datum(projPath.bounds(bufferedRoute))
+        //   .attr("x", d => { return d[0][0]; })
+        //   .attr("y", d => { return d[0][1]; })
+        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
+        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
+        //   .style("fill","lightyellow")
+        //   .style("stroke","whitesmoke")
+        //   .style("stroke-width","0.3px")
+        //   .style("opacity",0.4)
 
-      let searchExtent = padExtent(projPath.bounds(bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad; uncomment below for visual
+        let filteredEnrich = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
 
-      // g.append("rect")
-      //   .datum(searchExtent)
-      //   .attr("x", d => { return d[0][0]; })
-      //   .attr("y", d => { return d[0][1]; })
-      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-      //   .style("fill","orange")
-      //   .style("stroke","whitesmoke")
-      //   .style("stroke-width","0.3px")
-      //   .style("opacity",0.4)
-      //
-      // g.append("rect")
-      //   .datum(projPath.bounds(bufferedRoute))
-      //   .attr("x", d => { return d[0][0]; })
-      //   .attr("y", d => { return d[0][1]; })
-      //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-      //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-      //   .style("fill","lightyellow")
-      //   .style("stroke","whitesmoke")
-      //   .style("stroke-width","0.3px")
-      //   .style("opacity",0.4)
+        let end = performance.now();
+        console.log("quadtree construction + search took", end-begin, "ms")
 
-      let filteredEnrich = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
+        console.log("num filtered",filteredEnrich.length)
 
-      let end = performance.now();
-      console.log("quadtree construction + search took", end-begin, "ms")
+        // removeQuadtreeNodes(filtered,quadtree); // won't speed up search because all filtering complete by this point; keep quadtree in tact in case it could be reutilized within same session?
 
-      console.log("num filtered",filteredEnrich.length)
+        let possibleFeatures = [...new Set(filteredEnrich.map(d => d.properties.id))];
 
-      // removeQuadtreeNodes(filtered,quadtree); // won't speed up search because all filtering complete by this point; keep quadtree in tact in case it could be reutilized within same session?
+        console.log("unique possibleFeatures",possibleFeatures.length)
 
-      let possibleFeatures = [...new Set(filteredEnrich.map(d => d.properties.id))];
-
-      console.log("unique possibleFeatures",possibleFeatures.length)
-
-      let confirmedEnrich = Promise.all([enrichPts,enrichLines,enrichPolys]).then(filterFurther,onError);
-
-      return confirmedEnrich;
-
-      function filterFurther([pts,lines,polys]) {
-
-        let filteredPts = topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
-          filteredLines = topojson.feature(lines, lines.objects.enrichLines).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
-          filteredPolys = topojson.feature(polys, polys.objects.enrichPolys).features.filter(d => { return possibleFeatures.includes(d.properties.id) });
-
-        let confirmedEnrich = turfFilter(filteredPts,filteredLines,filteredPolys,chosen.lineString,bufferedRoute);
+        let confirmedEnrich = Promise.all([enrichPts,enrichLines,enrichPolys]).then(filterFurther,onError);
 
         return confirmedEnrich;
 
-        function turfFilter(pts,lines,polys,route,buffer) {
+        function filterFurther([pts,lines,polys]) {
 
-          // more specific than initial quadtree search
+          let filteredPts = topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
+            filteredLines = topojson.feature(lines, lines.objects.enrichLines).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
+            filteredPolys = topojson.feature(polys, polys.objects.enrichPolys).features.filter(d => { return possibleFeatures.includes(d.properties.id) });
 
-          // if any lines or polys are multigeometries, split for purposes of turf boolean queries only (to be reunited before return)
-          let singleLines = lines.map(d => {
-                return (d.geometry.type === "MultiLineString") ? turf.flatten(d).features : d;
-               }).flat(),
-              singlePolys = polys.map(d => {
-                // convert polygons to lines to ease turf.js utilization
-                  // even regular (non-multi-) polygons can produce MultiLineStrings when converted; account for this
-                let asLines = turf.polygonToLine(d);
-                // i think some recursion is called for below
-                if (asLines.features) {
-                  return asLines.features.map(d => {
-                    return (d.geometry.type === "MultiLineString") ? turf.flatten(d).features : d;
-                  }).flat();
-                } else {
-                  return (asLines.geometry.type === "MultiLineString") ? turf.flatten(asLines).features : asLines;
-                }
-               }).flat()
-
-          // OPTIMIZE: once a subfeature with a certain feature id has been identified, no need to run turf query on other subfeatures associated with same parent
-          let filteredSingleLineIds = singleLines.filter(d => {
-                return turf.booleanCrosses(d,buffer);
-              }).map(d => d.properties.id),
-              filteredSinglePolyIds = singlePolys.filter(d => {
-                // which faster?
-                return turf.booleanCrosses(d,buffer); // requires pre-conversion from polys -> (multi)linestrings -> single linestrings;
-                // return turf.booleanOverlap(d,buffer) // no conversion, but seems so slow!
-              }).map(d => d.properties.id);
-
-          let confirmedEnrich = {
-            pts: pts.filter(d => turf.booleanPointInPolygon(d,buffer)),
-            lines: lines.filter(d => filteredSingleLineIds.includes(d.properties.id)),
-            polys: polys.filter(d => filteredSinglePolyIds.includes(d.properties.id))
-          }
+          let confirmedEnrich = turfFilter(filteredPts,filteredLines,filteredPolys,chosen.lineString,bufferedRoute);
 
           return confirmedEnrich;
+
+          function turfFilter(pts,lines,polys,route,buffer) {
+
+            // more specific than initial quadtree search
+
+            // if any lines or polys are multigeometries, split for purposes of turf boolean queries only (to be reunited before return)
+            let singleLines = lines.map(d => {
+                  return (d.geometry.type === "MultiLineString") ? turf.flatten(d).features : d;
+                 }).flat(),
+                singlePolys = polys.map(d => {
+                  // convert polygons to lines to ease turf.js utilization
+                    // even regular (non-multi-) polygons can produce MultiLineStrings when converted; account for this
+                  let asLines = turf.polygonToLine(d);
+                  // i think some recursion is called for below
+                  if (asLines.features) {
+                    return asLines.features.map(d => {
+                      return (d.geometry.type === "MultiLineString") ? turf.flatten(d).features : d;
+                    }).flat();
+                  } else {
+                    return (asLines.geometry.type === "MultiLineString") ? turf.flatten(asLines).features : asLines;
+                  }
+                 }).flat()
+
+            // OPTIMIZE: once a subfeature with a certain feature id has been identified, no need to run turf query on other subfeatures associated with same parent
+            let filteredSingleLineIds = singleLines.filter(d => {
+                  return turf.booleanCrosses(d,buffer);
+                }).map(d => d.properties.id),
+                filteredSinglePolyIds = singlePolys.filter(d => {
+                  // which faster?
+                  return turf.booleanCrosses(d,buffer); // requires pre-conversion from polys -> (multi)linestrings -> single linestrings;
+                  // return turf.booleanOverlap(d,buffer) // no conversion, but seems so slow!
+                }).map(d => d.properties.id);
+
+            let confirmedEnrich = {
+              pts: pts.filter(d => turf.booleanPointInPolygon(d,buffer)),
+              lines: lines.filter(d => filteredSingleLineIds.includes(d.properties.id)),
+              polys: polys.filter(d => filteredSinglePolyIds.includes(d.properties.id))
+            }
+
+            return confirmedEnrich;
+
+          }
 
         }
 
       }
 
-    }
+      function distillTriggers([triggerPtPool,confirmedEnrich]) {
 
-    function distillTriggers([triggerPtPool,confirmedEnrich]) {
+        let massagedEnrich = massageEnrich(confirmedEnrich);
 
-      let massagedEnrich = massageEnrich(confirmedEnrich);
+        let triggerData = getTriggerData(triggerPtPool,massagedEnrich.pts,massagedEnrich.regLines,massagedEnrich.linegons,massagedEnrich.polys,chosen.lineString,bufferedRoute);
 
-      let triggerData = getTriggerData(triggerPtPool,massagedEnrich.pts,massagedEnrich.regLines,massagedEnrich.linegons,massagedEnrich.polys,chosen.lineString,bufferedRoute);
+        console.log("triggerData",triggerData)
 
-      console.log("triggerData",triggerData)
+        return triggerData;
 
-      return triggerData;
+        function massageEnrich(confirmed) {
 
-      function massageEnrich(confirmed) {
+          let massagedEnrich = {
+            pts: confirmed.pts,  // pts won't need any adjustment; kept here for simplicity
+            regLines: [],
+            linegons: [],
+            polys: []
+          };
 
-        let massagedEnrich = {
-          pts: confirmed.pts,  // pts won't need any adjustment; kept here for simplicity
-          regLines: [],
-          linegons: [],
-          polys: []
-        };
+          // separate out lines into LINEGONS (aka a polygon I want to style as a line, eg watersheds; pronounced liney-gons; not to be confused with polylines) and regular lines:
+          confirmed.lines.forEach((d,i) => {
+            let coords = d.geometry.coordinates  // shorthand
+            if (coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {  // ie if line === closed
+              massagedEnrich.linegons.push(d)
+            } else {
+              massagedEnrich.regLines.push(d)
+            }
+          })
 
-        // separate out lines into LINEGONS (aka a polygon I want to style as a line, eg watersheds; pronounced liney-gons; not to be confused with polylines) and regular lines:
-        confirmed.lines.forEach((d,i) => {
-          let coords = d.geometry.coordinates  // shorthand
-          if (coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {  // ie if line === closed
-            massagedEnrich.linegons.push(d)
-          } else {
-            massagedEnrich.regLines.push(d)
-          }
-        })
+          // polys => linestrings for purposes of extracting triggerData and styling associated features; will remain flagged as "polygons" within enrichData object
+          confirmed.polys.forEach(d => {
+            if (d.geometry.type === "MultiPolygon") {
+              d = turf.multiLineString(turf.flatten(turf.polygonToLine(d)).features.map(d => d.geometry.coordinates),d.properties)
+            } else if (d.geometry.coordinates.length > 1) {
+              d = turf.multiLineString(turf.polygonToLine(d).geometry.coordinates,d.properties)
+            } else {
+              d = turf.lineString(turf.polygonToLine(d).geometry.coordinates,d.properties)
+            }
+            massagedEnrich.polys.push(d);
+          })
 
-        // polys => linestrings for purposes of extracting triggerData and styling associated features; will remain flagged as "polygons" within enrichData object
-        confirmed.polys.forEach(d => {
-          if (d.geometry.type === "MultiPolygon") {
-            d = turf.multiLineString(turf.flatten(turf.polygonToLine(d)).features.map(d => d.geometry.coordinates),d.properties)
-          } else if (d.geometry.coordinates.length > 1) {
-            d = turf.multiLineString(turf.polygonToLine(d).geometry.coordinates,d.properties)
-          } else {
-            d = turf.lineString(turf.polygonToLine(d).geometry.coordinates,d.properties)
-          }
-          massagedEnrich.polys.push(d);
-        })
+          return massagedEnrich;
 
-        return massagedEnrich;
+        }
 
-      }
+        function getTriggerData(triggerPtPool,pts,regLines,linegons,polys,route,buffer) {
 
-      function getTriggerData(triggerPtPool,pts,regLines,linegons,polys,route,buffer) {
+          // and their associated intersection0,intersection1 pairs;
+          // split line geometries into two or more segments as necessary (one trigger pt per segment; occasionally, same trigger pt triggers multiple segments)
+          // add relevant properties:
+            // flag as partial geometry (tell log not to add to counts, etc)
+            // flag as multi trigger
+            // store distance from i0 to i1
+            // reference counterparts/group
 
-        // and their associated intersection0,intersection1 pairs;
-        // split line geometries into two or more segments as necessary (one trigger pt per segment; occasionally, same trigger pt triggers multiple segments)
-        // add relevant properties:
-          // flag as partial geometry (tell log not to add to counts, etc)
-          // flag as multi trigger
-          // store distance from i0 to i1
-          // reference counterparts/group
+          let begin = performance.now();
+          console.log("getting trigger data @",begin)
 
-        let begin = performance.now();
-        console.log("getting trigger data @",begin)
+          triggerPtPool = topojson.feature(triggerPtPool,triggerPtPool.objects.triggerPts).features;
 
-        triggerPtPool = topojson.feature(triggerPtPool,triggerPtPool.objects.triggerPts).features;
+          let prefixes = {
+            points: "pt",
+            regLines: "ln",
+            linegons: "ln",
+            polygons: "py"
+          };
 
-        let prefixes = {
-          points: "pt",
-          regLines: "ln",
-          linegons: "ln",
-          polygons: "py"
-        };
+          let replaceGJs = [];  // should be lines/linegons only
+                                // keep track of features that come in whole and were segmented, such that associated full GJ's can be replaced with multiple parts before binding to domain
+                                // keep all ids and geoms consistent between triggerPts and triggered features to ensure easy styling/transitions later on
 
-        let replaceGJs = [];  // should be lines/linegons only
-                              // keep track of features that come in whole and were segmented, such that associated full GJ's can be replaced with multiple parts before binding to domain
-                              // keep all ids and geoms consistent between triggerPts and triggered features to ensure easy styling/transitions later on
+          let routeOrigin = route.geometry.coordinates[0],
+            triggerGroups = [{data: pts, type: "points"},
+                             {data: regLines, type: "regLines"},
+                             {data: linegons, type: "linegons"},
+                             {data: polys, type: "polygons"}];
 
-        let routeOrigin = route.geometry.coordinates[0],
-          triggerGroups = [{data: pts, type: "points"},
-                           {data: regLines, type: "regLines"},
-                           {data: linegons, type: "linegons"},
-                           {data: polys, type: "polygons"}];
+          let allTriggerPts = triggerGroups.map(geomGroup => {
 
-        let allTriggerPts = triggerGroups.map(geomGroup => {
+              let assocPrefix = prefixes[geomGroup.type],
+                    groupPool = triggerPtPool.filter(d => {
+                      return d.properties.id.slice(0,2) === assocPrefix;
+                    });
 
-            let assocPrefix = prefixes[geomGroup.type],
-                  groupPool = triggerPtPool.filter(d => {
-                    return d.properties.id.slice(0,2) === assocPrefix;
-                  });
+              let returnGrp = geomGroup.data.map(d => {
 
-            let returnGrp = geomGroup.data.map(d => {
+                let triggerPts = [],
+                        origId = d.properties.id.slice(),
+                   featurePool = groupPool.filter(d => {
+                     return d.properties.id === origId;
+                   });
 
-              let triggerPts = [],
-                      origId = d.properties.id.slice(),
-                 featurePool = groupPool.filter(d => {
-                   return d.properties.id === origId;
-                 });
+                if (geomGroup.type === "points") {
 
-              if (geomGroup.type === "points") {
+                  let i0 = turf.nearestPointOnLine(route,d,{units:"miles"}),
+                   baseT = Math.ceil(i0.properties.dist);
 
-                let i0 = turf.nearestPointOnLine(route,d,{units:"miles"}),
-                 baseT = Math.ceil(i0.properties.dist);
-
-                triggerPts.push(turf.point(i0.geometry.coordinates,{
-                  id: origId,
-                  triggers: "point",
-                  baseT: baseT
-                }));
-
-              } else {
-
-                let i0, i1,
-                  routeIntersectPts = featurePool.filter(d => {
-                    return !d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
-                  }), // .sort((a,b) => {  // SKIP THE SORT?
-                  //   return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
-                  // }),
-                  bufferIntersectPts; // may or may not need
-
-                // if (!routeIntersectPts.length) {
-                //   // try again manually with turf?
-                //   routeIntersectPts = turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features.map(d=>d.geometry.coordinates))
-                // };
-
-                if (routeIntersectPts.length) {
-
-                  // console.log("routeIntPts filtered from pool",routeIntersectPts.slice().map(d=>d.geometry.coordinates))
-                  // console.log("SAME DATUM: routeIntPts found dynamically by turf",turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features.map(d=>d.geometry.coordinates))
-
-                  // store first encountered as i0, last encountered as i1 (i.e. if route enters/exits a geometry 3 different times, save only first enter and last exit)
-                  i0 = routeIntersectPts[0];
-                  if (routeIntersectPts.length > 1) {
-                    i1 = routeIntersectPts[routeIntersectPts.length-1];
-                  }
+                  triggerPts.push(turf.point(i0.geometry.coordinates,{
+                    id: origId,
+                    triggers: "point",
+                    baseT: baseT
+                  }));
 
                 } else {
 
-                  bufferIntersectPts = featurePool.filter(d => {
-                    return d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
-                  }) // .sort((a,b) => {
-                  //   return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
-                  // })
+                  let i0, i1,
+                    routeIntersectPts = featurePool.filter(d => {
+                      return !d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
+                    }), // .sort((a,b) => {  // SKIP THE SORT?
+                    //   return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
+                    // }),
+                    bufferIntersectPts; // may or may not need
 
-                  // if (bufferIntersectPts.length) {
-                  //   console.log("bufferIntPts filtered from pool",bufferIntersectPts.slice().map(d=>d.geometry.coordinates))
-                  //   console.log("SAME DATUM: bufferIntPts found dynamically by turf", turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features.map(d=>d.geometry.coordinates))
+                  // if (!routeIntersectPts.length) {
+                  //   // try again manually with turf?
+                  //   routeIntersectPts = turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features.map(d=>d.geometry.coordinates))
+                  // };
+
+                  if (routeIntersectPts.length) {
+
+                    // console.log("routeIntPts filtered from pool",routeIntersectPts.slice().map(d=>d.geometry.coordinates))
+                    // console.log("SAME DATUM: routeIntPts found dynamically by turf",turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features.map(d=>d.geometry.coordinates))
+
+                    // store first encountered as i0, last encountered as i1 (i.e. if route enters/exits a geometry 3 different times, save only first enter and last exit)
+                    i0 = routeIntersectPts[0];
+                    if (routeIntersectPts.length > 1) {
+                      i1 = routeIntersectPts[routeIntersectPts.length-1];
+                    }
+
+                  } else {
+
+                    bufferIntersectPts = featurePool.filter(d => {
+                      return d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
+                    }) // .sort((a,b) => {
+                    //   return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
+                    // })
+
+                    // if (bufferIntersectPts.length) {
+                    //   console.log("bufferIntPts filtered from pool",bufferIntersectPts.slice().map(d=>d.geometry.coordinates))
+                    //   console.log("SAME DATUM: bufferIntPts found dynamically by turf", turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features.map(d=>d.geometry.coordinates))
+                    // }
+
+                    // if still no intersectPts, get them manually
+                    if (isEmpty(bufferIntersectPts)) {
+                      bufferIntersectPts = turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features;
+                    }
+
+                    // save *first* buffer intersect pt as i0 snapped to route
+                    i0 = turf.nearestPointOnLine(route,bufferIntersectPts[0]);
+                    if (bufferIntersectPts.length > 2) { // because if there are any, there will always be at least 2 (buffer enter/exit)
+                      // save last buffer intersect pt snapped to route as i1
+                      i1 = turf.nearestPointOnLine(route,bufferIntersectPts[bufferIntersectPts.length-1]);
+                    }
+
+                  }
+
+                  let singleIntersectFlag = false;
+                  if (!i1) {
+                    singleIntersectFlag = true;
+                  } // else {
+                    // if (snapped) i0 too close to (snapped) i1 to be the basis of animation reveal timing
+                    // if ((turf.nearestPointOnLine(route,i1,{units:"miles"}).properties.location -turf.nearestPointOnLine(route,i0,{units:"miles"}).properties.location) < 10) {
+                    //   // console.log("less than 10")
+                    //   // boost baseT by boostFactor? calculate differently?
+                    // }
                   // }
 
-                  // if still no intersectPts, get them manually
-                  if (isEmpty(bufferIntersectPts)) {
-                    bufferIntersectPts = turf.lineIntersect(d.geometry,turf.polygonToLine(buffer)).features;
-                  }
+                  // LINEGONS and POLYGONS ONLY: shift enrich datum geometry to get i1
+                  if (["linegons","polygons"].includes(geomGroup.type)) {
 
-                  // save *first* buffer intersect pt as i0 snapped to route
-                  i0 = turf.nearestPointOnLine(route,bufferIntersectPts[0]);
-                  if (bufferIntersectPts.length > 2) { // because if there are any, there will always be at least 2 (buffer enter/exit)
-                    // save last buffer intersect pt snapped to route as i1
-                    i1 = turf.nearestPointOnLine(route,bufferIntersectPts[bufferIntersectPts.length-1]);
-                  }
+                    // find index of i0 (or closest to it) on d
+                    let nearest = turf.nearestPointOnLine(d,i0),
+                         index0 = nearest.properties.index;
 
-                }
+                    // shift line geometry to start (and end) at i0
+                    let shifted;
+                    if (d.geometry.type === "MultiLineString") {
+                      let halfOne = [],
+                          halfTwo = [],
+                          shiftPtFound = false;
+                      d.geometry.coordinates.forEach(arr => {
+                        if (arr[index0] && index0 === turf.nearestPointOnLine(turf.lineString(arr),i0).properties.index) {
+                          halfOne.push(arr.slice(index0)),
+                          halfTwo.push(arr.slice(0,index0+1)),
+                          shiftPtFound = true;
+                        } else if (shiftPtFound) {
+                          halfOne.push(arr);
+                        } else {
+                          halfTwo.push(arr);
+                        }
+                      })
+                      shifted = turf.multiLineString(halfOne.concat(halfTwo));
+                    } else {
+                      shifted = turf.lineString(d.geometry.coordinates.slice(index0).concat(d.geometry.coordinates.slice(0,index0+1)));
+                    }
 
-                let singleIntersectFlag = false;
-                if (!i1) {
-                  singleIntersectFlag = true;
-                } // else {
-                  // if (snapped) i0 too close to (snapped) i1 to be the basis of animation reveal timing
-                  // if ((turf.nearestPointOnLine(route,i1,{units:"miles"}).properties.location -turf.nearestPointOnLine(route,i0,{units:"miles"}).properties.location) < 10) {
-                  //   // console.log("less than 10")
-                  //   // boost baseT by boostFactor? calculate differently?
-                  // }
-                // }
-
-                // LINEGONS and POLYGONS ONLY: shift enrich datum geometry to get i1
-                if (["linegons","polygons"].includes(geomGroup.type)) {
-
-                  // find index of i0 (or closest to it) on d
-                  let nearest = turf.nearestPointOnLine(d,i0),
-                       index0 = nearest.properties.index;
-
-                  // shift line geometry to start (and end) at i0
-                  let shifted;
-                  if (d.geometry.type === "MultiLineString") {
-                    let halfOne = [],
-                        halfTwo = [],
-                        shiftPtFound = false;
-                    d.geometry.coordinates.forEach(arr => {
-                      if (arr[index0] && index0 === turf.nearestPointOnLine(turf.lineString(arr),i0).properties.index) {
-                        halfOne.push(arr.slice(index0)),
-                        halfTwo.push(arr.slice(0,index0+1)),
-                        shiftPtFound = true;
-                      } else if (shiftPtFound) {
-                        halfOne.push(arr);
-                      } else {
-                        halfTwo.push(arr);
-                      }
-                    })
-                    shifted = turf.multiLineString(halfOne.concat(halfTwo));
-                  } else {
-                    shifted = turf.lineString(d.geometry.coordinates.slice(index0).concat(d.geometry.coordinates.slice(0,index0+1)));
-                  }
-
-                  let index1,
-                    shiftedCoords = turf.coordAll(shifted.geometry);
-                  if (!i1) {  // only 0-1 actual route intersect pts, so calculate i1 as approx midpt on closed line (i0-i0)
-                    // [catch Recalcuate]
-                    i1 = turf.point(shiftedCoords[Math.floor(shiftedCoords.length/2)]),
-                    index1 = (shifted.geometry.type === "MultiLineString") ? getNestedIndex(shifted,i1) : Math.floor(shiftedCoords.length/2);
-                  } else {
-                    index1 = turf.nearestPointOnLine(shifted,i1).properties.index;
-                    if (index1 === 0) {
-                      // i0 & i1 route/buffer intersect points were identical or nearly so, such that turf.nearestPointOnLine is returning the same point for both;
-                      // solution: recalculate index1 and i1 as though there were only ever one routeIntersect pt
-                      // [throw Recalculate]
+                    let index1,
+                      shiftedCoords = turf.coordAll(shifted.geometry);
+                    if (!i1) {  // only 0-1 actual route intersect pts, so calculate i1 as approx midpt on closed line (i0-i0)
+                      // [catch Recalcuate]
                       i1 = turf.point(shiftedCoords[Math.floor(shiftedCoords.length/2)]),
                       index1 = (shifted.geometry.type === "MultiLineString") ? getNestedIndex(shifted,i1) : Math.floor(shiftedCoords.length/2);
-                    }
-                  }
-
-                  if (geomGroup.type === "linegons") {
-
-                    // create new geoJSON features with sub-geometries for individual line segment animation
-                    let gjA = turf.lineString(shifted.geometry.coordinates.slice(0,index1+1)),
-                      gjB = turf.lineString(shifted.geometry.coordinates.slice(index1).reverse());
-
-                    let baseT;
-                    if (singleIntersectFlag) {
-                      let lengthA = turf.length(gjA, {units:"miles"})
-                          lengthB = turf.length(gjB, {units:"miles"}),
-                            baseT = Math.ceil((lengthA + lengthB) / 2);
                     } else {
-                      baseT = Math.ceil(turf.length(turf.lineSlice(i0,i1,route),{units:"miles"}))
+                      index1 = turf.nearestPointOnLine(shifted,i1).properties.index;
+                      if (index1 === 0) {
+                        // i0 & i1 route/buffer intersect points were identical or nearly so, such that turf.nearestPointOnLine is returning the same point for both;
+                        // solution: recalculate index1 and i1 as though there were only ever one routeIntersect pt
+                        // [throw Recalculate]
+                        i1 = turf.point(shiftedCoords[Math.floor(shiftedCoords.length/2)]),
+                        index1 = (shifted.geometry.type === "MultiLineString") ? getNestedIndex(shifted,i1) : Math.floor(shiftedCoords.length/2);
+                      }
                     }
 
-                    // return one trigger pt representing both i0->i1 segments
-                    triggerPts.push(turf.point(i0.geometry.coordinates,{
-                      oid: origId,
-                      id: origId + "-1",
-                      i1: i1,
-                      triggers: "linegon",
-                      baseT: baseT,
-                      multiTrigger: true  // since already flagged as multiTrigger, no need for additional segmentFlag
+                    if (geomGroup.type === "linegons") {
+
+                      // create new geoJSON features with sub-geometries for individual line segment animation
+                      let gjA = turf.lineString(shifted.geometry.coordinates.slice(0,index1+1)),
+                        gjB = turf.lineString(shifted.geometry.coordinates.slice(index1).reverse());
+
+                      let baseT;
+                      if (singleIntersectFlag) {
+                        let lengthA = turf.length(gjA, {units:"miles"})
+                            lengthB = turf.length(gjB, {units:"miles"}),
+                              baseT = Math.ceil((lengthA + lengthB) / 2);
+                      } else {
+                        baseT = Math.ceil(turf.length(turf.lineSlice(i0,i1,route),{units:"miles"}))
+                      }
+
+                      // return one trigger pt representing both i0->i1 segments
+                      triggerPts.push(turf.point(i0.geometry.coordinates,{
+                        oid: origId,
+                        id: origId + "-1",
+                        i1: i1,
+                        triggers: "linegon",
+                        baseT: baseT,
+                        multiTrigger: true  // since already flagged as multiTrigger, no need for additional segmentFlag
+                      }));
+
+                      // save properties to repspective GJs and push to outer function's replaceGJs to ensure alignment between triggering and triggered
+                      let gjs = [gjA,gjB];
+                      gjs.forEach((gj,i) => {
+
+                        let newId = `${origId}-${(i+1)}`;
+
+                        gj.properties = Object.assign({},d.properties),
+                        gj.properties.oid = origId,
+                        gj.properties.id = newId;
+
+                        replaceGJs.push(gj);
+
+                      })
+
+                    } else { // polygons
+
+                      let baseT;
+                      if (singleIntersectFlag) {
+                        baseT = Math.ceil(turf.length(d,{units:"miles"}))
+                        // eventually, line straight from i0 to shifted/madeup i1?
+                        // console.log("perimeter",baseT,"vs area",turf.convertArea(turf.area(turf.lineToPolygon(d)),"meters","miles"))
+                      } else {
+                        baseT = Math.ceil(turf.length(turf.lineSlice(i0,i1,route),{units:"miles"}));
+                      }
+
+                      triggerPts.push(turf.point(i0.geometry.coordinates,{
+                        id: origId,
+                        i1: i1,
+                        triggers: "polygon",
+                        baseT: baseT
+                      }));
+
+                    }
+
+                    function getNestedIndex(multiGeom,pt) {
+                      let nested = {};
+                      multiGeom.geometry.coordinates.forEach((arr,i) => {
+                        if (arr.length >1) { // some end with a smattering of single points
+                          let line = turf.lineString(arr);
+                          if (turf.booleanPointOnLine(pt,line)) {
+                            nested.outer = i;
+                            nested.inner = turf.nearestPointOnLine(line,pt).properties.index;
+                            return nested;
+                          }
+                        }
+                      })
+                      // if (isEmpty(nested)) {
+                      //   console.log("nested remained empty")
+                      // }
+                    }
+
+                  } else { // regLines
+
+                    // EVENTUAL GOAL: RESTRUCTURE THIS FURTHER SO NO GJ SPLITTING AT ALL
+                    // FIND ONLY ONE INTERSECT PT; KEEP GJ IN TACT, BUT BASE LOCATION OF TRIGGER PT ON DISTANCE FROM ENRICHLINE START TO I0 (TIMING SO THAT TRAIN AND ANIMATION MEET AT THAT POINT CONCURRENTLY)
+                    // ANIMATE ENRICH LINE IN FULL FROM START-> END OF LINE BASE ON FLOW DIRECTION! OR OTHER STANDARD FOR NON-STREAMS (?)
+                    // ACTUAL TRIGGER PT LOCATIONS WILL HAVE TO BE RECREATED IN ORDER FOR QUADTREE SEARCH TO ENCOUNTER THEM WITH ENOUGH LEEWAY SO THAT STREAMS/ETC CAN GET AN APPROPRIATE HEADSTART WHERE NECESSARY
+
+                    // FOR NOW, TO SAVE PROCESSING TIME, FORGET SEGMENTS WITH EXCEPTION OF GENERAL i0First->i0Last (if different)
+
+                    // i0 is already first intersected route OR snapped buffer intersect pt; if there were enough intersectPts, i1 already saved as final route intersect OR snapped final buffer intersect pt
+                    let i0First = i0,
+                        i1First = getI1(d), // "first" flag == default
+                         i0Last = i1 || i0, // i0 if no i1 has been saved so far (indicating there is really only one enrichLine-route intersect pt)
+                         i1Last = getI1(d,"last");
+
+                    // invariably add one triggerPt representing first intersectPt to enrichLine begin
+                    triggerPts.push(turf.point(i0First.geometry.coordinates,{
+                      i1: i1First
                     }));
 
-                    // save properties to repspective GJs and push to outer function's replaceGJs to ensure alignment between triggering and triggered
-                    let gjs = [gjA,gjB];
-                    gjs.forEach((gj,i) => {
+                    // if multiple intersect pts, create one middle segment representing space between the two (first/last)
+                    if (i0First !== i0Last) {
+                      triggerPts.push(turf.point(i0First.geometry.coordinates,{
+                        i1: i0Last,
+                        baseT: Math.ceil(turf.length(turf.lineSlice(i0First,i0Last,route),{units:"miles"})),
+                        segmentFlag: true
+                      }));
+                    }
+
+                    // invariably add one triggerPt representing last (possibly same) intersectPt -> enrichLine end
+                    triggerPts.push(turf.point(i0Last.geometry.coordinates,{
+                      i1: i1Last,
+                      segmentFlag: true
+                    }));
+
+                    // save properties to respective GJs and push to outer function's replaceGJs to ensure alignment between triggering and triggered
+                    triggerPts.forEach((triggerPt,i) => {
 
                       let newId = `${origId}-${(i+1)}`;
+
+                      // create new geoJSON feature for the associated line segment and push into outer function's 'replaceGJs' array. transfer properties and update id to align with triggerPt id (while saving former id as origId)
+                      let gj;
+                      if (d.geometry.type === "MultiLineString") {
+
+                        let stored = [];
+                        d.geometry.coordinates.forEach((arr,i) => {
+
+                          let slice = turf.lineSlice(triggerPt,triggerPt.properties.i1,turf.lineString(arr));
+
+                          if (slice.geometry.coordinates.length > 2) {
+                            stored.push(slice.geometry.coordinates);
+                          }
+
+                        })
+
+                        gj = turf.multiLineString(stored);
+
+                      } else {
+                        gj = turf.lineSlice(triggerPt,triggerPt.properties.i1,d);
+                      }
 
                       gj.properties = Object.assign({},d.properties),
                       gj.properties.oid = origId,
@@ -1070,410 +1174,307 @@
 
                       replaceGJs.push(gj);
 
-                    })
+                      triggerPt.properties.id = newId;
+                      triggerPt.properties.oid = origId;
+                      triggerPt.properties.triggers = "line";
 
-                  } else { // polygons
-
-                    let baseT;
-                    if (singleIntersectFlag) {
-                      baseT = Math.ceil(turf.length(d,{units:"miles"}))
-                      // eventually, line straight from i0 to shifted/madeup i1?
-                      // console.log("perimeter",baseT,"vs area",turf.convertArea(turf.area(turf.lineToPolygon(d)),"meters","miles"))
-                    } else {
-                      baseT = Math.ceil(turf.length(turf.lineSlice(i0,i1,route),{units:"miles"}));
-                    }
-
-                    triggerPts.push(turf.point(i0.geometry.coordinates,{
-                      id: origId,
-                      i1: i1,
-                      triggers: "polygon",
-                      baseT: baseT
-                    }));
-
-                  }
-
-                  function getNestedIndex(multiGeom,pt) {
-                    let nested = {};
-                    multiGeom.geometry.coordinates.forEach((arr,i) => {
-                      if (arr.length >1) { // some end with a smattering of single points
-                        let line = turf.lineString(arr);
-                        if (turf.booleanPointOnLine(pt,line)) {
-                          nested.outer = i;
-                          nested.inner = turf.nearestPointOnLine(line,pt).properties.index;
-                          return nested;
-                        }
+                      if (!triggerPt.properties.baseT) {
+                        // middle segment already stored using route length vs enrichLine length
+                        triggerPt.properties.baseT = Math.ceil(turf.length(gj,{units:"miles"}));
                       }
+
                     })
-                    // if (isEmpty(nested)) {
-                    //   console.log("nested remained empty")
-                    // }
+
                   }
-
-                } else { // regLines
-
-                  // EVENTUAL GOAL: RESTRUCTURE THIS FURTHER SO NO GJ SPLITTING AT ALL
-                  // FIND ONLY ONE INTERSECT PT; KEEP GJ IN TACT, BUT BASE LOCATION OF TRIGGER PT ON DISTANCE FROM ENRICHLINE START TO I0 (TIMING SO THAT TRAIN AND ANIMATION MEET AT THAT POINT CONCURRENTLY)
-                  // ANIMATE ENRICH LINE IN FULL FROM START-> END OF LINE BASE ON FLOW DIRECTION! OR OTHER STANDARD FOR NON-STREAMS (?)
-                  // ACTUAL TRIGGER PT LOCATIONS WILL HAVE TO BE RECREATED IN ORDER FOR QUADTREE SEARCH TO ENCOUNTER THEM WITH ENOUGH LEEWAY SO THAT STREAMS/ETC CAN GET AN APPROPRIATE HEADSTART WHERE NECESSARY
-
-                  // FOR NOW, TO SAVE PROCESSING TIME, FORGET SEGMENTS WITH EXCEPTION OF GENERAL i0First->i0Last (if different)
-
-                  // i0 is already first intersected route OR snapped buffer intersect pt; if there were enough intersectPts, i1 already saved as final route intersect OR snapped final buffer intersect pt
-                  let i0First = i0,
-                      i1First = getI1(d), // "first" flag == default
-                       i0Last = i1 || i0, // i0 if no i1 has been saved so far (indicating there is really only one enrichLine-route intersect pt)
-                       i1Last = getI1(d,"last");
-
-                  // invariably add one triggerPt representing first intersectPt to enrichLine begin
-                  triggerPts.push(turf.point(i0First.geometry.coordinates,{
-                    i1: i1First
-                  }));
-
-                  // if multiple intersect pts, create one middle segment representing space between the two (first/last)
-                  if (i0First !== i0Last) {
-                    triggerPts.push(turf.point(i0First.geometry.coordinates,{
-                      i1: i0Last,
-                      baseT: Math.ceil(turf.length(turf.lineSlice(i0First,i0Last,route),{units:"miles"})),
-                      segmentFlag: true
-                    }));
-                  }
-
-                  // invariably add one triggerPt representing last (possibly same) intersectPt -> enrichLine end
-                  triggerPts.push(turf.point(i0Last.geometry.coordinates,{
-                    i1: i1Last,
-                    segmentFlag: true
-                  }));
-
-                  // save properties to respective GJs and push to outer function's replaceGJs to ensure alignment between triggering and triggered
-                  triggerPts.forEach((triggerPt,i) => {
-
-                    let newId = `${origId}-${(i+1)}`;
-
-                    // create new geoJSON feature for the associated line segment and push into outer function's 'replaceGJs' array. transfer properties and update id to align with triggerPt id (while saving former id as origId)
-                    let gj;
-                    if (d.geometry.type === "MultiLineString") {
-
-                      let stored = [];
-                      d.geometry.coordinates.forEach((arr,i) => {
-
-                        let slice = turf.lineSlice(triggerPt,triggerPt.properties.i1,turf.lineString(arr));
-
-                        if (slice.geometry.coordinates.length > 2) {
-                          stored.push(slice.geometry.coordinates);
-                        }
-
-                      })
-
-                      gj = turf.multiLineString(stored);
-
-                    } else {
-                      gj = turf.lineSlice(triggerPt,triggerPt.properties.i1,d);
-                    }
-
-                    gj.properties = Object.assign({},d.properties),
-                    gj.properties.oid = origId,
-                    gj.properties.id = newId;
-
-                    replaceGJs.push(gj);
-
-                    triggerPt.properties.id = newId;
-                    triggerPt.properties.oid = origId;
-                    triggerPt.properties.triggers = "line";
-
-                    if (!triggerPt.properties.baseT) {
-                      // middle segment already stored using route length vs enrichLine length
-                      triggerPt.properties.baseT = Math.ceil(turf.length(gj,{units:"miles"}));
-                    }
-
-                  })
 
                 }
 
-              }
+                // // ALL
+                // triggerPts.forEach(triggerPt => {
+                //   triggerPt.properties.name = d.properties.NAME;
+                //   // if (triggerPt.properties.baseT === 0) {
+                //   //   console.log(d.geometry)
+                //   //   console.log(triggerPt.geometry)
+                //   //   console.log(triggerPt.properties.i1.geometry)
+                //   // }
+                // })
 
-              // // ALL
-              // triggerPts.forEach(triggerPt => {
-              //   triggerPt.properties.name = d.properties.NAME;
-              //   // if (triggerPt.properties.baseT === 0) {
-              //   //   console.log(d.geometry)
-              //   //   console.log(triggerPt.geometry)
-              //   //   console.log(triggerPt.properties.i1.geometry)
-              //   // }
-              // })
+                return triggerPts;
 
-              return triggerPts;
+              }).flat()
 
-            }).flat()
+              console.log("returning",geomGroup.type,"@",performance.now(),returnGrp)
 
-            console.log("returning",geomGroup.type,"@",performance.now(),returnGrp)
+              return returnGrp;
 
-            return returnGrp;
-
-            function getI1(d,position = "first") {
-              let coords = d.geometry.coordinates.slice(), // deep enough copy?
-                   index = 0;
-              if (position === "last") {
-                if (d.geometry.type === "MultiLineString") {
-                  coords = d.geometry.coordinates[d.geometry.coordinates.length-1]
+              function getI1(d,position = "first") {
+                let coords = d.geometry.coordinates.slice(), // deep enough copy?
+                     index = 0;
+                if (position === "last") {
+                  if (d.geometry.type === "MultiLineString") {
+                    coords = d.geometry.coordinates[d.geometry.coordinates.length-1]
+                  }
+                  index = coords.length-1;
+                } else if (d.geometry.type === "MultiLineString") {
+                  coords = d.geometry.coordinates[0]
                 }
-                index = coords.length-1;
-              } else if (d.geometry.type === "MultiLineString") {
-                coords = d.geometry.coordinates[0]
+                return turf.point(coords[index]);
               }
-              return turf.point(coords[index]);
+
+            });
+
+          let end = performance.now();
+          console.log("getting trigger data took", end-begin, "ms")
+
+          return {
+            triggerPts: allTriggerPts.flat(),
+            replaceGJs: replaceGJs
+          };
+
+        }
+
+      }
+
+      function updateInAccordance(enrichData) {
+
+        let replaceGJs = enrichData[0].replaceGJs,
+             fullGeoms = enrichData[1];
+
+        // UPDATE ENRICH GJ'S AS NEEDED (SHOULD BE LINES ONLY)
+        let replaceIds = [...new Set(replaceGJs.map(d => d.properties.id.substring(0,d.properties.id.indexOf("-"))))];
+
+        let updatedLines = fullGeoms.lines.map(feature => {
+          if (replaceIds.includes(feature.properties.id)) {
+            let replaceWith = [];
+            replaceWith.push(replaceGJs.filter(replacement => {
+              return replacement.properties.oid === feature.properties.id;
+            }));
+            return replaceWith.flat();
+          } else {
+            return feature;
+          }
+        }).flat();
+
+        // NO NEED TO UPDATE PTS OR POLYS (return original full geometries)
+        let updated = {
+            pts: fullGeoms.pts,
+          lines: updatedLines,
+          polys: fullGeoms.polys
+        }
+
+        return updated;
+
+      }
+
+      function bindEnriching([updated]) {
+
+        console.log("enrichData",updated)
+
+        // filter null geometries
+        let pts = updated.pts.filter(d => d.geometry.coordinates.length > 0),
+          lines = updated.lines.filter(d => d.geometry.coordinates.length > 0),
+          polys = updated.polys.filter(d => d.geometry.coordinates.length > 0);
+
+        // let begin = performance.now();
+
+        let colorAssignments = {};
+
+        let oceanIds = [...new Set(lines.filter(d => { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "II" }).map(d => { return d.properties.OCEAN_ID }))],
+            baseHues = chroma.scale('Spectral').colors(oceanIds.length);
+
+        const levelStyles = {  // used for watersheds and ecoregions
+          "I": {
+            dash: "0.1 0.4",
+            width: 0.01,
+            zIndex: 5
+          },
+          "II": {
+            dash: "0.3 0.4",
+            width: 0.05,
+            zIndex: 4
+          },
+          "III": {
+            dash: "0.3 0.1 0.2 0.1",
+            width: 0.05,
+            zIndex: 3
+          },
+          "IV": {
+            dash: "0.1 0.2 0.4 0.2",
+            width: 0.1,
+            zIndex: 2
+          },
+          "V": {  // some ecoregions
+            zIndex: 1
+          }
+        }
+
+        const getDashArray = function(d) {
+          let dashArray;
+          if (d.properties.CATEGORY === "Watershed") {
+            dashArray = levelStyles[d.properties.LEVEL].dash
+          } else {
+            dashArray = "4 4";
+          }
+          return dashArray;
+        }
+
+        const getStrokeWidth = function(d) {
+          let width = 0.1,           // default
+              props = d.properties;  // shorthand
+          if (props.STROKEWIDTH) {
+            width = props.STROKEWIDTH;
+          } else if (props.LEVEL) {
+            width = levelStyles[props.LEVEL].width;
+          }
+          return width;
+        }
+
+        const getZIndex = function(d) {
+          let zIndex = 6,  // default for non-watershed lines, non-ecoregion polygons
+              props = d.properties;  // shorthand
+          if (props.LEVEL) {  // watersheds
+            zIndex = levelStyles[props.LEVEL].zIndex;
+          }
+          return zIndex;
+        }
+
+        // NEEDS UPDATING TO INCLUDE POLYGONS
+        const getColor = function(level,oceanId) { // ,subId) {
+          if (!colorAssignments[oceanId]) {
+            colorAssignments[oceanId] = {
+              "II": baseHues.shift()
             }
-
-          });
-
-        let end = performance.now();
-        console.log("getting trigger data took", end-begin, "ms")
-
-        return {
-          triggerPts: allTriggerPts.flat(),
-          replaceGJs: replaceGJs
-        };
-
-      }
-
-    }
-
-    function updateInAccordance(enrichData) {
-
-      let replaceGJs = enrichData[0].replaceGJs,
-           fullGeoms = enrichData[1];
-
-      // UPDATE ENRICH GJ'S AS NEEDED (SHOULD BE LINES ONLY)
-      let replaceIds = [...new Set(replaceGJs.map(d => d.properties.id.substring(0,d.properties.id.indexOf("-"))))];
-
-      let updatedLines = fullGeoms.lines.map(feature => {
-        if (replaceIds.includes(feature.properties.id)) {
-          let replaceWith = [];
-          replaceWith.push(replaceGJs.filter(replacement => {
-            return replacement.properties.oid === feature.properties.id;
-          }));
-          return replaceWith.flat();
-        } else {
-          return feature;
+          }
+          if (!colorAssignments[oceanId][level]) {
+            if (!colorAssignments[oceanId]["II"]) {  // occasionally undefined; debugging
+              console.log(oceanIds)
+              console.log(colorAssignments)
+              console.log("basehues",baseHues.slice())
+              console.log(lines.filter(d=> { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "I" }).map(d => d.properties.OCEAN_ID))
+            }
+            // deriveColor as brighter level I color assignment
+            colorAssignments[oceanId][level] = chroma(colorAssignments[oceanId]["II"]).brighten(unromanize(level))
+          }
+          return colorAssignments[oceanId][level];
         }
-      }).flat();
 
-      // NO NEED TO UPDATE PTS OR POLYS (return original full geometries)
-      let updated = {
-          pts: fullGeoms.pts,
-        lines: updatedLines,
-        polys: fullGeoms.polys
-      }
-
-      return updated;
-
-    }
-
-    function bindEnriching([updated]) {
-
-      console.log("enrichData",updated)
-
-      // filter null geometries
-      let pts = updated.pts.filter(d => d.geometry.coordinates.length > 0),
-        lines = updated.lines.filter(d => d.geometry.coordinates.length > 0),
-        polys = updated.polys.filter(d => d.geometry.coordinates.length > 0);
-
-      // let begin = performance.now();
-
-      let colorAssignments = {};
-
-      let oceanIds = [...new Set(lines.filter(d => { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "II" }).map(d => { return d.properties.OCEAN_ID }))],
-          baseHues = chroma.scale('Spectral').colors(oceanIds.length);
-
-      const levelStyles = {  // used for watersheds and ecoregions
-        "I": {
-          dash: "0.1 0.4",
-          width: 0.01,
-          zIndex: 5
-        },
-        "II": {
-          dash: "0.3 0.4",
-          width: 0.05,
-          zIndex: 4
-        },
-        "III": {
-          dash: "0.3 0.1 0.2 0.1",
-          width: 0.05,
-          zIndex: 3
-        },
-        "IV": {
-          dash: "0.1 0.2 0.4 0.2",
-          width: 0.1,
-          zIndex: 2
-        },
-        "V": {  // some ecoregions
-          zIndex: 1
-        }
-      }
-
-      const getDashArray = function(d) {
-        let dashArray;
-        if (d.properties.CATEGORY === "Watershed") {
-          dashArray = levelStyles[d.properties.LEVEL].dash
-        } else {
-          dashArray = "4 4";
-        }
-        return dashArray;
-      }
-
-      const getStrokeWidth = function(d) {
-        let width = 0.1,           // default
-            props = d.properties;  // shorthand
-        if (props.STROKEWIDTH) {
-          width = props.STROKEWIDTH;
-        } else if (props.LEVEL) {
-          width = levelStyles[props.LEVEL].width;
-        }
-        return width;
-      }
-
-      const getZIndex = function(d) {
-        let zIndex = 6,  // default for non-watershed lines, non-ecoregion polygons
-            props = d.properties;  // shorthand
-        if (props.LEVEL) {  // watersheds
-          zIndex = levelStyles[props.LEVEL].zIndex;
-        }
-        return zIndex;
-      }
-
-      // NEEDS UPDATING TO INCLUDE POLYGONS
-      const getColor = function(level,oceanId) { // ,subId) {
-        if (!colorAssignments[oceanId]) {
-          colorAssignments[oceanId] = {
-            "II": baseHues.shift()
+        const getStroke = function(d) {
+          let props = d.properties; // shorthand
+          if (props.CATEGORY === "Watershed") {
+            return getColor(props.LEVEL,props.OCEAN_ID);
+          } else { // if (props.CATEGORY === "River") {
+            return riverBlue;
           }
         }
-        if (!colorAssignments[oceanId][level]) {
-          if (!colorAssignments[oceanId]["II"]) {  // occasionally undefined; debugging
-            console.log(oceanIds)
-            console.log(colorAssignments)
-            console.log("basehues",baseHues.slice())
-            console.log(lines.filter(d=> { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "I" }).map(d => d.properties.OCEAN_ID))
+
+        const getFill = function(d) {
+          let props = d.properties; // shorthand
+          if (props.CATEGORY === "Ecoregion") {
+            return chroma.random() // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
+            //return getColor(props.LEVEL,props.OCEAN_ID);
+          } else { // if (props.CATEGORY === "Lake") {
+            return lakeBlue;
           }
-          // deriveColor as brighter level I color assignment
-          colorAssignments[oceanId][level] = chroma(colorAssignments[oceanId]["II"]).brighten(unromanize(level))
         }
-        return colorAssignments[oceanId][level];
-      }
 
-      const getStroke = function(d) {
-        let props = d.properties; // shorthand
-        if (props.CATEGORY === "Watershed") {
-          return getColor(props.LEVEL,props.OCEAN_ID);
-        } else { // if (props.CATEGORY === "River") {
-          return riverBlue;
+        const enrichLayer = g.append("g")
+          .attr("id","enrich-layer")
+
+        const enrichPolys = enrichLayer.append("g")
+          .attr("id", "enrich-polygons")
+          .selectAll(".enrich-poly")
+          .data(polys)
+          .enter().append("path")
+            .classed("enrich-poly polygon waiting", true)
+            .attr("d", projPath)
+            .attr("id", d => d.properties.id)
+            .property("name", d => d.properties.NAME)
+            .property("category", d => d.properties.CATEGORY)
+            .property("level", d => d.properties.LEVEL)
+            .property("more-info", d => d.properties.MORE_INFO)
+            .property("description", d => d.properties.DESCRIPTION)
+            .style("fill", d => chroma.random()) //getFill)
+            .style("stroke", "none")
+            .style("z-index",d => (getZIndex(d) - 4)) // temp, to keep polygons in order under lines
+            .style("opacity",0)
+            .style("visibility","hidden")          .on("mouseover",onMouseover)
+            .on("mouseout",onMouseout)
+
+        const enrichLines = enrichLayer.append("g")
+          .attr("id", "enrich-lines")
+          .selectAll(".enrich-line")
+          .data(lines)
+          .enter().append("path")
+            .classed("enrich-line line waiting", true)
+            .attr("d", getPath)
+            .attr("id", d => d.properties.id)
+            .property("name", d => d.properties.NAME)
+            .property("category", d => d.properties.CATEGORY)
+            .property("level", d => d.properties.LEVEL)
+            .style("fill", "none")
+            .style("stroke", getStroke)
+            .style("stroke-width", getStrokeWidth)
+            .style("stroke-dasharray", getDashArray)
+            .style("stroke-linecap", "round")
+            .style("z-index",getZIndex)
+            .style("opacity", 0)
+            .style("visibility","hidden")
+            .on("mouseover", onMouseover)
+            .on("mouseout", onMouseout)
+
+        const enrichPoints = enrichLayer.append("g")
+            .attr("id", "enrich-pts")
+          .selectAll(".enrich-pt")
+          .data(pts)
+          .enter().append("circle")
+            .classed("enrich-pt point waiting", true)
+            .attr("r", 0)
+            .attr("cx", d => projection(d.geometry.coordinates)[0])
+            .attr("cy", d => projection(d.geometry.coordinates)[1])
+            .attr("id", d => d.properties.id)
+            .property("name", d => d.properties.NAME)
+            .property("category", d => d.properties.CATEGORY)
+            .property("description", d => d.properties.DESCRIPTION)
+            .property("more-info", d => d.properties.MORE_INFO)
+            .style("fill", d => chroma.random()) // for now
+            .style("stroke", "whitesmoke")
+            .style("stroke-width", "0.05px")
+            .style("z-index",7)
+            .style("opacity", 0.6)
+            .style("visibility","hidden")
+            .on("mouseover", onMouseover)
+            .on("mouseout", onMouseout)
+
+        // let done = performance.now();
+
+        function unromanize(romanNum) {
+          // for now
+          let unromanized = {
+            "I": 1,
+            "II": 2,
+            "III": 3,
+            "IV": 4
+          };
+          return unromanized[romanNum];
         }
-      }
 
-      const getFill = function(d) {
-        let props = d.properties; // shorthand
-        if (props.CATEGORY === "Ecoregion") {
-          return chroma.random() // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
-          //return getColor(props.LEVEL,props.OCEAN_ID);
-        } else { // if (props.CATEGORY === "Lake") {
-          return lakeBlue;
+        function getPath(d) {
+          // reverse certain line paths for purposes of later tweenDash directionality
+          if (d.properties.CATEGORY === "Watershed") {
+            return reverseSVGPath(projPath(d));
+          } else {
+            return projPath(d);
+          }
         }
+
       }
 
-      const enrichLayer = g.append("g")
-        .attr("id","enrich-layer")
-
-      const enrichPolys = enrichLayer.append("g")
-        .attr("id", "enrich-polygons")
-        .selectAll(".enrich-poly")
-        .data(polys)
-        .enter().append("path")
-          .classed("enrich-poly polygon waiting", true)
-          .attr("d", projPath)
-          .attr("id", d => d.properties.id)
-          .property("name", d => d.properties.NAME)
-          .property("category", d => d.properties.CATEGORY)
-          .property("level", d => d.properties.LEVEL)
-          .property("more-info", d => d.properties.MORE_INFO)
-          .property("description", d => d.properties.DESCRIPTION)
-          .style("fill", d => chroma.random()) //getFill)
-          .style("stroke", "none")
-          .style("z-index",d => (getZIndex(d) - 4)) // temp, to keep polygons in order under lines
-          .style("opacity",0)
-          .style("visibility","hidden")          .on("mouseover",onMouseover)
-          .on("mouseout",onMouseout)
-
-      const enrichLines = enrichLayer.append("g")
-        .attr("id", "enrich-lines")
-        .selectAll(".enrich-line")
-        .data(lines)
-        .enter().append("path")
-          .classed("enrich-line line waiting", true)
-          .attr("d", getPath)
-          .attr("id", d => d.properties.id)
-          .property("name", d => d.properties.NAME)
-          .property("category", d => d.properties.CATEGORY)
-          .property("level", d => d.properties.LEVEL)
-          .style("fill", "none")
-          .style("stroke", getStroke)
-          .style("stroke-width", getStrokeWidth)
-          .style("stroke-dasharray", getDashArray)
-          .style("stroke-linecap", "round")
-          .style("z-index",getZIndex)
-          .style("opacity", 0)
-          .style("visibility","hidden")
-          .on("mouseover", onMouseover)
-          .on("mouseout", onMouseout)
-
-      const enrichPoints = enrichLayer.append("g")
-          .attr("id", "enrich-pts")
-        .selectAll(".enrich-pt")
-        .data(pts)
-        .enter().append("circle")
-          .classed("enrich-pt point waiting", true)
-          .attr("r", 0)
-          .attr("cx", d => projection(d.geometry.coordinates)[0])
-          .attr("cy", d => projection(d.geometry.coordinates)[1])
-          .attr("id", d => d.properties.id)
-          .property("name", d => d.properties.NAME)
-          .property("category", d => d.properties.CATEGORY)
-          .property("description", d => d.properties.DESCRIPTION)
-          .property("more-info", d => d.properties.MORE_INFO)
-          .style("fill", d => chroma.random()) // for now
-          .style("stroke", "whitesmoke")
-          .style("stroke-width", "0.05px")
-          .style("z-index",7)
-          .style("opacity", 0.6)
-          .style("visibility","hidden")
-          .on("mouseover", onMouseover)
-          .on("mouseout", onMouseout)
-
-      // let done = performance.now();
-
-      function unromanize(romanNum) {
-        // for now
-        let unromanized = {
-          "I": 1,
-          "II": 2,
-          "III": 3,
-          "IV": 4
-        };
-        return unromanized[romanNum];
-      }
-
-      function getPath(d) {
-        // reverse certain line paths for purposes of later tweenDash directionality
-        if (d.properties.CATEGORY === "Watershed") {
-          return reverseSVGPath(projPath(d));
-        } else {
-          return projPath(d);
-        }
-      }
-
-    }
+  }
 
   }
 
 //// INITIATE EXPERIENCE
+
   function initExp(chosen) {
 
     experience.initiated = true;
@@ -1531,16 +1532,16 @@
 
   }
 
-  function drawRoute(received,sT) {
+  function drawRoute(received,t) {
 
     d3.select("#veil").transition()
-      .duration(sT)
+      .duration(t)
       .style("opacity", 0)
       .on("end", noneClass)
 
     d3.select("#map-init-load").transition()
-      .delay(sT/2)
-      .duration(sT/2 - 200)
+      .delay(t/2)
+      .duration(t/2 - 200)
       .style("opacity", 0)
       .on("end", noneClass)
 
@@ -1558,7 +1559,7 @@
       .attr("id", "route")
 
     // fade background railways
-    g.select("#railways").transition().delay(sT/2).duration(sT/2)
+    g.select("#railways").transition().delay(t/2).duration(t/2)
       .attr("opacity",0.2)
 
     // keep relevant station points
@@ -1580,10 +1581,10 @@
 
     // remove non-chosen station points
     let allStns = g.select("#rail-stations").selectAll("circle");
-    allStns.transition().duration(sT)
+    allStns.transition().duration(t)
         .attr("r", 0)
         .on("start", () => {
-          relevantStns.transition().duration(sT)
+          relevantStns.transition().duration(t)
             .attr("r", 0.4)
         })
         .on("end", () => {
@@ -1806,26 +1807,21 @@
     d3.select(this).classed("manual-close",true);
   })
 
+  // setup event listener on modal open
+  d3.select(window).on("dblclick", function() {
+    // if modal is open and click target is NOT within modal
+    if (!(d3.select("#modal").classed("none")) && !d3.event.target.closest("#modal")) {
+      toggleModal()  // toggle close
+    }
+  })
+
   // Custom Buttons
   // d3.select("#play-pause").on("click", remoteControl.playPause(e))
-
-  // General Visibility Mgmt
-  // d3.selectAll(".expand-trigger").on("click", e=> {
-  //   expand(e.target.for); // controls?
-  //   noneClass(e.target);       // hide the icon that prompted expansion, once expansion is attained
-  // });
-  // d3.selectAll(".hide-trigger").on("click", e => {
-  //   noneClass(e.target.for); // controls? (for as attribute containing id of element to hide)
-  //   // with the exception of the modal hide-trigger (and all submit buttons)
-  //   if (e.target.type != "submit") {
-  //     // expand something else? (expand-trigger icon?)
-  //   }
-  // });
 
 // LOAD EVENTS
   d3.select(window).on("load", function () {
     // if (!('optionsReceived' in localStorage)) {
-      initPrompt();
+      initPrompt()
     // }
   });
   // d3.select(window).on("reload", *)
@@ -1838,7 +1834,7 @@
   // svg.on("viewreset", rerender);
 
 // FORMS & FIELDS
-  d3.select("#getInitOptions").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
+  d3.select("#get-options").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
                                 .on("blur", function (e) { e.target.style.background = "#fafafa" })
 
 
@@ -1881,15 +1877,18 @@
 
         // if #about was hidden on smaller window size
         if (d3.select("#about").classed("disappear-down")) {
-          // if #about was *manually* hidden
+          // change disappear-direction for aligment in case of reopen
+          d3.select("#about").classed("disappear-right",true)
+                             .classed("disappear-down",false)
+          // make sure section-wrapper not "relative"
+          d3.select("#section-wrapper").classed("relative",false)
+          // adjust dash padding so long as #about collapsed on mxl
+          d3.select("#dash-content").classed("mx24-mxl",true)
+          // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
-            // keep collapsed, but change disappear-direction
-            d3.select("#about").classed("disappear-right",true)
-                               .classed("disappear-down",false)
-            // remove relative from section-wrapper
-            d3.select("#section-wrapper").classed("relative",false)
-          } else if (d3.select("#modal-plus").classed("none")) {
-            // if #about not manually closed && modal not open
+            // keep collapsed; do nothing
+          } else if (d3.select("#modal-about").classed("none")) {
+            // if #about not manually closed && modal-about not open
             expand("about","left");
           }
         }
@@ -1922,11 +1921,14 @@
         // if #about was manually collapsed on screen mxl
         if (d3.select("#about").classed("disappear-right")) {
           // // *keep* #about collapsed, but change class to disappear-down so transitions/placement correct if #about re-expanded from smaller window position
-          // d3.select("#about").classed("disappear-down",true).classed("disappear-right",false)
+          d3.select("#about").classed("disappear-down",true)
+                             .classed("disappear-right",false)
           // replace previously-removed "relative" class in #section-wrapper
           d3.select("#section-wrapper").classed("relative", true);
           // attribution mr24 is false
           d3.select("#attribution").classed("mr24", false)
+          // readjust dash padding
+          d3.select("#dash-content").classed("mx24-mxl",false)
           // if dash was ALSO closed
           if (d3.select("#dash").classed("disappear-down")) {
             d3.select("#dash-expand-btn").classed("h24", true);
@@ -2198,17 +2200,14 @@
   }
 
   function resetZoom() {
+
     active.classed("active", false);
     active = d3.select(null);
 
-    svg.transition().duration(3000).ease(d3.easeLinear)
+    svg.transition().duration(800).ease(d3.easeLinear)
       .call(zoom.transform, zoom0)
 
-    svg.call(zoom)
-  }
-
-  function nozoom() {
-    d3.event.preventDefault();
+    // svg.call(zoom)
   }
 
 //// QUADTREE / DATA / INTERSECT QUERIES
@@ -2438,10 +2437,14 @@
       })
       .on("end", () => {
         // expand dashboard (and adjust map margins accordingly)
-        d3.select("#dash").style("opacity",0).classed("disappear-down", false)
-          .transition().duration(tEnd*2)
-            .style("opacity",1)
-        d3.select("#dash-collapse").style("opacity",0)
+        // d3.select("#dash").style("opacity",0).classed("disappear-down", false)
+        //   .transition().duration(tEnd*2)
+        //     .style("opacity",1)
+        // d3.select("#dash-collapse").style("opacity",0)
+        //   .classed("opacity0",false)
+        //   .transition().duration(tEnd*2)
+        //     .style("opacity",1)
+        d3.select("#dash-expand").style("opacity",0)
           .classed("opacity0",false)
           .transition().duration(tEnd*2)
             .style("opacity",1)
@@ -2932,15 +2935,6 @@
 
 //// HTML/CSS VISIBILITY MANAGEMENT
 
-  // function feature(element) {
-  //   // passed 'about'
-  //   // have sidebar content expand upward (from about text at bottom of screen) into modal
-  // }
-  // function unfeature(element) {
-  //   // passed 'about'
-  //   // collapse sidebar content downward
-  // }
-
   function noneClass() {
     d3.select(this).classed("none", true)
   }
@@ -2950,7 +2944,9 @@
     // if window too short to reasonably fit more content, expand modal instead
     if (window.innerHeight < 500) {
 
-      oOpen("modal-plus",elementStr)
+      if (elementStr === "about") {
+        toggleModal("modal-about")
+      }
 
     } else {
 
@@ -2962,7 +2958,8 @@
       if (elementStr === "about") {
         if (window.innerWidth > 1200) {
           d3.select("#section-wrapper").classed("relative", true);
-          d3.select("#attribution").classed("mr24", false);
+          d3.select("#attribution").classed("mr24-mxl", false);
+          d3.select("#dash-content").classed("mx24-mxl",false)
         } else {
           d3.select("#dash-up").classed("mt-neg6", false);
           d3.select("#dash-up").classed("mt-neg18", true);
@@ -2970,6 +2967,7 @@
           // d3.select("#dash-expand-btn").classed("h18", true)
         }
       } else if (elementStr === "dash") {
+        d3.select("#attribution").classed("mt0-mm", true)
         d3.select("#attribution").classed("mt-neg24", false)
         // d3.select("#attribution").classed("mt-neg6",true)
         if (window.innerWidth > 1200) {
@@ -3001,7 +2999,8 @@
     if (elementStr === "about") {
       if (window.innerWidth > 1200) {
         d3.select("#section-wrapper").classed("relative", false);
-        d3.select("#attribution").classed("mr24", true);
+        d3.select("#attribution").classed("mr24-mxl", true);
+        d3.select("#dash-content").classed("mx24-mxl",true)
       } else {
         d3.select("#dash-up").classed("mt-neg6", true);
         d3.select("#dash-up").classed("mt-neg18", false);
@@ -3009,6 +3008,7 @@
         // d3.select("#dash-expand-btn").classed("h18", false)
       }
     } else if (elementStr === "dash") {
+      d3.select("#attribution").classed("mt0-mm", false)
       d3.select("#attribution").classed("mt-neg24", true)
       // d3.select("#attribution").classed("mt-neg6", false)
       if (window.innerWidth > 1200) {
@@ -3021,29 +3021,24 @@
 
   }
 
-  function oOpen(elementStr, subContent) {
-
-    if (subContent) {
-      d3.select(`#${subContent}`).classed("none", false);
-      if (elementStr === "modal-plus") {
-        // TOGGLE form/about modal content
+  function toggleModal(subContent) {
+    // subContent required to reveal; optional on close
+    if (d3.select(`#modal`).classed("none")) {
+      if (subContent) {
+        d3.select(`#${subContent}`).classed("none", false);
         if (subContent === "modal-about") {
           collapse("about","down");
-          d3.select("#getInitOptions").classed("none", true)
-        } else if (subContent === "getInitOptions") {
-          d3.select("#modal-about").classed("none", true)
+          resize()
         }
       }
-      // doesn't register as a resize event but map may need adjustments following subContent collapse
-      resize()
+      d3.select("#modal-bg").classed("bg-lighten25", true)
+      d3.select(`#modal`).classed("none", false);
+    } else {
+      d3.select(`#modal`).classed("none", true);
+      d3.select("#modal-bg").classed("bg-lighten25", false)
+      d3.select("#get-options").classed("none", true)
+      d3.select("#modal-about").classed("none", true)
     }
-
-    d3.select(`#${elementStr}`).classed("none", false);
-
-  }
-
-  function xClose(elementStr) {
-    d3.select(`#${elementStr}`).classed("none", true);
   }
 
 //// BUTTONS & FUNCTIONAL ICONS
@@ -3060,14 +3055,16 @@
         return;
       }
     }
+
     // if animation finished/canceled or select new confirmed
     // perform variety of resets
     d3.select("#submit-btn-txt").classed("none",false);
     d3.select("#submit-btn-load").classed("none",true);
     experience.initiated = false;
-    // resetZoom();
+    // resetZoom(), endAll(), clearDOM();journey
+    d3.select("#journey").remove()
     // open selection form
-    oOpen('modal');
+    toggleModal('get-options')
   }
 
 //// PIZAZZ
@@ -3114,7 +3111,7 @@
       //   // do nothing
       } else if (d.property("id").slice(0,2) === "pt") {
         content += ` ${d.property("description")}</span>`
-      } else {
+      } else if (d.property("category")) {
         content += ` ${d.property("category")}</span>`
       }
 
@@ -3199,10 +3196,6 @@
   // }
 
   // BROADLY APPLICABLE OR NOT AT ALL
-  function toggle(i) {
-    return (i === 0) ? 1 : 0;
-  }
-
   function uniqueOn(array,prop = "properties",subProp = "id") {
     // largely from https://reactgo.com/removeduplicateobjects/
     let unique = array.map(d => d[prop][subProp])
@@ -3240,18 +3233,19 @@
 
 //// INCOMPLETE TODO ////
 
-// LITTLE THINGS, SOON
+// LITTLE THINGS
   // add intial texture to non-ecoregion polys
-  // fix a few more layout issues
-    // see issues folder with a few more screenshots of layout issues to fix
-    // resolve initial balance between "About" and route prompt
-    // FIX ABOUT EXPAND BUTTON ON MXL
-    // TURN DASH EXPAND / ABOUT COLLAPSE INTO TRANSITIONS
-    // on @media screen up to ml, #about collapsed with icon?
-    // screen mxl, about window OPEN, fixed position OFF
-    // gaspeX peninsula watershed character
-    // keep cleaning data (polys mostly, lines if time)
-      // remove repetitive stuff ("lake michigan lake") and prepare for dash/log output
+  // resolve initial balance between "About" and route prompt
+  // keep cleaning data (polys mostly, lines if time)
+    // remove repetitive stuff ("lake michigan lake") and prepare for dash/log output
+    // gaspe peninsula watershed character
+  // change projection to equidistant (instead of equal area)
+  // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
+  // turn #dash, #about, and #modal expand/collapse into transitions?
+  // sources.md -> links
+  // about paragraph
+  // workable link color
+  // workable button hover color
 
 // ONGOING / AS POSSIBLE:
   // remove/fix problem cities
@@ -3270,15 +3264,15 @@
   // fix console errors (in Chrome)
     // "Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist."
     // "[Violation] Forced reflow while executing JavaScript took 39ms"
+      // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
 
 // STYLING NOTES:
-  // visual affordances on hover
+  // improve visual affordances on hover
   // new color for modal
   // make enrichLines brighter close up?
   // fix watershed color scale (stable shades of silver/light grey?)
-  // polygon opacity also based on level
-    // lines too?
-  // zIndexes will become relevant. from bottom to top:
+  // polygon opacity also based on level?
+  // zIndexes becoming more relevant. from bottom to top:
     // basemap
     // polygons large->small (slightly transparent)
     // linegons
@@ -3289,12 +3283,20 @@
     // enrichPts
     // dashboard
     // tooltips
+  // transitions can interpolate between:
+    // visibility: visible and visibility: hidden
+    // opacity [0, 1]
+    // colors
+    // location/size
+  // PLAY/ADVANCED:
+    // CSS filters: blur(),brightness(),hueRotate()
+    // mix-blend-mode, filters: sepia(), blur(), drop-shadow(), grayscale()
+    // backdrop filters? (not much browser compatability?)
+    // SVG filters: feGaussianBlur, etc
 
 // MAJOR TO DO'S; *** = NEED HELP!
   // *** performance improvement! (see next section below) ***
   // *** create rewind,ff,play/pause,cancel buttons for user control over animation (state management a huge implicit -- animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData)). including reverse animation??
-  // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
-    // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
   // resolve all dash output / user information INCL legend/log (lots of data clumping)
   // resolve all colors, stroke-dasharrays, textures, styling issues of every kind
   // restructure line trigger/reveal such that watersheds trigger all inner lakes and streams in predetermined reveal order (timing same as watershed overall, but possible continued silver/blue flickering in flow direction), OR, only 1 intersection per feature, triggerPts adjusted accordingly (given streams a headstart such that they reach i0 concurrently) and each animated in flow direction
@@ -3313,13 +3315,42 @@
     // * redraw SVG (supported by use of `clipExtent()` or similar?) at certain moments within script
     // * appropriately truncate coordinates and other values wherever possible
     // * slim library imports / take only what I need
+  // https://beta.observablehq.com/@mbostock/disposing-content
+  // Canvas links:
+    // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
+    //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
+    // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
+    // https://beta.observablehq.com/@mbostock/randomized-flood-fill
+    // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
+    // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
 
 // WISHLIST/FUN
-  // orig options: sort matching by distance
-  // "choose random" @ initial prompt
-  // choose cities by location (clicking on stn pt within map)
-  // sliders for user to control speed of train, other variable
+  // orig options sorted matching by distance
+  // add autocomplete/suggestions to R2R search
+  // add features:
+    // ability to "select random" in prompt route
+    // ability to select route visually, by clicking on city/rail stn locations from map
+    // ability to replay, rewind, ff?, select new
+    // ability to control pace of train (and other variables?) via slider(s)
+    // ability to takeSnapshot()=> save inner screenshot in log?
+  // add more enrich data (pts only): tunnels, bridges, iNaturalist, glaciers
+  // add underlying MapboxGL vector tiles / custom MapboxStudio basemap?
+  // add underlying shaded relief raster layer?
+    // http://www.shadedrelief.com/birds_eye/gallery.html?
+  // seek opportunities for more data-driven styling
+    // bc math & facts ==> pattern & power
+  // instead of free-zooming, zoom to certain views: whole continent, all routes, selected route, current train position, X miles
+    // keep enabled even during animation
+  // keep improving responsivity/layout
+    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
+    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
 
 // MAYBE
   // visualize fewer ecoregion and watershed levels
-  // low priority: remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
+  // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
+    // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
+
+// CLEAN UP
+  // be super consistent and clear including '' vs "", use of var/const/let, spacing
+  // refactor, optimize, condense, DRY, improve structure
+  // revisit zoomFollow functions in particular
