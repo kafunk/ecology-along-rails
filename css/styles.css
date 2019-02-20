@@ -8,7 +8,7 @@ p, span, a, li { font-family: 'Thasadith', sans-serif; line-height: 150%;}
 a { color: whitesmoke; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
-svg path { stroke-linejoin: round; } /* shape-rendering: optimizeSpeed; } */
+svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-rendering: optimizeSpeed; } */
 
 /* list of all IDed elements */
 /* #header, #title, #subtitle, #main, #section, #aside, #map-plus, #overlay, #map, #legend, #legend-content, #info, #attribution, #zoom, #about-toggles, #about-expand, #about-collapse, #about, #about-wrapper, #about-content, #dash-plus, #dashboard, #dash-toggles, #dash-wrapper, #dash-content, #modal-plus, #modal, #veil, #modal-content, #modal-about, #modal-close, #footer */
@@ -16,6 +16,8 @@ svg path { stroke-linejoin: round; } /* shape-rendering: optimizeSpeed; } */
 /* #aside, #about-toggles, #about-expand, #about-collapse, #about, #about-wrapper, #about-content, #dashboard, #dash-toggles, #dash-wrapper, #dash-content, #modal-plus, #modal, #veil, #modal-about { transition: 0.6s all; } */
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
+#veil,#modal { pointer-events: none; }
+#getInitOptions {pointer-events: all; }
 
 #map {  /* i.e. .svg-container */
   top:0;
@@ -75,7 +77,7 @@ svg path { stroke-linejoin: round; } /* shape-rendering: optimizeSpeed; } */
 .legend-item { }
 .legend-symbol { }
 .legend-text { }
-.hover { }
+.hover { stroke: #d8ff00; stroke-width: 1; opacity: 1}  /* make more dynamic */
 .visible { }
 .hidden { }
 
@@ -88,7 +90,6 @@ svg path { stroke-linejoin: round; } /* shape-rendering: optimizeSpeed; } */
 
 /* TRIGGER PTS and other quadtree data */
 .quad-datum {
-  radius: 0.5;
   stroke-width: 0.1px;
   opacity: 0.6;
   fill: darkgoldenrod;
