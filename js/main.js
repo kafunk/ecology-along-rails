@@ -189,6 +189,81 @@
       .attr("stop-color", d => { return radialGradientScale(d) });
 
 
+// TEXTURES
+
+  const random = function(upper,lower = 0) {
+    let randNum = Math.random();
+    return (upper) ? lower + Math.round(randNum * (upper - lower)) : randNum;
+  }
+
+  const orientations = ["horizontal","diagonal","vertical","2/8","4/8","6/8","8/8"];
+
+  let tWaves = textures.paths()
+    .d("waves")
+    .background(lakeBlue)
+    .stroke("mediumseagreen")
+    .thicker(18)
+    .lighter(12)
+  let tCrosses = textures.paths()
+    .d("crosses")
+    .thicker(18)
+    .lighter(12)
+  let tNylon = textures.paths()
+    .d("nylon")
+    .lighter(12)
+    .thicker(18)
+    .shapeRendering("crispEdges")
+  let tLines = textures.lines()
+    .thicker(18)
+    .lighter(12)
+    .orientation(orientations[random(orientations.length-1)])
+  let tLines2 = textures.lines()
+    .size(0.5)
+    .lighter(12)
+    .thicker(18)
+    .orientation(orientations[random(orientations.length-1)],orientations[random(orientations.length-1)])
+  let tLines3 = textures.lines()
+    .orientation(`${random(8).toLocaleString()}/8`)
+  let tCircles = textures.circles()
+    .complement()
+    .thicker(18)
+    .lighter(12)
+    .fill(chroma.random())
+  let tCircles2 = textures.circles()
+    .complement()
+    .radius(random(8))
+    .thicker(18)
+    .lighter(12)
+  let tHexagons = textures.paths()
+    .d("hexagons")
+    .thicker(18)
+    .lighter(12)
+    .shapeRendering("crispEdges")
+    .fill("transparent")
+  let tHexagons2 = textures.paths()
+    .d("hexagons")
+    .thicker(18)
+    .lighter(12)
+  let tSquares = textures.paths()
+    .d("squares")
+    .thicker(18)
+    .lighter(12)
+
+  // let textureOpts = [tLines,tLines2,tCircles,tHexagons,tNylon,tCrosses]
+
+  let textureOpts = [tCircles,tHexagons,tNylon,tCrosses]
+
+  textureOpts.forEach(d => {
+    d.stroke(chroma.random())
+  })
+
+  // circles can complement
+  // circles have radius
+  // circles and paths have fill
+  // paths have shapeRendering
+  // lines have orientation
+
+
 //// INITIATE DATA LOAD
 
   // Typical Mapshaper CLI transform:
@@ -1414,23 +1489,19 @@
         const getFill = function(d) {
           let props = d.properties; // shorthand
           if (props.CATEGORY === "Lake") {
-            // return tWaves.url();
-            return lakeBlue;
-          // } else if (props.CATEGORY === "Ecoregion") {
-          //   return chroma.random();
-          //   // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
+            return tWaves.url();
+          } else if (props.CATEGORY === "Ecoregion") {
+            return chroma.random();
+            // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
           } else if (props.id.slice(0,2) == "ln") {  // only lake lines filled
             return "none"
           } else {
-            return chroma.random()
+            let chosen = textureOpts[random(textureOpts.length-1)];
+            svg.call(chosen)
+            return chosen.url();
           }
-          // else {
-          //   let chosen = textureOpts[random(textureOpts.length-1)];
-          //   svg.call(chosen)
-          //   return chosen.url();
-          // }
         }
-// double kankakee?
+
         const enrichLayer = g.append("g")
           .attr("id","enrich-layer")
 
@@ -3299,12 +3370,14 @@
 //// INCOMPLETE TODO ////
 
 // DONE:
-  // add initial texture to non-ecoregion polys
   // clean data more (associate rivers/lakes with watersheds, update ids, remove repetitive text, character errors, extra whitespaces)
   // restructure line trigger/reveal such that watersheds trigger all inner lakes and streams in predetermined reveal order (timing same as watershed overall, but possible continued silver/blue flickering in flow direction), OR, only 1 intersection per feature, triggerPts adjusted accordingly (given streams a headstart such that they reach i0 concurrently) and each animated in flow direction
+    // i0 = i0, i1 = last i1; get baseT of this, then extrapolate baseT of full, THEN determine new i0 based on distance from coord0 to original i0
 
 // LITTLE THINGS
-
+  // double kankakee?
+  // dash expand not part of map window
+  // account for polygons a user STARTS in (does not enter, may/may not exit)
   // resolve initial balance between "About" and route prompt
   // change projection to equidistant (instead of equal area)
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
@@ -3314,10 +3387,6 @@
   // workable link color
   // workable button hover color
 
-
-// i0 = i0, i1 = last i1; get baseT of this, then extrapolate baseT of full, THEN determine new i0 based on distance from coord0 to original i0
-
-
 // ONGOING / AS POSSIBLE:
   // remove/fix problem cities
     // FIX
@@ -3326,6 +3395,7 @@
       // Cincinnatti, OH
       // Greenville, SC
       // Grand Junction, CO
+      // Saskatoon, SK
     // REMOVE
       // Lynn Lake, MB
       // Sept-Iles, QC :(
