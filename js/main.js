@@ -284,15 +284,17 @@
         // passRail = d3.json("data/final/pass_railways.json"),
         railStns = d3.json("data/final/na_rr_stns.json"),
   // merged enrich data
-     enrichPolys = d3.json("data/final/enrich_polys.json"),
-     enrichLines = d3.json("data/final/enrich_lines.json"),
-       enrichPts = d3.json("data/final/enrich_pts.json"),
-     // enrichPolys = d3.json("data/final/slimmed/enrich_polys.json"),
-     // enrichLines = d3.json("data/final/slimmed/enrich_lines.json"),
-     //   enrichPts = d3.json("data/final/slimmed/enrich_pts.json"),
+     // enrichPolys = d3.json("data/final/enrich_polys.json"),
+     // enrichLines = d3.json("data/final/enrich_lines.json"),
+     //   enrichPts = d3.json("data/final/enrich_pts.json"),
+     enrichPolys = d3.json("data/final/slimmed/enrich_polys.json"),
+     enrichLines = d3.json("data/final/slimmed/enrich_lines.json"),
+       enrichPts = d3.json("data/final/slimmed/enrich_pts.json"),
   // quadtree ready
-    quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),  // searchReps
-   triggerPtPool = d3.json("data/final/enrich_trigger_pts.json");    // triggerPts
+    quadtreeReps = d3.json("data/final/slimmed/quadtree_search_reps.json"),
+   triggerPtPool = d3.json("data/final/slimmed/enrich_trigger_pts.json");
+   //  quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
+   // triggerPtPool = d3.json("data/final/enrich_trigger_pts.json");
 
 //// PREPARE MAP LAYERS
 
@@ -325,7 +327,7 @@
     });
 
     // MESH SELECT
-    let lakeMesh = getMesh(sourceData.hydroLines,"hydroLines", (a,b) => { return a.properties.strokeweig === null }),
+    let lakeMesh = getMesh(sourceData.hydroUnits,"hydroUnits", (a,b) => { return a.properties.strokeweig === null }),
        urbanMesh = getMesh(sourceData.urbanAreas,"urbanAreas"),
    continentMesh = getMesh(sourceData.countries,"countries",outerlines()),
    countriesMesh = getMesh(sourceData.countries,"countries",innerlines()),
@@ -395,7 +397,7 @@
     hydroBase.append("g")
       .attr("id", "rivers")
       .selectAll("path")
-      .data(sourceData.hydroLines.gj.features.filter(d => { return d.properties.strokeweig !== null }))
+      .data(sourceData.hydroUnits.gj.features.filter(d => { return d.properties.strokeweig !== null }))
       .enter().append("path")
         .attr("d", projPath)
         .style("fill","none")
@@ -922,9 +924,6 @@
             let coords = d.geometry.coordinates  // shorthand
             if (coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {  // ie if line === closed
               massagedEnrich.linegons.push(d)
-            } else if (d.properties.ASSOC_WATERSHED) {
-              // do nothing; lines WITH an ASSOC_WATERSHED attribute will be triggered automatically by their containing watershed
-              // for some reason (!(d.properties.ASSOC_WATERSHED) does not return opposite of this conditional
             } else {
               massagedEnrich.regLines.push(d);
             }
@@ -948,14 +947,6 @@
 
         function getTriggerData(triggerPtPool,pts,regLines,linegons,polys,route,buffer) {
 
-          // and their associated intersection0,intersection1 pairs;
-          // split line geometries into two or more segments as necessary (one trigger pt per segment; occasionally, same trigger pt triggers multiple segments)
-          // add relevant properties:
-            // flag as partial geometry (tell log not to add to counts, etc)
-            // flag as multi trigger
-            // store distance from i0 to i1
-            // reference counterparts/group
-
           let begin = performance.now();
           console.log("getting trigger data @",begin)
 
@@ -968,7 +959,7 @@
             polygons: "py"
           };
 
-          let replaceGJs = [];  // should be lines/linegons only
+          let replaceGJs = [];  // should be linegons only
                                 // keep track of features that come in whole and were segmented, such that associated full GJ's can be replaced with multiple parts before binding to domain
                                 // keep all ids and geoms consistent between triggerPts and triggered features to ensure easy styling/transitions later on
 
@@ -1009,9 +1000,9 @@
                 let i0, i1,
                   routeIntersectPts = featurePool.filter(d => {
                     return !d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
-                  }), // .sort((a,b) => {  // SKIP THE SORT?
-                  //   return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
-                  // }),
+                  }).sort((a,b) => {  // SKIP THE SORT?
+                    return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
+                  }),
                   bufferIntersectPts; // may or may not need
 
                 // if (!routeIntersectPts.length) {
@@ -1034,9 +1025,9 @@
 
                   bufferIntersectPts = featurePool.filter(d => {
                     return d.properties.buffer_int && turf.booleanPointInPolygon(d,buffer);
-                  }) // .sort((a,b) => {
-                  //   return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
-                  // })
+                  }).sort((a,b) => {
+                    return turf.distance(routeOrigin,a) < turf.distance(routeOrigin,b);  // sort vaguely in direction of travel (turf.distance calculated geodesically, not route specific)
+                  });
 
                   // if (bufferIntersectPts.length) {
                   //   console.log("bufferIntPts filtered from pool",bufferIntersectPts.slice().map(d=>d.geometry.coordinates))
@@ -1192,111 +1183,103 @@
 
                 } else { // regLines
 
-                  // EVENTUAL GOAL: RESTRUCTURE THIS FURTHER SO NO GJ SPLITTING AT ALL
                   // FIND ONLY ONE INTERSECT PT; KEEP GJ IN TACT, BUT BASE LOCATION OF TRIGGER PT ON DISTANCE FROM ENRICHLINE START TO I0 (TIMING SO THAT TRAIN AND ANIMATION MEET AT THAT POINT CONCURRENTLY)
                   // ANIMATE ENRICH LINE IN FULL FROM START-> END OF LINE BASE ON FLOW DIRECTION! OR OTHER STANDARD FOR NON-STREAMS (?)
                   // ACTUAL TRIGGER PT LOCATIONS WILL HAVE TO BE RECREATED IN ORDER FOR QUADTREE SEARCH TO ENCOUNTER THEM WITH ENOUGH LEEWAY SO THAT STREAMS/ETC CAN GET AN APPROPRIATE HEADSTART WHERE NECESSARY
 
-                  // FOR NOW, TO SAVE PROCESSING TIME, FORGET SEGMENTS WITH EXCEPTION OF GENERAL i0First->i0Last (if different)
+                  // THAT IS: restructure line trigger/reveal such that only 1 intersection per feature, triggerPts adjusted accordingly (given streams a headstart such that they reach i0 concurrently) and each animated in flow direction
+                    // get baseT of i0->i1, then extrapolate baseT of full, THEN determine new i0 based on distance from coord0 to original i0
 
-                  // i0 is already first intersected route OR snapped buffer intersect pt; if there were enough intersectPts, i1 already saved as final route intersect OR snapped final buffer intersect pt
+                  // i0 is first intersected route pt OR snapped buffer intersect pt; if there were enough intersectPts, i1 is final route intersect pt OR snapped final buffer intersect pt
                   let i0First = i0,
-                      i1First = getI1(d);//, // "first" flag == default
-                       // i0Last = i1 || i0, // i0 if no i1 has been saved so far (indicating there is really only one enrichLine-route intersect pt)
-                       // i1Last = getI1(d,"last");
+                       dFirst = getI1(d), // "first" flag == default
+                       i0Last = i1 || i0; // i0 if no i1 has been saved so far (indicating there is really only one enrichLine-route intersect pt)
+                        // dLast = getI1(d,"last");
 
-                  let test;
-                  if (d.geometry.type === "MultiLineString") {
-                    let stored = [];
-                    d.geometry.coordinates.forEach((arr,i) => {
-                      let slice = turf.lineSlice(i1First,i0First,turf.lineString(arr));
-                      if (slice.geometry.coordinates.length > 2) {
-                        stored.push(slice.geometry.coordinates);
-                      }
-                    })
-                    test = turf.lineString(stored.flat());
+                  // break off line slice between start of d and i0First
+                  let dPreMiles;
+                  if (dFirst !== i0First) {
+                    if (d.geometry.type === "MultiLineString") {
+                      dPreMiles = sliceMultiString(dFirst,i0First,d).length;
+                    } else {
+                      dPreMiles = turf.length(turf.lineSlice(dFirst,i0First,d),{units:"miles"});
+                    }
                   } else {
-                    test = turf.lineSlice(i1First,i0First,d);
+                    dPreMiles = 0;
                   }
 
-                  // let dPix = projPath.measure(test),
-                  let dMiles = turf.length(test,{units:"miles"}),
-                    routeI0 = turf.nearestPointOnLine(route,i0First),
-                    adjustedI0Dist = Math.abs(routeI0.properties.location - dMiles),
-                    adjustedI0 = turf.along(route,adjustedI0Dist, {units: "miles"});
+                  let dOverlapMiles;
+                  if (i0First !== i0Last) {
+                    if (d.geometry.type === "MultiLineString") {
+                      dOverlapMiles = sliceMultiString(i0First,i0Last,d).length;
+                    } else {
+                      dOverlapMiles = turf.length(turf.lineSlice(i0First,i0Last,d),{units:"miles"});
+                    }
+                  } else {
+                    dOverlapMiles = 0;
+                  }
 
-                  // i0 = i0 - length
-                  // no gj adjustment
+                  let dTotalMiles = turf.length(d,{units:"miles"});
+
+                  let routeI0 = (i0First.properties.location) ? i0First : turf.nearestPointOnLine(route,i0First,{units:"miles"});
+
+                  let adjustedI0Location = Math.max(0,routeI0.properties.location - dPreMiles);
+
+                  // console.log("adjusted location",adjustedI0Location)
+
+                  // if (Math.sign(adjustedI0Location) === -1) {
+                  //
+                  //   // try reversing d
+                  //   let reversed, preMiles2;
+                  //
+                  //   // console.log("d",d.geometry.coordinates.slice())
+                  //
+                  //   if (d.geometry.type === "MultiLineString") {
+                  //     reversed = turf.multiLineString(reverseNested(d.geometry.coordinates.slice()));
+                  //     // console.log("reversed nested",reversed.geometry.coordinates)
+                  //     preMiles2 = sliceMultiString(dLast,i0First,reversed).length;
+                  //   } else {
+                  //     reversed = turf.lineString(d.geometry.coordinates.slice().reverse())
+                  //     // console.log("reversed plain",reversed.geometry.coordinates)
+                  //     preMiles2 = turf.length(turf.lineSlice(dLast,i0First,reversed),{units:"miles"});
+                  //   }
+                  //
+                  //   adjustedI0Location = routeI0.properties.location - preMiles2;
+                  //
+                  //   // console.log("new adjusted",adjustedI0Location)
+                  //
+                  //   // if still negative
+                  //   if (Math.sign(adjustedI0Location) === -1) {
+                  //     adjustedI0Location = 0;
+                  //   } else {  // if it worked, make changes permanent (for now; at least until flow direction property added)
+                  //     d.geometry.coordinates = reversed;
+                  //     dPreMiles = preMiles2;
+                  //     dLast = dFirst;
+                  //   }
+                  //
+                  // }
+
+                  let adjustedI0 = turf.along(route,adjustedI0Location, {units: "miles"});
+
+                  let baseT;
+                  if (dOverlapMiles > 0) {
+                    let wouldBeT = Math.ceil(turf.length(turf.lineSlice(i0First,i0Last,route),{units:"miles"}));
+                    // console.log("would be t",wouldBeT)
+                    baseT = Math.ceil((wouldBeT * dTotalMiles) / dOverlapMiles)
+                  } else {
+                    baseT = dTotalMiles;
+                  }
+
+                  // console.log("baseT",baseT)
+                  // console.log("final premiles",dPreMiles)
 
                   triggerPts.push(turf.point(adjustedI0.geometry.coordinates,{
-                    // i1?
+                    // i1: dLast,
                     id: origId,
-                    baseT: Math.ceil(turf.length(d,{units:"miles"})),
+                    baseT: baseT,
+                    outputDelay: dPreMiles,
                     triggers: "line"
                   }))
-
-                      // invariably add one triggerPt representing first intersectPt to enrichLine begin
-                      // triggerPts.push(turf.point(i0First.geometry.coordinates,{
-                      //   i1: i1First
-                      // }));
-
-                      // if multiple intersect pts, create one middle segment representing space between the two (first/last)
-                      // if (i0First !== i0Last) {
-                      //   triggerPts.push(turf.point(i0First.geometry.coordinates,{
-                      //     i1: i0Last,
-                      //     baseT: Math.ceil(turf.length(turf.lineSlice(i0First,i0Last,route),{units:"miles"})),
-                      //     segmentFlag: true
-                      //   }));
-                      // }
-                      //
-                      // invariably add one triggerPt representing last (possibly same) intersectPt -> enrichLine end
-                      // triggerPts.push(turf.point(i0Last.geometry.coordinates,{
-                      //   i1: i1Last,
-                      //   segmentFlag: true
-                      // }));
-
-                      // save properties to respective GJs and push to outer function's replaceGJs to ensure alignment between triggering and triggered
-                      // triggerPts.forEach((triggerPt,i) => {
-                      //
-                      //   let newId = `${origId}-${(i+1)}`;
-                      //
-                      //   // create new geoJSON feature for the associated line segment and push into outer function's 'replaceGJs' array. transfer properties and update id to align with triggerPt id (while saving former id as origId)
-                      //   let gj;
-                      //   if (d.geometry.type === "MultiLineString") {
-                      //
-                      //     let stored = [];
-                      //     d.geometry.coordinates.forEach((arr,i) => {
-                      //
-                      //       let slice = turf.lineSlice(triggerPt,triggerPt.properties.i1,turf.lineString(arr));
-                      //
-                      //       if (slice.geometry.coordinates.length > 2) {
-                      //         stored.push(slice.geometry.coordinates);
-                      //       }
-                      //
-                      //     })
-                      //
-                      //     gj = turf.multiLineString(stored);
-                      //
-                      //   } else {
-                      //     gj = turf.lineSlice(triggerPt,triggerPt.properties.i1,d);
-                      //   }
-                      //
-                      //   gj.properties = Object.assign({},d.properties),
-                      //   gj.properties.oid = origId,
-                      //   gj.properties.id = newId;
-                      //
-                      //   replaceGJs.push(gj);
-                      //
-                      //   triggerPt.properties.id = newId;
-                      //   triggerPt.properties.oid = origId;
-                      //   triggerPt.properties.triggers = "line";
-                      //
-                      //   if (!triggerPt.properties.baseT) {
-                      //     // middle segment already stored using route length vs enrichLine length
-                      //     triggerPt.properties.baseT = Math.ceil(turf.length(gj,{units:"miles"}));
-                      //   }
-                      //
-                      // })
 
                 }
 
@@ -1305,11 +1288,6 @@
               // ALL
               // triggerPts.forEach(triggerPt => {
               //   triggerPt.properties.name = d.properties.NAME;
-              //   // if (triggerPt.properties.baseT === 0) {
-              //   //   console.log(d.geometry)
-              //   //   console.log(triggerPt.geometry)
-              //   //   console.log(triggerPt.properties.i1.geometry)
-              //   // }
               // })
 
               return triggerPts;
@@ -1333,6 +1311,34 @@
                 }
                 return turf.point(coords[index]);
               }
+
+            function reverseNested(d) {
+              let reversed = [];
+              d.forEach(arr => {
+                if (Array.isArray(arr[0][0])) {
+                  reversed.unshift(reversedNested(arr.slice()))
+                } else {
+                  reversed.unshift(arr.slice().reverse())
+                }
+              })
+              return reversed;
+            }
+
+            function sliceMultiString(pt0,pt1,d) {
+              let accumCoords = [],
+                  accumLength = 0;
+              d.geometry.coordinates.forEach((arr,i) => {
+                let slice = turf.lineSlice(pt0,pt1,turf.lineString(arr));
+                if (slice.geometry.coordinates.length > 2) {
+                  accumCoords.push(slice.geometry.coordinates);
+                  accumLength += turf.length(turf.lineString(slice.geometry.coordinates),{units:"miles"});
+                }
+              })
+              return {
+                coords: accumCoords,
+                length: accumLength
+              }
+            }
 
           });
 
@@ -1390,99 +1396,101 @@
 
         // let begin = performance.now();
 
-        let colorAssignments = {};
+        let oceanIds = [...new Set(lines.filter(d => { return d.properties.CATEGORY === "Watershed" }).map(d => { return d.properties.OCEAN_ID }))],
+           oceanHues = chroma.scale(['paleturquoise','aquamarine']).mode('lch').correctLightness().colors(oceanIds.length);
 
-        let oceanIds = [...new Set(lines.filter(d => { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "II" }).map(d => { return d.properties.OCEAN_ID }))],
-            baseHues = chroma.scale('Spectral').colors(oceanIds.length);
+        let ecoZones = [...new Set(polys.filter(d => { return d.properties.CATEGORY === "Ecoregion" /* && d.properties.LEVEL === "II"*/ }).map(d => { return d.properties.ECOZONE }))],
+            zoneHues = chroma.scale('Spectral').colors(ecoZones.length);
 
-        if (!baseHues.length) {
-          console.log(baseHues.slice())
-          console.log(oceanIds.length)
-          console.log(chroma.scale('Spectral').colors(oceanIds.length))
-        }
+        let colorAssignments = {
+          watersheds: {},
+          ecoregions: {}
+        };
+
+        oceanIds.forEach(id => {
+          colorAssignments.watersheds[id] = {
+            base: chroma(oceanHues.shift().slice()).alpha(0.5)
+            // base: chroma.random().alpha(0.5)
+          }
+        })
+        ecoZones.forEach(zone => {
+          colorAssignments.ecoregions[zone] = {
+            base: chroma(zoneHues.shift().slice()).alpha(0.5)
+            // base: chroma.random().alpha(0.5)
+          }
+        })
 
         const levelStyles = {  // used for watersheds and ecoregions
           "I": {
-            dash: "0.1 0.4",
+            // dash: "0.1 0.4",
             width: 0.01,
-            zIndex: 5
+            zIndex: 1
           },
           "II": {
-            dash: "0.3 0.4",
+            // dash: "0.3 0.4",
             width: 0.05,
-            zIndex: 4
+            zIndex: 2
           },
           "III": {
-            dash: "0.3 0.1 0.2 0.1",
+            // dash: "0.3 0.1 0.2 0.1",
             width: 0.05,
             zIndex: 3
           },
           "IV": {
-            dash: "0.1 0.2 0.4 0.2",
+            // dash: "0.1 0.2 0.4 0.2",
             width: 0.1,
-            zIndex: 2
+            zIndex: 4
           },
           "V": {  // some ecoregions
-            zIndex: 1
+            zIndex: 5
           }
         }
 
         const getDashArray = function(d) {
-          let dashArray;
-          if (d.properties.CATEGORY === "Watershed") {
-            dashArray = levelStyles[d.properties.LEVEL].dash
-          } else {
-            dashArray = "4 4";
-          }
-          return dashArray;
+          return (d.properties.CATEGORY === "Watershed") ? "0.1 0.2 0.4 0.2" : "none";
         }
 
         const getStrokeWidth = function(d) {
-          let width = 0.1,           // default
-              props = d.properties;  // shorthand
-          if (props.STROKEWIDTH) {
-            width = props.STROKEWIDTH;
-          } else if (props.LEVEL) {
-            width = levelStyles[props.LEVEL].width;
-          }
-          return width;
+          return (d.properties.STROKEWIDTH) ? d.properties.STROKEWIDTH : 0.1;
         }
 
         const getZIndex = function(d) {
-          let zIndex = 6,  // default for non-watershed lines, non-ecoregion polygons
-              props = d.properties;  // shorthand
-          if (props.LEVEL) {  // watersheds
+          let zIndex = 10,  // default for non-watershed lines & non-ecoregion polygons
+            props = d.properties;  // shorthand
+          if (props.LEVEL) {  // ecoregions; FORMERLY watersheds
             zIndex = levelStyles[props.LEVEL].zIndex;
+          } else if (props.CATEGORY === "Watershed") {
+            zIndex = 6
           }
           return zIndex;
         }
 
-        // NEEDS UPDATING TO INCLUDE POLYGONS
-        const getColor = function(level,oceanId) { // ,subId) {
-          if (!colorAssignments[oceanId]) {
-            colorAssignments[oceanId] = {
-              "II": baseHues.shift()
+        const getColor = function(type,parentId,level) {
+          if (type === "Ecoregion") {
+            // derive color as brighter (/more saturated? darker? more opaque?) version of parent level color assignment
+            if (!colorAssignments.ecoregions[parentId][level]) {
+              colorAssignments.ecoregions[parentId][level] = {
+                base: chroma(colorAssignments.ecoregions[parentId].base).saturate(unromanize(level))
+              }
             }
+            return chroma(colorAssignments.ecoregions[parentId][level].base).set('lch.c', random(30));
+          } else {
+            return chroma.random();
           }
-          if (!colorAssignments[oceanId][level]) {
-            if (!colorAssignments[oceanId]["II"]) {  // occasionally undefined; debugging
-              console.log(oceanIds)
-              console.log(colorAssignments)
-              console.log("basehues",baseHues.slice())
-              console.log(lines.filter(d=> { return d.properties.CATEGORY === "Watershed" && d.properties.LEVEL === "I" }).map(d => d.properties.OCEAN_ID))
-            }
-            // deriveColor as brighter level I color assignment
-            colorAssignments[oceanId][level] = chroma(colorAssignments[oceanId]["II"]).brighten(unromanize(level))
-          }
-          return colorAssignments[oceanId][level];
         }
 
         const getStroke = function(d) {
           let props = d.properties; // shorthand
           if (props.CATEGORY === "Watershed") {
-            return getColor(props.LEVEL,props.OCEAN_ID);
-          } else { // if (props.CATEGORY === "River") {
+            return colorAssignments.watersheds[props.OCEAN_ID].base;
+          } else if (props.CATEGORY === "Ecoregion") {
+            return chroma(colorAssignments.ecoregions[props.ECOZONE][props.LEVEL].base).brighten(2)
+          } else if (props.CATEGORY === "River") {
             return riverBlue;
+          } else if (props.CATEGORY === "Lake") {
+            return lakeBlue;
+          } else {  // ??
+            return chroma.random();
           }
         }
 
@@ -1491,10 +1499,10 @@
           if (props.CATEGORY === "Lake") {
             return tWaves.url();
           } else if (props.CATEGORY === "Ecoregion") {
-            return chroma.random();
+            return getColor("Ecoregion",props.ECOZONE,props.LEVEL)
             // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
-          } else if (props.id.slice(0,2) == "ln") {  // only lake lines filled
-            return "none"
+          } else if (props.id.slice(0,2) === "ln") {  // only lake lines filled
+            return "none";
           } else {
             let chosen = textureOpts[random(textureOpts.length-1)];
             svg.call(chosen)
@@ -1520,7 +1528,7 @@
             .property("description", d => d.properties.DESCRIPTION)
             .style("fill", getFill)
             .style("stroke", "none")
-            .style("z-index",d => (getZIndex(d) - 4)) // temp, to keep polygons in order under lines
+            .style("z-index",getZIndex) // d => (getZIndex(d) - 4)) // temp, to keep polygons in order under lines
             .style("opacity",0)
             .style("visibility","hidden")          .on("mouseover",onMouseover)
             .on("mouseout",onMouseout)
@@ -1579,7 +1587,8 @@
             "I": 1,
             "II": 2,
             "III": 3,
-            "IV": 4
+            "IV": 4,
+            "V": 5
           };
           return unromanized[romanNum];
         }
@@ -2948,20 +2957,20 @@
     // DETERMINE TYPE, CALCULATE T, VISUALIZE
       // currently separated for geom-specific styling and transitions, but may be no need..
     if (id.startsWith('ln')) {
-      if (encountered.property("category") === "Watershed") {
-        let innerReveal = g.selectAll(".enrich-line.waiting").filter(e => {
-          return e.properties.ASSOC_WATERSHED === encountered.datum().properties.oid;
-        });
-        if (innerReveal.nodes()) {
-          innerReveal.nodes().forEach(node => {
-            // let selectedReveal = g.select(`#${e.properties.id}`);
-            let selectedReveal = d3.select(node);
-            selectedReveal.classed("waiting",false);
-            reveal(selectedReveal,"line",t);
-            output(selectedReveal)
-          })
-        }
-      }
+      // if (encountered.property("category") === "Watershed") {
+      //   let innerReveal = g.selectAll(".enrich-line.waiting").filter(e => {
+      //     return e.properties.ASSOC_WATERSHED === encountered.datum().properties.oid;
+      //   });
+      //   if (innerReveal.nodes()) {
+      //     innerReveal.nodes().forEach(node => {
+      //       // let selectedReveal = g.select(`#${e.properties.id}`);
+      //       let selectedReveal = d3.select(node);
+      //       selectedReveal.classed("waiting",false);
+      //       reveal(selectedReveal,"line",t);
+      //       output(selectedReveal)
+      //     })
+      //   }
+      // }
       if (encountered1) { encountered = [encountered,encountered1]; }
       reveal(encountered,"line",t)
     } else if (id.startsWith('py')) {
@@ -3007,7 +3016,6 @@
 
         } else {
           encountered.forEach(d => {
-            console.log(d)
             d.style("opacity",0.8)
               .transition().duration(t).ease(d3.easeLinear)
               .styleTween("stroke-dasharray",tweenDash)
@@ -3369,55 +3377,24 @@
 
 //// INCOMPLETE TODO ////
 
-// DONE:
-  // clean data more (associate rivers/lakes with watersheds, update ids, remove repetitive text, character errors, extra whitespaces)
-  // restructure line trigger/reveal such that watersheds trigger all inner lakes and streams in predetermined reveal order (timing same as watershed overall, but possible continued silver/blue flickering in flow direction), OR, only 1 intersection per feature, triggerPts adjusted accordingly (given streams a headstart such that they reach i0 concurrently) and each animated in flow direction
-    // i0 = i0, i1 = last i1; get baseT of this, then extrapolate baseT of full, THEN determine new i0 based on distance from coord0 to original i0
-
-// LITTLE THINGS
-  // double kankakee?
-  // dash expand not part of map window
-  // account for polygons a user STARTS in (does not enter, may/may not exit)
-  // resolve initial balance between "About" and route prompt
-  // change projection to equidistant (instead of equal area)
-  // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
-  // turn #dash, #about, and #modal expand/collapse into transitions?
+// PRIORITIZE:
+  // lines: account for outputDelay triggerPt property
+  // dashboard and log output!!
   // sources.md -> links
   // about paragraph
+  // resolve initial balance between "About" and route prompt
+  // change projection to equidistant (instead of equal area)
+  // dash expand at begin (expand btn not part of map window?)
   // workable link color
   // workable button hover color
-
-// ONGOING / AS POSSIBLE:
-  // remove/fix problem cities
-    // FIX
-      // Sault Ste Marie, ON
-      // Charleston, SC
-      // Cincinnatti, OH
-      // Greenville, SC
-      // Grand Junction, CO
-      // Saskatoon, SK
-    // REMOVE
-      // Lynn Lake, MB
-      // Sept-Iles, QC :(
-      // Quesnel, BC
-      // North Glengarry, ON
-    // SEGMENT ISSUES?
-      // Richmond, CA
-      // Ft Lauderdale, FL
-      // Oriole, ON
-  // fix occasional chroma.js/baseHues issue
-  // fix console errors (in Chrome)
-    // "Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist."
-    // "[Violation] Forced reflow while executing JavaScript took 39ms"
-      // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
+  // turn #dash, #about, and #modal expand/collapse into transitions?
+  // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
 
 // STYLING NOTES:
+  // hexagons denser
   // line-dash ease slower at end
   // improve visual affordances on hover
   // new color for modal
-  // make enrichLines brighter close up?
-  // fix watershed color scale (stable shades of silver/light grey?)
-  // polygon opacity also based on level?
   // zIndexes becoming more relevant. from bottom to top:
     // basemap
     // polygons large->small (slightly transparent)
@@ -3491,7 +3468,10 @@
     // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
 
 // MAYBE
-  // visualize fewer ecoregion and watershed levels
+  // account for polygons a user STARTS in? (does not enter, may/may not exit)
+  // verbose console errors (in Chrome)
+    // "[Violation] Forced reflow while executing JavaScript took 39ms"
+      // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
   // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
     // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
 
@@ -3500,12 +3480,32 @@
   // refactor, optimize, condense, DRY, improve structure
   // revisit zoomFollow functions in particular
 
+// DATA CLEAN:
+  // double poly: flint hills
+  // double poly: Sinaloa Coastal Plain with Low Tropical Thorn Forest and Wetlands
+  // double poly: Piedmonts and Plains with Grasslands, Xeric Shrub, and Oak and Conifer Forests
+  // double poly: Sinaloa and Sonora Hills and Canyons with Xeric Shrub and Low Tropical Deciduous Forest
+// double kankakee?
+// remove/fix problem cities
+  // FIX
+    // Sault Ste Marie, ON
+    // Charleston, SC
+    // Cincinnatti, OH
+    // Greenville, SC
+    // Grand Junction, CO
+    // Saskatoon, SK
+  // REMOVE
+    // Lynn Lake, MB
+    // Sept-Iles, QC :(
+    // Quesnel, BC
+    // North Glengarry, ON
+  // SEGMENT ISSUES?
+    // Richmond, CA
+    // Ft Lauderdale, FL
+    // Oriole, ON
 
-// new line sources?:
-// http://www.hydrosheds.org/page/gloric
-// http://www.hydrosheds.org/download
-
-// ?
-// https://www.worldwildlife.org/publications/global-200
-// https://www.worldwildlife.org/publications/wildfinder-database
-// https://www.worldwildlife.org/publications/world-grassland-types
+// MORE SOURCES?
+  // hydro flow direction
+    // http://www.hydrosheds.org/download
+  // species-specific:
+    // https://www.worldwildlife.org/publications/wildfinder-database
