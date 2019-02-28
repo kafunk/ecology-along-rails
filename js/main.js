@@ -1019,16 +1019,7 @@
 
                 }
 
-                let singleIntersectFlag = false;
-                if (!i1) {
-                  singleIntersectFlag = true;
-                } // else {
-                  // if (snapped) i0 too close to (snapped) i1 to be the basis of animation reveal timing
-                  // if ((turf.nearestPointOnLine(route,i1,{units:"miles"}).properties.location -turf.nearestPointOnLine(route,i0,{units:"miles"}).properties.location) < 10) {
-                  //   // console.log("less than 10")
-                  //   // boost baseT by boostFactor? calculate differently?
-                  // }
-                // }
+                let singleIntersectFlag = (!i1) ? true : false;
 
                 // LINEGONS and POLYGONS ONLY: shift enrich datum geometry to get i1
                 if (["linegons","polygons"].includes(geomGroup.type)) {
@@ -2412,10 +2403,6 @@
 
       selected.forEach(d => {
 
-        // console.log("removed d", d)
-
-        // console.log("removed quadtree datum", g.selectAll(".quadtree-data").selectAll(`.quad-datum.${d.properties.id}`).node())
-
         g.selectAll(".quadtree-data").selectAll(`.quad-datum.${d.properties.id}`).classed("quad-datum--removed",true)
 
       })
@@ -2843,32 +2830,6 @@
 
   }
 
-  // function animateDashed(along,t) {
-  //
-  //   // see https://bl.ocks.org/kafunk/91f7b870b79c2f104f1ebacf4197c9dc for more commentary
-  //
-  //   let reversedAlong = along.clone(),
-  //              length = reversedAlong.node().getTotalLength();
-  //
-  //   let dashStr = getDashStr(reversedAlong,length);
-  //
-  //   // REVERSE PATH for proper direction
-  //   let reversedPath = reverseSVGPath(reversedAlong.attr("d"));
-  //
-  //   reversedAlong.attr("d", reversedPath)
-  //                .attr("id", "full-route-reversed")
-  //
-  //   // dashed path initially blank
-  //   reversedAlong.style("stroke-dasharray", dashStr)
-  //                .style("stroke-dashoffset", -length)
-  //                .style("opacity", 0.6)
-  //
-  //   reversedAlong.transition()
-  //                .duration(t)
-  //                .styleTween("stroke-dashoffset",drawDashed)
-  //
-  // }
-
 //// REVEAL ENCOUNTERED
 
   function encountered(baseT,segmentFlag = false) {
@@ -2935,6 +2896,9 @@
     if (type === "line") {
       if (Array.isArray(encountered)) { // multiTrigger
         if (encountered[0].property("category") === "Watershed") {
+
+          // a version of animateDashed()
+            // see https://bl.ocks.org/kafunk/91f7b870b79c2f104f1ebacf4197c9dc for more commentary
 
           let dashArr0 = encountered[0].style("stroke-dasharray"),
               dashArr1 = (encountered[1].style("stroke-dasharray")),
@@ -3243,7 +3207,7 @@
 
   function getEncounterText(d) {
 
-    // only arrives here if node and name confirmed?
+    // only arrives here if node and name confirmed
 
     // verb/the?/pretext
       // passing
@@ -3540,14 +3504,3 @@
     // connecticut what?
     // ozark, ouachita => ozark/ouchita
     // ?? northern lake erie watershed (tiny?)
-
-
-// DONE RECENTLY
-  // fixed more layout issues
-  // fixed egregious overlap between onmouseover/output fxs
-  // rm dashboard header
-  // initial dash output structure
-  // replace most chroma.random() with paletteScale(random())
-  // added stroke to polygons for hover effect
-  // instead of automtically collapsing #about 'down' when unsure about screen size, added check to determine direction to rpeven later layout errors
-  // fixed lip under dashboard on @mxl
