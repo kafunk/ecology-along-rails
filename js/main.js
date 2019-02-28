@@ -35,9 +35,10 @@
     tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower); eventually should be user-adjustable via slider
     minT = tpm * 10,
     tPause = 2400;  // standard delay time for certain transitions
+    // add zoom levels / zoom follow variables here
 
   var padX = 0,
-      padY = 0;
+      padY = -18;
       // marginX = 0,
       // marginY = 0;
 
@@ -74,7 +75,7 @@
     .style("fill", "none")
     .style("pointer-events", "all")
     .on("dblclick", function() {
-      resetZoom() // having this in function avoids error from not yet having declared var active
+      resetZoom() // having this inside wrapper function avoids error from not yet having declared `active`
     })
 
   // all rendered/zoomable content
@@ -139,18 +140,22 @@
 
   let timer, routeQuadtree; // observer
 
+  let allEncounters = [],
+         enterAlign = "left",
+          exitAlign = "right";
+
   const cityState = d => { return d.city + ", " + d.state; }
 
 // COLORS
 
-  // let riverBlues = d3.interpolate({colors: ["rosybrown","mediumaquamarine"]},{colors: ["cadetblue","darkcyan"]}),
-       // riverBlue = riverBlues(Math.random());
+  const palette = ['#483597','#94417f','#fa8253','#ec934a','#c7993f','#b5be6a','#9dc579','#8bc188'];
+
+  const paletteScale = chroma.scale(palette).mode('lch').correctLightness();
+
   const riverBlue = "cyan",
          lakeBlue = "teal";
 
-  var linearGradientScale = d3.scaleLinear()
-    .range(["#2c7bb6", "#00a6ca","#00ccbc","#90eb9d","#ffff8c",
-            "#f9d057","#f29e2e","#e76818","#d7191c"]);
+  var linearGradientScale = d3.scaleLinear().range(palette);
 
   // gradients
   // append gradient elements to svg <defs> and give each a unique id
@@ -169,6 +174,7 @@
       .attr("stop-color", d => { return d });
 
   // append radial color gradient to <defs> element
+    // this one used for current train point only
 	var radialGradient = defs.append("radialGradient")
 		.attr("id", "radial-gradient")
 		.attr("cx", "50%")
@@ -191,77 +197,47 @@
 
 // TEXTURES
 
-  const random = function(upper,lower = 0) {
-    let randNum = Math.random();
-    return (upper) ? lower + Math.round(randNum * (upper - lower)) : randNum;
-  }
-
-  const orientations = ["horizontal","diagonal","vertical","2/8","4/8","6/8","8/8"];
-
   let tWaves = textures.paths()
     .d("waves")
     .background(lakeBlue)
     .stroke("mediumseagreen")
     .thicker(18)
     .lighter(12)
+    .shapeRendering("crispEdges")
   let tCrosses = textures.paths()
     .d("crosses")
     .thicker(18)
     .lighter(12)
+    .shapeRendering("crispEdges")
   let tNylon = textures.paths()
     .d("nylon")
     .lighter(12)
     .thicker(18)
     .shapeRendering("crispEdges")
   let tLines = textures.lines()
+    // .size(0.5)
     .thicker(18)
     .lighter(12)
-    .orientation(orientations[random(orientations.length-1)])
-  let tLines2 = textures.lines()
-    .size(0.5)
-    .lighter(12)
-    .thicker(18)
-    .orientation(orientations[random(orientations.length-1)],orientations[random(orientations.length-1)])
-  let tLines3 = textures.lines()
-    .orientation(`${random(8).toLocaleString()}/8`)
+    .orientation("diagonal")
   let tCircles = textures.circles()
     .complement()
     .thicker(18)
     .lighter(12)
-    .fill(chroma.random())
-  let tCircles2 = textures.circles()
-    .complement()
-    .radius(random(8))
-    .thicker(18)
-    .lighter(12)
+    .fill(paletteScale(random()))
   let tHexagons = textures.paths()
     .d("hexagons")
-    .thicker(18)
-    .lighter(12)
+    .thicker(24)
+    .lighter(18)
     .shapeRendering("crispEdges")
     .fill("transparent")
-  let tHexagons2 = textures.paths()
-    .d("hexagons")
-    .thicker(18)
-    .lighter(12)
-  let tSquares = textures.paths()
-    .d("squares")
-    .thicker(18)
-    .lighter(12)
 
-  // let textureOpts = [tLines,tLines2,tCircles,tHexagons,tNylon,tCrosses]
+  svg.call(tWaves)
 
-  let textureOpts = [tCircles,tHexagons,tNylon,tCrosses]
+  let textureOpts = [tCircles,tHexagons,tNylon,tCrosses,tLines]
 
   textureOpts.forEach(d => {
-    d.stroke(chroma.random())
+    d.stroke(paletteScale(random()))
   })
-
-  // circles can complement
-  // circles have radius
-  // circles and paths have fill
-  // paths have shapeRendering
-  // lines have orientation
 
 
 //// INITIATE DATA LOAD
@@ -284,17 +260,12 @@
         // passRail = d3.json("data/final/pass_railways.json"),
         railStns = d3.json("data/final/na_rr_stns.json"),
   // merged enrich data
-     // enrichPolys = d3.json("data/final/enrich_polys.json"),
-     // enrichLines = d3.json("data/final/enrich_lines.json"),
-     //   enrichPts = d3.json("data/final/enrich_pts.json"),
      enrichPolys = d3.json("data/final/slimmed/enrich_polys.json"),
      enrichLines = d3.json("data/final/slimmed/enrich_lines.json"),
        enrichPts = d3.json("data/final/slimmed/enrich_pts.json"),
   // quadtree ready
     quadtreeReps = d3.json("data/final/slimmed/quadtree_search_reps.json"),
    triggerPtPool = d3.json("data/final/slimmed/enrich_trigger_pts.json");
-   //  quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
-   // triggerPtPool = d3.json("data/final/enrich_trigger_pts.json");
 
 //// PREPARE MAP LAYERS
 
@@ -333,7 +304,7 @@
    countriesMesh = getMesh(sourceData.countries,"countries",innerlines()),
       statesMesh = getMesh(sourceData.states,"states",innerlines());
 
-    console.log("* base data *",sourceData)
+    // console.log("* base data *",sourceData)
 
     // define svg groups
     var baselayers = g.append("g")
@@ -794,7 +765,7 @@
               dataExtent = topojson.feature(quadBounds,quadBounds.objects.bounds).features[0];
 
         let begin = performance.now();
-        console.log("making quadtree @",begin)
+        // console.log("making quadtree @",begin)
 
         let quadtree = makeQuadtree(quadtreeData, dataExtent)
 
@@ -829,15 +800,15 @@
         let filteredEnrich = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
 
         let end = performance.now();
-        console.log("quadtree construction + search took", end-begin, "ms")
+        console.log("quadtree construction + search took", Math.floor(end-begin), "ms")
 
-        console.log("num filtered",filteredEnrich.length)
+        console.log("total filtered from pool by quadtree #1:",filteredEnrich.length)
 
         // removeQuadtreeNodes(filtered,quadtree); // won't speed up search because all filtering complete by this point; keep quadtree in tact in case it could be reutilized within same session?
 
         let possibleFeatures = [...new Set(filteredEnrich.map(d => d.properties.id))];
 
-        console.log("unique possibleFeatures",possibleFeatures.length)
+        console.log("unique possibleFeatures by id:",possibleFeatures.length)
 
         let confirmedEnrich = Promise.all([enrichPts,enrichLines,enrichPolys]).then(filterFurther,onError);
 
@@ -906,7 +877,7 @@
 
         let triggerData = getTriggerData(triggerPtPool,massagedEnrich.pts,massagedEnrich.regLines,massagedEnrich.linegons,massagedEnrich.polys,chosen.lineString,bufferedRoute);
 
-        console.log("triggerData",triggerData)
+        // console.log("triggerData",triggerData)
 
         return triggerData;
 
@@ -948,7 +919,7 @@
         function getTriggerData(triggerPtPool,pts,regLines,linegons,polys,route,buffer) {
 
           let begin = performance.now();
-          console.log("getting trigger data @",begin)
+          // console.log("getting trigger data @",begin)
 
           triggerPtPool = topojson.feature(triggerPtPool,triggerPtPool.objects.triggerPts).features;
 
@@ -1294,7 +1265,7 @@
 
             }).flat()
 
-            console.log("returning",geomGroup.type,"@",performance.now(),returnGrp)
+            console.log("returning",returnGrp.length,geomGroup.type.slice(0,geomGroup.type.length-1),"triggerPts @",Math.floor(performance.now())) //,returnGrp)
 
             return returnGrp;
 
@@ -1343,7 +1314,7 @@
           });
 
           let end = performance.now();
-          console.log("getting trigger data took", end-begin, "ms")
+          console.log("getting trigger data took", Math.floor(end-begin), "ms")
 
           return {
             triggerPts: allTriggerPts.flat(),
@@ -1387,7 +1358,7 @@
 
       function bindEnriching([updated]) {
 
-        console.log("enrichData",updated)
+        console.log("binding enrichData:",updated.pts.length,"pts,",updated.lines.length,"lines (incl split), &",updated.polys.length,"polys")
 
         // filter null geometries
         let pts = updated.pts.filter(d => d.geometry.coordinates.length > 0),
@@ -1400,7 +1371,8 @@
            oceanHues = chroma.scale(['paleturquoise','aquamarine']).mode('lch').correctLightness().colors(oceanIds.length);
 
         let ecoZones = [...new Set(polys.filter(d => { return d.properties.CATEGORY === "Ecoregion" /* && d.properties.LEVEL === "II"*/ }).map(d => { return d.properties.ECOZONE }))],
-            zoneHues = chroma.scale('Spectral').colors(ecoZones.length);
+            // zoneHues = chroma.scale('Spectral').colors(ecoZones.length);
+            zoneHues = chroma.scale(['#472e37','#e35c45','#e2754d','#ffa100','#dbea09']).mode('lch').correctLightness().colors(ecoZones.length);
 
         let colorAssignments = {
           watersheds: {},
@@ -1409,14 +1381,14 @@
 
         oceanIds.forEach(id => {
           colorAssignments.watersheds[id] = {
-            base: chroma(oceanHues.shift().slice()).alpha(0.5)
-            // base: chroma.random().alpha(0.5)
+            base: chroma(oceanHues.shift().slice()).alpha(0.7)
+            // base: paletteScale(random()).alpha(0.5)
           }
         })
         ecoZones.forEach(zone => {
           colorAssignments.ecoregions[zone] = {
-            base: chroma(zoneHues.shift().slice()).alpha(0.5)
-            // base: chroma.random().alpha(0.5)
+            base: chroma(zoneHues.splice(random(zoneHues.length-1),1)[0].slice()).alpha(0.7)
+            // base: paletteScale(random()).alpha(0.5)
           }
         })
 
@@ -1475,7 +1447,7 @@
             }
             return chroma(colorAssignments.ecoregions[parentId][level].base).set('lch.c', random(30));
           } else {
-            return chroma.random();
+            return paletteScale(random());
           }
         }
 
@@ -1490,7 +1462,7 @@
           } else if (props.CATEGORY === "Lake") {
             return lakeBlue;
           } else {  // ??
-            return chroma.random();
+            return paletteScale(random());
           }
         }
 
@@ -1503,6 +1475,8 @@
             // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
           } else if (props.id.slice(0,2) === "ln") {  // only lake lines filled
             return "none";
+          } else if (props.id.slice(0,2) === "pt") {
+            return paletteScale(random());
           } else {
             let chosen = textureOpts[random(textureOpts.length-1)];
             svg.call(chosen)
@@ -1527,10 +1501,11 @@
             .property("more-info", d => d.properties.MORE_INFO)
             .property("description", d => d.properties.DESCRIPTION)
             .style("fill", getFill)
-            .style("stroke", "none")
+            .style("stroke", getStroke) // was "none"; adding for hover effects
             .style("z-index",getZIndex) // d => (getZIndex(d) - 4)) // temp, to keep polygons in order under lines
             .style("opacity",0)
-            .style("visibility","hidden")          .on("mouseover",onMouseover)
+            .style("visibility","hidden")  // specify so tooltips don't engage too soon
+            .on("mouseover",onMouseover)
             .on("mouseout",onMouseout)
 
         const enrichLines = enrichLayer.append("g")
@@ -1570,7 +1545,7 @@
             .property("category", d => d.properties.CATEGORY)
             .property("description", d => d.properties.DESCRIPTION)
             .property("more-info", d => d.properties.MORE_INFO)
-            .style("fill", d => chroma.random()) // for now
+            .style("fill", getFill)
             .style("stroke", "whitesmoke")
             .style("stroke-width", "0.05px")
             .style("z-index",7)
@@ -1646,6 +1621,19 @@
       })
 
     function prepareEnvironment() {
+
+      // let initialThree =
+      d3.select("#encounters").selectAll(".encounter")
+        .data(['Traversing special places','Encountering incredible things','Beholding the world made fresh again'])
+        .enter().append("div")
+          .classed("flex-child flex-child--grow encounter placeholder", true)
+          .property("name", d => d)
+          .html(d => `<span>${d}</span>`)
+
+      // depending on direction of train, change #encounters div classes:
+        // generally moving west: keep as is
+        // generally moving east: use flex-parent--row-reverse / flex-parent--column-reverse; also switch enterAlign => "right", exitAlign => "left"
+
       // setup dashboard including legend
         // store initial orienting data:
           // total length (leg length sum?)
@@ -1655,6 +1643,7 @@
       // setup / initiate select event listeners
         // use remoteControl.js for button functionality
       // activate newly relevant buttons
+
     }
 
     function prepareUser() {
@@ -1817,7 +1806,7 @@
   function initAnimation(routeObj,routeBounds) {
 
     // collapse about pane
-    collapse("about","down")
+    collapse("about", collapseDirection(window.innerWidth)) // "down")
     resize()
 
     // get zoomFollow object including simplified zoomArc, pace, and first/last zoom frames
@@ -2018,7 +2007,7 @@
           // make sure section-wrapper not "relative"
           d3.select("#section-wrapper").classed("relative",false)
           // adjust dash padding so long as #about collapsed on mxl
-          d3.select("#dash-content").classed("mx24-mxl",true)
+          d3.select("#dash-content").classed("mx30-mxl",true)
           // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
@@ -2026,14 +2015,6 @@
             // if #about not manually closed && modal-about not open
             expand("about","left");
           }
-        }
-
-        // ensure dash tags in alignment if #dash closed
-        if (d3.select("#dash").classed("disappear-down")) {
-          d3.select("#dash-up").classed("mt-neg6", true);
-          d3.select("#dash-up").classed("mt-neg18", false);
-          d3.select("#dash-expand-btn").classed("h24", true)
-          d3.select("#dash-expand-btn").classed("h18", false)
         }
 
       }
@@ -2045,7 +2026,7 @@
       // update #about-wrapper to align with full map height
       d3.select("#about-wrapper").style("height", calculated.height + "px");
 
-    } else {
+    } else {  // < 1200
 
       // if screen sizing downward from 1200+
       if (d3.select("#aside").classed("mxl")) {
@@ -2060,29 +2041,13 @@
                              .classed("disappear-right",false)
           // replace previously-removed "relative" class in #section-wrapper
           d3.select("#section-wrapper").classed("relative", true);
-          // attribution mr24 is false
-          d3.select("#attribution").classed("mr24", false)
-          // readjust dash padding
-          d3.select("#dash-content").classed("mx24-mxl",false)
-          // if dash was ALSO closed
-          if (d3.select("#dash").classed("disappear-down")) {
-            d3.select("#dash-expand-btn").classed("h24", true);
-            d3.select("#dash-expand-btn").classed("h18", false);
-            d3.select("#dash-up").classed("mt-neg6", true);
-            d3.select("#dash-up").classed("mt-neg18", false);
-          }
+          // reset dash and attribution margins
+          d3.select("#attribution").classed("mr24-mxl", false)
+          d3.select("#dash-content").classed("mx30-mxl",false)
         }
-        // below not happening right now because about always closed automatically on move from large to smaller screen
-        // else if (d3.select("#dash").classed("disappear-down")) {
-        //   // about open, dash closed
-        //   d3.select("#dash-expand-btn").classed("h24", false);
-        //   d3.select("#dash-expand-btn").classed("h18", true);
-        //   d3.select("#dash-up").classed("mt-neg6", false);
-        //   d3.select("#dash-up").classed("mt-neg18", true);
-        // }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
         d3.select("#about").classed("disappear-right", false)
-        collapse("about","down")
+        collapse("about", "down")
       }
 
       // if window too short to show #about content, collapse automatically
@@ -2097,6 +2062,10 @@
 
     return calculated;
 
+  }
+
+  function collapseDirection(width) {
+    return (width > 1200) ? "right" : "down";
   }
 
 //// PROJECTIONS & PATHS
@@ -2561,7 +2530,7 @@
 
     // optional binding/visualization:
     // bindQuadtree(routeQuadtree)
-    // non-optional binding, optional visualization:
+    // non-optional binding, optional visualization (within function):
     bindQuadtreeData(enrichData.triggerPts,true) // triggerPtFlag === true
 
     // turn on headlights
@@ -2569,45 +2538,25 @@
       .style("opacity",0.6)
       .on("start", () => {
         dimBackground()
+        expand("dash","up")
       })
       .on("end", () => {
-        // expand dashboard (and adjust map margins accordingly)
-        // d3.select("#dash").style("opacity",0).classed("disappear-down", false)
-        //   .transition().duration(tEnd*2)
-        //     .style("opacity",1)
-        // d3.select("#dash-collapse").style("opacity",0)
-        //   .classed("opacity0",false)
-        //   .transition().duration(tEnd*2)
-        //     .style("opacity",1)
-        d3.select("#dash-expand").style("opacity",0)
-          .classed("opacity0",false)
-          .transition().duration(tEnd*2)
-            .style("opacity",1)
-        // d3.select("#about-up-btn").classed("h24",false)
-        // d3.select("#about-up").classed("mt-neg6",false)
-        d3.select("#map").classed("mb0-mxl", false) // mb-neg6?
-                         .classed("mb-neg6-mxl", true) // mb-neg30?
-        // if (confirm("Ready?")) {
-          // d3.timerFlush() // necessary?
-          // disable free zooming
-          svg.on('.zoom',null)
-          // call initial point transition, passing simplified path
-          goOnNow(scale,lastIdentity,zoomArc)
-        // }
+        // disable free zooming
+        svg.on('.zoom',null)
+        // call initial point transition, passing simplified path
+        goOnNow(scale,lastIdentity,zoomArc)
       })
 
     function dimBackground() {
-      // temporarily dim background, admin, rail, urban during animation (to focus visualization / ease problem solving and reduce load until performance improved)
+
       let toDim = [d3.select("#admin-base"),d3.select("#hydro-base"),d3.select("#urban-base"),d3.select("#rail-base")];
+
       toDim.forEach(selection => {
         let currentOpacity = selection.style("opacity")
-        selection // .selectAll("*")
-          .transition().duration(2400)
+        selection.transition().duration(2400)
           .style("opacity", currentOpacity * 0.2)
-          // .on("end", () => {
-          //   selection.selectAll("*").remove();
-          // })
         });
+
     }
 
     function goOnNow(scale,lastIdentity,simpPath) {
@@ -2663,7 +2612,7 @@
 
       let sectorBBox = headlights.node().getBBox(),
             arcWidth = sectorBBox.width,
-           arcHeight = sectorBBox.height; // ** CAN ADJUST ARC HEIGHT FOR SEARCH EXTENT / EXTENT VIZ CONTROL ** //
+           arcHeight = sectorBBox.height;
 
       let sectorExtent = [[-arcWidth/2,-arcHeight],[arcWidth/2,0]];
 
@@ -2751,7 +2700,7 @@
     // initiate quadtree search
     let newlySelected = searchQuadtree(routeQuadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1]);
 
-    // remove data as they are selected/revealed; (not sure if this helps performance any, but it doesn't hurt)
+    // remove data as they are selected/revealed; (not sure if this helps performance any, but it probably doesn't hurt)
     removeQuadtreeNodes(newlySelected,routeQuadtree);
 
     // save newly determined values as previous values
@@ -2768,8 +2717,6 @@
       let angle = turf.degreesToRadians(degrees),
           width = extent[1][0]-extent[0][0],
          height = Math.abs(extent[1][1]-extent[0][1]),
-            // pt0 = extent[0],
-            // pt1 = extent[1],
           midPt = [extent[0][0]+width/2,extent[0][1]+height/2];
 
       let point = midPt,
@@ -2780,7 +2727,7 @@
       let deltaX = rotatedPt[0]-point[0],
           deltaY = rotatedPt[1]-point[1];
 
-      // adjust extent pts accordingly // DEFINITELY NOT EXACT
+      // adjust extent pts accordingly
       let rotatedExtent = extent.map(d => { return [d[0]+deltaX,d[1]+deltaY] });
 
       return rotatedExtent;
@@ -2817,6 +2764,9 @@
     console.log("train arrived @ " + performance.now())
     timer.stop()
     // observer.disconnect()
+    let unique = [...new Set(allEncounters.map(d=>d.property("name")))]
+    console.log("unique encounters",unique.length)
+    console.log("all encounters",allEncounters.length)
   }
 
 //// TRANSITIONS AND TWEENS
@@ -2827,15 +2777,9 @@
     return function(t) { return i(t); };
   }
 
-  // function dashBack() {
-  //   var l = this.getTotalLength(),
-  //       i = d3.interpolateString(l + ",0", "0," + l);
-  //   return function(t) { return i(t); };
-  // }
-
   function drawDashed() {
     var l = this.getTotalLength();
-    var i = d3.interpolateString(-l,"0"); // results in 0=>dashed in wrong direction
+    var i = d3.interpolateString(-l,"0");
     return function(t) { return i(t); };
   }
 
@@ -2847,7 +2791,7 @@
         // KEEP NODE P IN CENTER OF FRAME
         var p = path.node().getPointAtLength(t * l);
         // calculate translate necessary to center data within extent
-        let tx = -k * p.x + initial.width/2,  // what if window resized during animation??
+        let tx = -k * p.x + initial.width/2,
             ty = -k * p.y + initial.height/2;
         return "translate(" + tx + "," + ty + ") scale(" + k + ")";
       }
@@ -2870,8 +2814,6 @@
     return function(d, i, a) {
       let rotate = azimuth0,
              pt0 = path.node().getPointAtLength(0);
-      // additional rotate interpolator for smoother transitions?
-      // address any jumps between, eg., -179 and 179
       return function(t) {
         let pt1 = path.node().getPointAtLength(t * l);  // svg pt
         if (!(pt0.x === pt1.x)) rotate = getRotate(pt0,pt1);
@@ -2934,7 +2876,7 @@
     let t = Math.max(minT,baseT * tpm);
       // baseT is # en route miles from i0 to i1, OR
       // # miles from snapped route i0 to off route i1, OR
-      // in a few cases, full length of d (non-watershed-associated lines)
+      // in a few cases, full length of d
 
     // console.log("reached encountered() at " + performance.now())
 
@@ -3052,37 +2994,71 @@
 //// OUTPUT AND ALERT incl DASHBOARD
 
   function output(encountered) {
+
     if (encountered.node() && encountered.property("name")) {
-      let output = encountered.property("name");
-      if (encountered.property("id").slice(0,2) === "ln") {
-        if (encountered.property("category") === "Watershed") {
-          output += (encountered.property("level") === "IV") ? " Watershed" : " Drainage Basin"
-        } else if (encountered.property("category") === "Lake") {
-          // do nothing
-        } else if (encountered.property("category") === "Lake Centerline") {
-          output += `Lake`
-        } else if (encountered.property("category") === "River (Intermittent)") {
-          output += `River`
-        } else {
-          output += ` ${encountered.property("category")}`
-        }
-      } else if (encountered.property("description")) {
-        output += ` ${encountered.property("description")}`
+
+      allEncounters.unshift(encountered)
+
+      // IDENTIFYING DOUBLES
+      if (allEncounters.length > 2 && [...new Set(allEncounters.slice(0,3).map(d=>d.property("name")))].length < 3) {
+        console.log(allEncounters.slice(0,3).map(d=>d.property("name")))
+        console.log(allEncounters.slice(0,3).map(d=>d.node().id))
       }
-      console.log(`now passing ${output}`);
+
+      updateOutput(allEncounters.slice(0,3))
+
+      function updateOutput(encounters) {
+
+        // https://observablehq.com/@d3/selection-join
+
+        // const t = d3.transition().duration(750);
+
+        // FIXME: set hard limit for how many visible at a time (when transition active, currently waits out on transition duration before resetting to 3)
+
+        d3.select("#encounters").selectAll(".encounter")
+          .data(encounters, d => {
+            return (typeof d === "string") ? d : d.property("id")
+          })
+          .join(
+            enter => enter.append("div")
+                .classed("flex-child flex-child--grow encounter  mx3 my3 px3 py3 hide-overflow slide-out", true)
+                .html(getEncounterText)
+              // .call(enter => enter.transition(t)
+              //   // .style("background", "green")
+              //   .style("text-align", enterAlign)),
+              ,
+            update => update
+              // .call(update => update.transition(t)
+              //   // .style("background", "purple")
+              //   .style("text-align", "center")),
+              ,
+            exit => exit
+              // .call(exit => exit.transition(t)
+              //   // .style("background", "tomato")
+              //   .style("text-align", exitAlign)
+                .remove() //)
+          );
+
+      }
+
     }
 
-    // future
-      // temp popups/tooltips fade in/out
-        // points:
-          // flash tiny offset tooltip with basic info (name, category)
-          // animate cursive writing?
-      // legend-log populated
-      // dashboard/trackers updated
+    // flashTooltip()
+      // // bring tooltip into full opacity
+      // tooltip.transition().duration(300)
+      //   .style("opacity", 1)
+      // // transition tooltip away
+      // tooltip.transition().duration(600)
+      //   .style("opacity", 0)
+      // animate text itself?
+
+    // trackerUpdate()
+
+    // log(name,type)
 
   }
 
-  function dashUpdate(current) {
+  function trackerUpdate(current) {
     // update dashboard elements: compass visual?, mileage tracker, elevation?
     // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
     log()
@@ -3092,6 +3068,17 @@
     // initial element type/symbol, plus counter +=1 on each subsequent
     // subsequent encounters
       // add 1 to log count
+    const logTypes = {}
+
+    function styleToSymbol() {}
+
+    if (!logTypes[type]) {
+      logTypes[type] = {
+        count: 0
+      }
+      logTypes[type].count++
+    }
+
   }
 
 //// HTML/CSS VISIBILITY MANAGEMENT
@@ -3119,22 +3106,20 @@
       if (elementStr === "about") {
         if (window.innerWidth > 1200) {
           d3.select("#section-wrapper").classed("relative", true);
-          d3.select("#attribution").classed("mr24-mxl", false);
-          d3.select("#dash-content").classed("mx24-mxl",false)
+          d3.select("#attribution").classed("mr24-mxl", false)
+          d3.select("#dash-content").classed("mx30-mxl",false)
         } else {
-          d3.select("#dash-up").classed("mt-neg6", false);
-          d3.select("#dash-up").classed("mt-neg18", true);
-          d3.select("#dash-expand-btn").classed("h24", false)
-          // d3.select("#dash-expand-btn").classed("h18", true)
+          d3.select("#dash-up").classed("mt-neg18", true)
+          d3.select("#dash-up").classed("mt-neg6", false)
+          d3.select("#dash-expand-btn").classed("h18 mt6", true)
+          d3.select("#dash-expand-btn").classed("h24 mt0", false)
+          if (d3.select("#dash").classed("disappear-down")) {
+            d3.select("#attribution").classed("mt-neg24", false)
+            d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", true)
+          }
         }
       } else if (elementStr === "dash") {
-        d3.select("#attribution").classed("mt0-mm", true)
-        d3.select("#attribution").classed("mt-neg24", false)
-        // d3.select("#attribution").classed("mt-neg6",true)
-        if (window.innerWidth > 1200) {
-          d3.select("#dash-expand-btn").classed("h24", false)
-          d3.select("#dash-expand-btn").classed("h18", true)
-        }
+        d3.select("#attribution").classed("mt-neg18 mt-neg24 mt-neg24-mxl", false)
       }
 
       function opposite(direction) {
@@ -3159,26 +3144,28 @@
     // size- and element-specific toggles upon expand/collapse of various elements
     if (elementStr === "about") {
       if (window.innerWidth > 1200) {
-        d3.select("#section-wrapper").classed("relative", false);
-        d3.select("#attribution").classed("mr24-mxl", true);
-        d3.select("#dash-content").classed("mx24-mxl",true)
+        d3.select("#section-wrapper").classed("relative", false)
+        d3.select("#attribution").classed("mr24-mxl", true)
+        d3.select("#dash-content").classed("mx30-mxl",true)
       } else {
-        d3.select("#dash-up").classed("mt-neg6", true);
-        d3.select("#dash-up").classed("mt-neg18", false);
-        d3.select("#dash-expand-btn").classed("h24", true)
-        // d3.select("#dash-expand-btn").classed("h18", false)
+        d3.select("#dash-up").classed("mt-neg6", true)
+        d3.select("#dash-up").classed("mt-neg18", false)
+        d3.select("#dash-expand-btn").classed("h24 mt0", true)
+        d3.select("#dash-expand-btn").classed("h18 mt6", false)
+        if (d3.select("#dash").classed("disappear-down")) {
+          d3.select("#attribution").classed("mt-neg24", true)
+          d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", false)
+        }
       }
     } else if (elementStr === "dash") {
-      d3.select("#attribution").classed("mt0-mm", false)
-      d3.select("#attribution").classed("mt-neg24", true)
-      // d3.select("#attribution").classed("mt-neg6", false)
-      if (window.innerWidth > 1200) {
-        d3.select("#dash-expand-btn").classed("h24", true)
-        // d3.select("#dash-expand-btn").classed("h18", false)
+      if (d3.select("#about").classed("disappear-down")) {
+        d3.select("#attribution").classed("mt-neg24", true)
+        d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", false)
+      } else {
+        d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", true)
+        d3.select("#attribution").classed("mt-neg24", false)
       }
     }
-
-    // resize() // overflows stack!!
 
   }
 
@@ -3188,7 +3175,7 @@
       if (subContent) {
         d3.select(`#${subContent}`).classed("none", false);
         if (subContent === "modal-about") {
-          collapse("about","down");
+          collapse("about", collapseDirection(window.innerWidth))
           resize()
         }
       }
@@ -3238,14 +3225,11 @@
 
     if (d3.select(this).property("name")) {
       // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
-      let tooltip = d3.select("#map").append("div") // ("body").append("div")
-        // .datum(d)
+      let tooltip = d3.select("#map").append("div")
         .attr("class","tooltip")
-        .html(getTooltipContent(d3.select(this)))
+        .html(getEncounterText(d3.select(this)))
         .style("left", (d3.event.layerX + 10) + "px")
         .style("top", (d3.event.layerY - 30) + "px")
-        // .style("left", (d3.event.pageX + 10) + "px")
-        // .style("top", (d3.event.pageY - 30) + "px")
         .style("fill", "honeydew")
         .style("stroke", "dimgray")
         .style("opacity", 0) // initially
@@ -3255,36 +3239,48 @@
         .style("opacity", 1)
     }
 
-    // FIXME: significant overlap with current output() function
-    function getTooltipContent(d) {
+  }
 
-      let content = `<span class="name txt-spacing1">${d.property("name")}`
-      if (d.property("level")) {
-        if (d.property("category") === "Watershed") {
-          content += (d.property("level") === "IV") ? ` Watershed</span>` : ` Drainage Basin</span>`
-        } else {  // ecoregion
-          content += `</span>
-          <br />
-          <span class="name-ii txt-em">Level ${d.property("level")} Ecoregion</span>
-          `
-        }
-      // } else if (["Lake Centerline","River (Intermittent)"].includes(d.property("category"))) {
-      //   // do nothing
-      } else if (d.property("id").slice(0,2) === "pt") {
-        content += ` ${d.property("description")}</span>`
-      } else if (d.property("category")) {
-        content += ` ${d.property("category")}</span>`
-      }
+  function getEncounterText(d) {
 
-      if (d.property("more-info")) {
-        content += `
-        <br />
-        <span class="more-info txt-s">${d.property("more-info")}</span>
-        `
-      }
+    // only arrives here if node and name confirmed?
 
-      return content;
+    // verb/the?/pretext
+      // passing
+      // entering
+      // exiting
+      // traversing
+
+    // NO THE's: lakes, mountains, national/state parks -- most pts?
+    // ALMOST ALWAYS THE's: ecoregions, watersheds, rivers, grasslands
+    let pre = `<span class="name txt-spacing1">The `;
+
+    // main output
+    let mainOut = `${d.property("name")}`
+    if (d.property("category") === "Lake") {
+      // type = "Lake"
+    } else if (d.property("id").slice(0,2) === "ln") {
+      mainOut += ` ${d.property("category")}`
+    } else if (d.property("description")) {
+      mainOut += ` ${d.property("description")}`
     }
+
+    // posttext/subtext/more info
+    let post = `</span>`;
+    if (d.property("category") === "Ecoregion") {
+      mainOut += `<br />
+      <span class="name-ii txt-em">Level ${d.property("level")} Ecoregion</span>
+      `
+    }
+
+    if (d.property("more-info")) {
+      mainOut += `
+      <br />
+      <span class="more-info txt-s">${d.property("more-info")}</span>
+      `
+    }
+
+    return pre + mainOut + post;
 
   }
 
@@ -3308,14 +3304,10 @@
     tooltip.transition().duration(600)
       .style("opacity", 0)
 
-    // remove tooltip from DOM?
+    // remove tooltip from DOM? // COMBAK NOT WORKING
     tooltip.exit().remove();
+
   }
-
-  // COLOR
-
-  // TRANSITIONS
-
 
 //// OTHER HELPER FUNCTIONS
 
@@ -3327,11 +3319,6 @@
     transition.each(function() { ++n; })
               .each("end", function() { if (!--n) callback.apply(this, arguments); });
   }
-
-  // function dynamicallySimplify() {
-  //   minZ = 1 / scale * scale;
-  //   // minZi, minZp
-  // }
 
   // THE PARSING OF THINGS
   function replaceCommas(string){
@@ -3348,17 +3335,12 @@
                       .map(d => array[d])     // restore unique objects
     return unique;
   }
-  // prevent window reprompt on apps with lots of moving parts
-  // function localStore() {
-  //   // add somewhere to prevent reprompt
-  //   localStorage.optionsReceived = true;
-  //   ////
-  //   // let bigVVal = capitalize(val);
-  //   // var element = d3.select(`#get${bigVVal}`);
-  //   // localStorage.setItem(val, element.value); // sessionStorage?
-  //   // var stored = localStorage.getItem(val);
-  //   // return stored;
-  // }
+
+  function random(upper,lower = 0) {
+    let randNum = Math.random();
+    return (upper) ? lower + Math.round(randNum * (upper - lower)) : randNum;
+  }
+
   function isEmpty(obj) {
     for (var key in obj) {
       if (obj.hasOwnProperty(key)) {
@@ -3375,37 +3357,108 @@
 
 // })
 
+
 //// INCOMPLETE TODO ////
 
 // PRIORITIZE:
-  // lines: account for outputDelay triggerPt property
   // dashboard and log output!!
-  // sources.md -> links
-  // about paragraph
-  // resolve initial balance between "About" and route prompt
-  // change projection to equidistant (instead of equal area)
-  // dash expand at begin (expand btn not part of map window?)
-  // workable link color
-  // workable button hover color
-  // turn #dash, #about, and #modal expand/collapse into transitions?
-  // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
+    // sizing of dash output text
+    // data clumping / prepare for log out
+    // "The" Lake Michigan,etc
+  // more data cleaning: doubles, rivers needing split, etc (see below)
+  // about this map
+    // sources.md -> links
+    // writing real words
+  // now getting polygon trigger pts seems slow?
 
-// STYLING NOTES:
-  // hexagons denser
+// LITTLE THINGS
+  // veil only over map area (keep about accessible)
+  // center zoomFollow further north to offset dash intrusion
+  // less padding around about map on mm
   // line-dash ease slower at end
   // improve visual affordances on hover
   // new color for modal
-  // zIndexes becoming more relevant. from bottom to top:
-    // basemap
-    // polygons large->small (slightly transparent)
-    // linegons
-    // regLines
-    // route
-    // headlights
-    // train
-    // enrichPts
-    // dashboard
-    // tooltips
+  // change projection to equidistant (instead of equal area)
+  // workable link color
+  // workable button hover color
+
+// LITTLE BUT STUMPING ME RIGHT NOW
+  // on form submit, modal element jumps, offsetting sizing (the excess padding issue that presented itself before and resolved mysteriously; well, it's back)
+  // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin)
+  // keeping zindexes in line on very small screen sizes
+
+// MEDIUM
+  // lines: account for outputDelay triggerPt property
+  // new train icon / rotate along with headlights
+  // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
+
+// MAJOR!! *** = NEED HELP!
+  // *** performance improvement! (see ideas below) ***
+  // resolve all dash output / user information INCL legend/log (lots of data clumping)
+  // resolve all colors, stroke-dasharrays, textures, styling issues of every kind (see more style notes below)
+
+// WISHLIST/FUN
+  // polygon radial animation / so fancy
+  // add autocomplete/suggestions to R2R search
+  // add features:
+    // ability to "select random" in prompt route
+    // ability to select route visually, by clicking on city/rail stn locations from map
+    // ability to control pace of train (and other variables?) via slider(s) (!)
+    // ability to replay, PAUSE, CANCEL, ff?, rewind??? (dash/animate back)
+      // would need so much help with state management stuff: animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData) ***
+    // ability to takeSnapshot()=> save inner screenshot in log?
+  // orig options matches sorted by distance
+  // add more enrich data (mostly pts): tunnels, bridges, iNaturalist, glaciers, species-specific polygons (habitat/range, https://www.worldwildlife.org/publications/wildfinder-database)
+  // animate rivers in direction of flow: http://www.hydrosheds.org/download
+  // add underlying MapboxGL vector tiles / custom MapboxStudio basemap?
+  // add underlying shaded relief raster layer?
+    // http://www.shadedrelief.com/birds_eye/gallery.html?
+  // instead of free-zooming, zoom to certain views: whole continent, all routes, selected route, current train position, X miles
+    // keep enabled even during animation
+  // keep improving responsivity/layout
+    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
+    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
+  // mousing over log elements highlights all within map
+  // use x/y to transition-collapse down from tooltip/element itself into dash/log
+  // more data-driven styling
+
+// MAAAAYBE
+  // account for polygons a user STARTS in? (does not enter, may/may not exit)
+  // verbose console errors (in Chrome)
+    // "[Violation] Forced reflow while executing JavaScript took 39ms"
+      // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
+  // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
+    // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
+    // css states?
+
+////
+
+// PERFORMANCE IMPROVEMENT IDEAS
+  // removing unneeded elements from DOM as animation progresses
+  // removing everything from DOM at end of experience (WHY DOES MY COMPUTER HUM FOR 5 MINUTES POST EVERY ANIMATION)
+    // https://beta.observablehq.com/@mbostock/disposing-content
+  // use projPath.measure() or projPath.area() instead of turf.length() calculations to determine animation variables? how would pixel units translate to time?
+  // taken from github issue notes:
+    // * redraw SVG (supported by use of `clipExtent()` or similar?) at certain moments within script
+    // * appropriately truncate coordinates and other values wherever possible
+    // * slim library imports / take only what I need
+  // search/filter dynamically on backend? is this possible? goal: avoid bringing all of north america's enrichData into the browser every time
+  // allow R2R request / data prep to happen more asynchronously to avoid long lag following submit click??
+  // dynamically simplify map geometries?
+  // use Canvas! even WebGL?
+    // stardust.js? https://www.cs.ucsb.edu/~holl/pubs/Ren-2017-EuroVis.pdf
+    // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
+    // ----->>>> https://github.com/kafunk/eco-rails/issues/1 <<<<-----
+    // links:
+      // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
+      //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
+      // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
+      // https://beta.observablehq.com/@mbostock/randomized-flood-fill
+      // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
+      // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
+
+
+// STYLING NOTES:
   // transitions can interpolate between:
     // visibility: visible and visibility: hidden
     // opacity [0, 1]
@@ -3417,95 +3470,84 @@
     // backdrop filters? (not much browser compatability?)
     // SVG filters: feGaussianBlur, etc
 
-// MAJOR TO DO'S; *** = NEED HELP!
-  // *** performance improvement! (see next section below) ***
-  // *** create rewind,ff,play/pause,cancel buttons for user control over animation (state management a huge implicit -- animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData)). including reverse animation??
-  // resolve all dash output / user information INCL legend/log (lots of data clumping)
-  // resolve all colors, stroke-dasharrays, textures, styling issues of every kind
 
-// PERFORMANCE IMPROVEMENT IDEAS
-  // removing unneeded elements from DOM as animation progresses
-  // removing everything from DOM at end of experience
-  // should all turf.length() calculations be projPath.measure(d) or projPath.area(d) calculations?? (FASTER?) how would pixel units translate to time?
-  // *** searching/filtering data on backend; avoid bringing all of north america's enrichData into the browser every time ***
-    // speed up filtering process ESP for regLines
-  // *** animation speed ***
-    // stardust.js?
-    // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
-    // ----->>>> https://github.com/kafunk/eco-rails/issues/1 <<<<-----
-  // taken from github issue notes:
-    // * redraw SVG (supported by use of `clipExtent()` or similar?) at certain moments within script
-    // * appropriately truncate coordinates and other values wherever possible
-    // * slim library imports / take only what I need
-  // https://beta.observablehq.com/@mbostock/disposing-content
-  // Canvas links:
-    // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
-    //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
-    // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
-    // https://beta.observablehq.com/@mbostock/randomized-flood-fill
-    // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
-    // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
-
-// WISHLIST/FUN
-  // orig options sorted matching by distance
-  // add autocomplete/suggestions to R2R search
-  // add features:
-    // ability to "select random" in prompt route
-    // ability to select route visually, by clicking on city/rail stn locations from map
-    // ability to replay, rewind, ff?, select new
-    // ability to control pace of train (and other variables?) via slider(s)
-    // ability to takeSnapshot()=> save inner screenshot in log?
-  // add more enrich data (pts only): tunnels, bridges, iNaturalist, glaciers
-  // add underlying MapboxGL vector tiles / custom MapboxStudio basemap?
-  // add underlying shaded relief raster layer?
-    // http://www.shadedrelief.com/birds_eye/gallery.html?
-  // seek opportunities for more data-driven styling
-    // bc math & facts ==> pattern & power
-  // instead of free-zooming, zoom to certain views: whole continent, all routes, selected route, current train position, X miles
-    // keep enabled even during animation
-  // keep improving responsivity/layout
-    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
-    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
-
-// MAYBE
-  // account for polygons a user STARTS in? (does not enter, may/may not exit)
-  // verbose console errors (in Chrome)
-    // "[Violation] Forced reflow while executing JavaScript took 39ms"
-      // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
-  // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
-    // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
-
-// CLEAN UP
-  // be super consistent and clear including '' vs "", use of var/const/let, spacing
+// CODE CLEAN
+  // be super consistent and clear including '' vs "", use of var/const/let, spacing, semicolons, etc
   // refactor, optimize, condense, DRY, improve structure
-  // revisit zoomFollow functions in particular
+  // revisit older functions (eg zoomFollow group) in particular
 
-// DATA CLEAN:
-  // double poly: flint hills
-  // double poly: Sinaloa Coastal Plain with Low Tropical Thorn Forest and Wetlands
-  // double poly: Piedmonts and Plains with Grasslands, Xeric Shrub, and Oak and Conifer Forests
-  // double poly: Sinaloa and Sonora Hills and Canyons with Xeric Shrub and Low Tropical Deciduous Forest
-// double kankakee?
-// remove/fix problem cities
-  // FIX
-    // Sault Ste Marie, ON
-    // Charleston, SC
-    // Cincinnatti, OH
-    // Greenville, SC
-    // Grand Junction, CO
-    // Saskatoon, SK
-  // REMOVE
-    // Lynn Lake, MB
-    // Sept-Iles, QC :(
-    // Quesnel, BC
-    // North Glengarry, ON
-  // SEGMENT ISSUES?
-    // Richmond, CA
-    // Ft Lauderdale, FL
-    // Oriole, ON
 
-// MORE SOURCES?
-  // hydro flow direction
-    // http://www.hydrosheds.org/download
-  // species-specific:
-    // https://www.worldwildlife.org/publications/wildfinder-database
+// DATA CLEAN!
+
+  // PROBLEM CITIES
+    // FIX
+      // Sault Ste Marie, ON
+      // Charleston, SC
+      // Cincinnatti, OH
+      // Greenville, SC
+      // Grand Junction, CO
+      // Saskatoon, SK
+      // Memphis, TN?
+    // REMOVE
+      // Lynn Lake, MB
+      // Sept-Iles, QC :(
+      // Quesnel, BC
+      // North Glengarry, ON
+    // SEGMENT ISSUES?
+      // Richmond, CA
+      // Ft Lauderdale, FL
+      // Oriole, ON
+
+  // DOUBLES BY NAME: (do i need to join all enrich data in one file to address this from ground up?)
+    // Mount Rainier: "py820", "py854"
+    // Lake Michigan: "ln144", "ln1009-1", "py110" (three!)
+    // Lake Ontario: "ln565", "ln606"
+    // Flint Hills: "py183", "py184", "py284"
+    // Glaciated Reading Prong/Hudson Highlands: "py625", "py626"
+    // John Day: "ln708", "ln314-1"
+    // Flathead: "py327", "ln675"
+    // Souris: "ln469-1", "ln170"
+    // Rock: "ln4-1", "ln718"
+    // Grand: "ln595-1", "py558", "ln121", "py345" (four!)
+    // Lake Saint Clair: "ln1267-1", "py805"
+    // Deschutes: "ln152", "ln769-1"
+    // Cowlitz/Chehalis Foothills: "py798", "py799"
+    // Sinaloa and Sonora Hills and Canyons with Xeric Shrub and Low Tropical Deciduous Forest: "py97", "py130"
+    // Piedmonts and Plains with Grasslands, Xeric Shrub, and Oak and Conifer Forests: "py81", "py78"
+    // Baker: "pt230", "pt239"
+    // Roanoake: "ln813-1", "ln1029"
+    // Algonquin : "py675", "py125"
+    // Missinaibi:  "py781", "ln961"
+    // Minnesota: "ln286", "ln473-1"
+    // Neches: "ln389", "ln49-1"
+    // Lake Texoma: "ln933-1", "py1010"
+    // Lake Huron: "ln187", "ln504"
+    // Lake Manitoba: ln616-1", "py468"
+    // Kiowa: "py774", "py1052"
+    // Wabash: "ln582-1","ln519"
+    // Lake Simcoe:
+    // Assiniboine Watershed:
+    // Lake Erie?
+    // Sinaloa Coastal Plain with Low Tropical Thorn Forest and Wetlands
+    // Kankakee?
+
+  // SPLIT:
+    // The Black River, The White River, The Thompson River
+    // Grand River, Beaver River, Gulf (Gull?) River, Ottawa River?
+
+  // OTHER DATA Qs and TODOs:
+    // taconic what?
+    // connecticut what?
+    // ozark, ouachita => ozark/ouchita
+    // ?? northern lake erie watershed (tiny?)
+
+
+// DONE RECENTLY
+  // fixed more layout issues
+  // fixed egregious overlap between onmouseover/output fxs
+  // rm dashboard header
+  // initial dash output structure
+  // replace most chroma.random() with paletteScale(random())
+  // added stroke to polygons for hover effect
+  // instead of automtically collapsing #about 'down' when unsure about screen size, added check to determine direction to rpeven later layout errors
+  // fixed lip under dashboard on @mxl
