@@ -34,8 +34,10 @@
     headlightRadius = 6,
     tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower); eventually should be user-adjustable via slider
     minT = tpm * 10,
-    tPause = 2400;  // standard delay time for certain transitions
-    // add zoom levels / zoom follow variables here
+    tPause = 2400,  // standard delay time for certain transitions
+    viewFocusInt = 100, // miles in/out to initially focus view, start/stop
+    overviewScale = 18,
+    zoomFollowScale = 18; // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12 good
 
   var padX = 0,
       padY = -18;
@@ -50,8 +52,7 @@
 
   var extent0 = [[-initial.width/2, -initial.height/2],[initial.width/2, initial.height/2]],
    translate0 = [(initial.width + padX)/2, (initial.height + padY)/2],
-       scale0 = 0.9, // initial overview scale
-       scale1 = 12;  // standard scale during animation (and maximum routeBounds)
+       scale0 = 0.9; // initial overview scale
 
   // CURRENT STATE (NOT IDEAL)
   let experience = { initiated: false, animating: false };
@@ -1583,16 +1584,16 @@
     // zoom to bounds of chosen route
     let routeBounds = getIdentity(getTransform(projPath.bounds(chosen.lineString)));
 
-    // if routeBounds overly zoomed in
-    if (routeBounds.k > scale1) {
-
-      let simpRoute = getSimpRoute(chosen.lineString),
-         simpLength = Math.floor(turf.length(simpRoute, {units: "miles"})),
-              midPt = turf.along(simpRoute,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2));
-
-      routeBounds = getIdentity(centerTransform(projection(midPt),scale1));
-
-    }
+    // // if routeBounds overly zoomed in
+    // if (routeBounds.k > overviewScale) {
+    //
+    //   let simpRoute = getSimpRoute(chosen.lineString),
+    //      simpLength = Math.floor(turf.length(simpRoute, {units: "miles"})),
+    //           midPt = turf.along(simpRoute,simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2));
+    //
+    //   routeBounds = getIdentity(centerTransform(projection(midPt),overviewScale));
+    //
+    // }
 
     // control timing with transition start/end events
     svg.transition().duration(tPause*2).ease(d3.easeCubicIn)
@@ -1797,11 +1798,11 @@
   function initAnimation(routeObj,routeBounds) {
 
     // collapse about pane
-    collapse("about", collapseDirection(window.innerWidth)) // "down")
+    collapse("about", collapseDirection(window.innerWidth))
     resize()
 
     // get zoomFollow object including simplified zoomArc, pace, and first/last zoom frames
-    let zoomFollow = getZoomFollow();  // pass routeObj, optional focus int (default = 100)
+    let zoomFollow = getZoomFollow();
 
     // bind zoomArc to DOM for tracking only (not visible)
     let zoomArc = g.append("path")
@@ -1810,21 +1811,23 @@
       .attr("d", line)
       .style("fill","none")
       // toggle below for visual of zoomArc
-      .style("stroke","none")
+      // .style("stroke","none")
       // .style("stroke", "rebeccapurple")
       // .style("stroke-width",1)
 
     // final user prompt/countdown??
     // if (confirm("Ready?")) {
-      experience.animating = true;  // global flag that experience in process
+      experience.animating = true;  // global flag that experience == in process
       goTrain(zoomFollow,zoomArc,routeObj.enrichData,routeBounds); // initiate movement!
     // }
 
-    function getZoomFollow(int = 100) { // also requires access to routeObj
-                                        // int = miles in/out to focus view, start/stop zoomFollow
+    function getZoomFollow() { // requires access to routeObj
 
       let zoomFollow = {
         necessary: true, // default
+        focus: viewFocusInt,
+        limit: viewFocusInt *3,
+        scale: zoomFollowScale,
         arc: [],
         firstThree: [],
         lastThree: [],
@@ -1844,9 +1847,9 @@
         }
       }
 
-      if (zoomFollow.simpLength() > 300) {
+      if (zoomFollow.simpLength() > zoomFollow.limit) {
 
-        let firstLast = getFirstLast(zoomFollow.fullSimp,int);
+        let firstLast = getFirstLast(zoomFollow.fullSimp,zoomFollow.focus);
 
         zoomFollow.firstThree = firstLast[0],
          zoomFollow.lastThree = firstLast[1],
@@ -1860,7 +1863,7 @@
 
       } else {
 
-        // console.log("short route (< 300 miles -- specifically, " + zoomFollow.simpLength + ". first/last frames identical; no zoomAlong necessary.")
+        // console.log(`short route (< ${limit} miles -- specifically, ${zoomFollow.simpLength}. first/last frames identical; no zoomAlong necessary.`)
 
         zoomFollow.necessary = false,
               zoomFollow.arc = zoomFollow.fullSimp.geometry.coordinates.slice();
@@ -1877,7 +1880,7 @@
 
       return zoomFollow;
 
-      function getFirstLast(fullLine,int) {
+      function getFirstLast(fullLine,int = 100) {
 
         // turf.js returning same three coordinates at distance minus 200, distance minus 100, & distance; reversing instead
         let fullLineReversed = makeFeature(fullLine.geometry.coordinates.slice().reverse(), "LineString");
@@ -2125,12 +2128,12 @@
     return breaks;
   }
 
-  function getAzimuth(p0,p1,isInitial = false) {  // returns getRotate(p0,p1)
+  function getRotate(p0,p1,isInitial = false) {  // returns getRotate(p0,p1)
     let rotate = getRotate(p0,p1,isInitial);
     return rotate;
   }
 
-  function getRotate(p0,p1,isInitial = false) {
+  function getAzimuth(p0,p1,isInitial = false) {
     let slope, y0, y1;
     // adjust slope calculation to account for reflectedY!
     if (p0.x) {   // assume two svg pts
@@ -2223,26 +2226,26 @@
 
   }
 
-  function zoomTo(d,i) {
-
-    if (active.node() === this) return resetZoom();
-
-    if (d3.event.defaultPrevented) return; // panning, not zooming
-
-    active.classed("active", false);
-
-    active = d3.select(this).classed("active", true);
-
-    let transform = getTransform(path.bounds(d));
-
-    let zoom1 = d3.zoomIdentity
-      .translate(transform.x,transform.y)
-      .scale(transform.k)
-
-    svg.transition().duration(750)
-      .call(zoom.transform, zoom1)
-
-  }
+  // function zoomTo(d,i) {
+  //
+  //   if (active.node() === this) return resetZoom();
+  //
+  //   if (d3.event.defaultPrevented) return; // panning, not zooming
+  //
+  //   active.classed("active", false);
+  //
+  //   active = d3.select(this).classed("active", true);
+  //
+  //   let transform = getTransform(projPath.bounds(d)); // path
+  //
+  //   let zoom1 = d3.zoomIdentity
+  //     .translate(transform.x,transform.y)
+  //     .scale(transform.k)
+  //
+  //   svg.transition().duration(750)
+  //     .call(zoom.transform, zoom1)
+  //
+  // }
 
   function getTransform(bounds, extent = extent0, padding = 0.1) {
 
@@ -2264,10 +2267,7 @@
      width = extent[1][0] - extent[0][0],  // range x (output)
     height = extent[1][1] - extent[0][1];  // range y (output)
 
-    let k = (1 - padding) / Math.max(dx / width, dy / height),
-                           // aka the m in y = mx + b
-                           // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
-                           // 0.9 provides 10% built-in padding
+    let k = (1 - padding) / Math.max(dx / width, dy / height),  // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
         x = b1[0] + b0[0], // xMax (b1[0]) + xOffset (b0[0])
         y = b1[1] + b0[1];  // yMax (b1[1]) + yOffset (b0[1])
 
@@ -2284,7 +2284,7 @@
   function getIdentity(atTransform,k) {
     let identity = d3.zoomIdentity
       .translate(atTransform.x,atTransform.y)
-      .scale(k || atTransform.k)  // if (k), k || (keep k constant?)
+      .scale(k || atTransform.k)
     return identity;
   }
 
@@ -2332,6 +2332,8 @@
 
   function bindQuadtree(quadtree) {
 
+    // CALLED OPTIONALLY FOR VISUAL OF GRID
+
     ///// QUADTREE / TRIGGER NODES ADDED TO DOM
     let grid = g.append("g")
                 .classed("quadtree", true)
@@ -2344,12 +2346,10 @@
           .attr("y", function(d) { return d.y0; })
           .attr("width", function(d) { return d.y1 - d.y0; })
           .attr("height", function(d) { return d.x1 - d.x0; })
-          // .style("fill","none")
-          // uncomment for visual of grid
-            .style("fill", chroma.random())
-            .style("stroke", "whitesmoke")
-            .style("stroke-width", "0.4px")
-            .style("opacity", 0.3)
+          .style("fill", chroma.random())
+          .style("stroke", "whitesmoke")
+          .style("stroke-width", "0.4px")
+          .style("opacity", 0.3)
 
     // Collapse the quadtree into an array of rectangles.
     function nodes(quadtree) {
@@ -2490,15 +2490,12 @@
     if (zoomFollow.necessary) {
     // calculate transforms and timing from firstFrame to lastFrame
 
-      // pass hard coded scale that seems to be widely appropriate given constant bufferExtent
-      scale = scale1;
+      let firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),zoomFollow.scale));
 
-      let firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),scale));
+      lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),zoomFollow.scale));
 
-      lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),scale));
-
-      tDelay = (simpDistance > 300) ? tpm * 100 : tpm * 0,      // delay zoomFollow until train hits mm 100 (of fullSimp) IF route long enough
-        tMid = tFull - (tDelay*2),  // tDelay doubled to account for stopping 100m from end
+      tDelay = (simpDistance > zoomFollow.limit) ? tpm * zoomFollow.focus : tpm * 0,      // delay zoomFollow until train hits mm <zoomFollow.focus> (of fullSimp) IF route long enough
+        tMid = tFull - (tDelay*2),  // tDelay doubled to account for stopping <zoomFollow.focus> miles from end
         tEnd = tPause;              // arbitrary time to zoom to start frame
 
       // zoom to First frame
@@ -2803,7 +2800,7 @@
              pt0 = path.node().getPointAtLength(0);
       return function(t) {
         let pt1 = path.node().getPointAtLength(t * l);  // svg pt
-        if (!(pt0.x === pt1.x)) rotate = getRotate(pt0,pt1);
+        if (!(pt0.x === pt1.x)) rotate = getAzimuth(pt0,pt1);
         pt0 = pt1;  // shift pt values pt0 >> pt1
         return transform = "translate(" + pt1.x + "," + pt1.y + ") rotate(" + rotate + ")";
       }
@@ -3340,7 +3337,7 @@
   // center zoomFollow further north to offset dash intrusion
   // less padding around about map on mm
   // line-dash ease slower at end
-  // improve visual affordances on hover
+  // improve visual affordances on hover for pts & lines
   // new color for modal
   // change projection to equidistant (instead of equal area)
   // workable link color
@@ -3496,7 +3493,7 @@
     // Kankakee?
 
   // SPLIT:
-    // The Black River, The White River, The Thompson River
+    // The Black River, The White River, The Verde River, The Saline River, The Thompson River
     // Grand River, Beaver River, Gulf (Gull?) River, Ottawa River?
 
   // OTHER DATA Qs and TODOs:
