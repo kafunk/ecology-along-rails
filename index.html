@@ -35,7 +35,7 @@
     <main id="main" class="flex-child flex-child--grow bg-main">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative"> <!-- flex-parent--start-cross,stretch-cross-mxl-->
+      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden"> <!-- flex-parent--start-cross,stretch-cross-mxl-->
 
         <!-- map and dash pane -->
         <section id="section" class="flex-child flex-child--grow scroll-hidden bg-section">
@@ -150,15 +150,15 @@
                         </div>
 
                         <!-- Dash--Main -->
-                        <div class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-ml round-bl-mm round-br-mm">
+                        <div class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-mxl round-bl-mm round-br-mm">
 
                           <!-- main content inner wrapper -->
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid'>
 
                             <!-- Narration -->
-                            <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--4-ml bg-lighten25 px6 pt6 pb3 px12-mm pt12-mm pb6-mm pl12-mm pr6-ml py12-ml">
+                            <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--5-ml bg-lighten25 px6 pt6 pb3 px12-mm pt12-mm pb6-mm pl12-mm pr6-ml py12-ml">
 
-                              <div class="flex-parent flex-parent--column round flex-parent--center-main h-full">
+                              <div class="flex-parent flex-parent--column flex-parent--center-main round h-full">
 
                                 <!-- header -->
                                 <div id="narration-header" class="flex-child flex-child-no-shrink bg-darken25 align-center round-tl round-tr color-lighten75 py3">
@@ -166,8 +166,8 @@
                                   <!-- You are currently:</h5> -->
                                 </div>
 
-                                <div id="narration-txt" class="flex-child flex-child--grow px12 bg-lighten50 flex-parent flex-parent--center-cross">
-                                  <div id="encounters" class="flex-child flex-child--grow flex-parent flex-parent--space-between-main flex-parent--center-cross h60"><!--hmin60 hmax120"><!-- flex-parent--row-reverse flex-parent--column-ml -->
+                                <div id="narration-txt" class="flex-child flex-child--grow px6 bg-lighten50 flex-parent flex-parent--center-cross">
+                                  <div id="encounters" class="flex-child flex-child--grow flex-parent flex-parent--space-between-main flex-parent--center-cross txt-xs txt-s-mm"><!--hmax60 hmax120"><!-- flex-parent--row-reverse flex-parent--column-ml -->
                                   </div>
                                 </div>
 
@@ -178,7 +178,7 @@
                             </div> <!-- end of narration -->
 
                             <!-- Compass + -->
-                            <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--4-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml">
+                            <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--2-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml">
 
                               <div class="flex-parent--column h-full flex-parent round flex-parent--end-main">
 
@@ -186,22 +186,34 @@
                                 <div id="compass-header" class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
 
                                 <!-- compass content -->
-                                <div class="flex-child flex-child--grow bg-lighten50 scroll-auto px12 py6 grid">
-                                  <div id="widgets" class="col col--12 grid align-l clearfix">
-                                    <span id="compass" class="col col--6">
-                                      current bearing
+                                <div class="flex-child flex-child--grow bg-lighten50 px12 py6 grid">
+                                  <div id="details" class="col col--12 grid">
+                                    <span id="from" class="col col--12 align-center">
+                                      you are travelling:
                                     </span>
-                                    <span id="elevation" class="col col--6 align-r fr">
-                                      current elevation
+                                    <span id="from" class="col col--4">from</span>
+                                    <span id="to" class="col col--4 align-center">to</span>
+                                    <span id="via" class="col col--4 align-r">via</span>
+                                  </div>
+                                  <div id="current" class="col col--12 grid">
+                                    <span id="miles-in" class="col col--12 align-center hidden">
+                                      current:
+                                    </span>
+                                    <span id="compass" class="col col--4">
+                                      bearing
+                                    </span>
+                                    <span id="miles-in" class="col col--4 align-center hmax12">
+                                      miles in
+                                    </span>
+                                    <span id="elevation" class="col col--4 align-r">
+                                      elevation
                                     </span>
                                   </div>
-                                  <div id="miles-in" class="col col--12 align-center">
-                                    miles in
-                                  </div>
-                                  <div id="remaining" class="col col--12 grid align-l clearfix">
-                                    <span id="time" class="col col--6">time remaining</span>
-                                    <span id="distance" class="col col--6 align-r fr">distance remaining</span>
-                                  </div>
+                                  <!-- <div id="remaining" class="col col--12 grid">
+                                    <span class="col col--12 align-center">remaining:</span>
+                                    <span id="time" class="col col--6">time</span>
+                                    <span id="distance" class="col col--6 align-r">distance</span>
+                                  </div> -->
                                 </div>
 
                                 <!-- compass footer -->
@@ -212,7 +224,7 @@
                             </div> <!-- end of compass+ -->
 
                             <!-- Legend-Log -->
-                            <div id="legend-log" class="flex-child flex-child--grow bg-lighten25 col col--7 col--4-ml pl3 pr6 pb6 pt3 pl6-mm pr12-mm pt6-mm pb12-mm py12-ml">
+                            <div id="legend-log" class="flex-child flex-child--grow bg-lighten25 col col--7 col--5-ml pl3 pr6 pb6 pt3 pl6-mm pr12-mm pt6-mm pb12-mm py12-ml">
 
                               <div class="flex-parent flex-parent--column round flex-parent--space-between-main h-full flex-parent--stretch-cross">
 
@@ -542,7 +554,7 @@
     <!-- footer stays on the bottom at full width -->
     <footer id="footer" class="flex-child flex-child--no-shrink bg-darken50 color-lighten75 txt-s txt-m-ml">
       <!-- inner horizontal wrapper -->
-      <div class='flex-parent flex-parent--center-cross grid px6 py3 px12-mm px18-ml px24-mxl'>
+      <div class='flex-parent flex-parent--center-cross grid px6 py3 px12-mm px18-ml px24-mxl ml3'>
         <!-- author info -->
         <div class='flex-child col col--5'>
           <span class="mx6">
@@ -552,29 +564,27 @@
           </span>
         </div>
         <!-- break/divider icon visible @ mm+ -->
-        <div class="flex-child col col--2">
+        <div class="flex-child col col--2 ml-neg1">
           <svg class="icon mx-auto h30 w30 color-lighten75"><use xlink:href="assets/compass-rose.svg#compass-rose"/></svg>
         </div>
         <!-- social media -->
-        <div class="flex-child col col--5">
-          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr-neg3">
-            <a target="_blank" href="mailto:kafunk@gmail.com">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="email"><use xlink:href='#icon-mail'/></svg>
-            </a>
-            <a target="_blank" href="https://github.com/kafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="github"><use xlink:href='#icon-github'/></svg>
-            </a>
-            <a target="_blank" href="https://twitter.com/kafunkafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="twitter"><use xlink:href='#icon-twitter'/></svg>
-            </a>
-            <a target="_blank" href="https://www.instagram.com/kafunkafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="instagram"><use xlink:href='#icon-instagram'/></svg>
-            </a>
-            <!-- <a target="_blank" href="https://open.spotify.com/user/kafunkafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="spotify"><use xlink:href='#icon-spotify'/></svg>
-            </a> -->
-            <!-- Pinterest,Dribbble,LinkedIn? -->
-          </div>
+        <div class="flex-child col col--5 flex-parent flex-parent--end-main flex-parent--center-cross">
+          <a target="_blank" href="mailto:kafunk@gmail.com">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="email"><use xlink:href='#icon-mail'/></svg>
+          </a>
+          <a target="_blank" href="https://github.com/kafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="github"><use xlink:href='#icon-github'/></svg>
+          </a>
+          <a target="_blank" href="https://twitter.com/kafunkafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="twitter"><use xlink:href='#icon-twitter'/></svg>
+          </a>
+          <a target="_blank" href="https://www.instagram.com/kafunkafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="instagram"><use xlink:href='#icon-instagram'/></svg>
+          </a>
+          <!-- <a target="_blank" href="https://open.spotify.com/user/kafunkafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="spotify"><use xlink:href='#icon-spotify'/></svg>
+          </a> -->
+          <!-- Pinterest,Dribbble,LinkedIn? -->
         </div>
       </div>
     </footer>

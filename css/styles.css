@@ -20,7 +20,7 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
-#dash { transition: 0.6s all; } /* not doing much */
+#dash { transition: 0.6s; } /* not doing much */
 #veil,#modal-bg { pointer-events: none; }
 #modal-about,#get-options,#modal-close { pointer-events: all; }
 #map {  /* i.e. .svg-container */
@@ -81,12 +81,10 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
 
-/* .hide-overflow {
+#encounters {
   overflow: hidden;
-}
-.slide-out {
   transition: 0.4s;
-} */
+}
 
 /* .svg-content {
   display: inline-block;
