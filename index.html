@@ -177,37 +177,45 @@
 
                             </div> <!-- end of narration -->
 
-                            <!-- Compass + -->
-                            <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--2-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml">
+                            <!-- Compass -->
+                            <div id="widgets-plus" class="flex-child flex-child--grow col col--5 col--2-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml">
 
                               <div class="flex-parent--column h-full flex-parent round flex-parent--end-main">
 
                                 <!-- header -->
-                                <div id="compass-header" class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
+                                <div class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
 
-                                <!-- compass content -->
-                                <div class="flex-child flex-child--grow bg-lighten50 px12 py6 grid">
-                                  <div id="details" class="col col--12 grid">
-                                    <span id="from" class="col col--12 align-center">
-                                      you are travelling:
-                                    </span>
-                                    <span id="from" class="col col--4">from</span>
-                                    <span id="to" class="col col--4 align-center">to</span>
-                                    <span id="via" class="col col--4 align-r">via</span>
+                                <!-- content -->
+                                <div class="flex-child flex-child--grow bg-lighten50 px12 py6"><!--relative-->
+                                  <div id="from-to" class="flex-parent flex-parent--center-cross flex-parent--space-between-main">
+                                    <div id="from" class="flex-child txt-xs align-r">
+                                      <svg class='icon h24 w24 h30-mxl w30-mxl'><use xlink:href='#icon-depart'></use></svg>
+                                    </div>
+                                    <div id="via" class="flex-child flex-child--grow txt-spacing2 txt-xxs align-center"></div>
+                                    <div id="to" class="flex-child txt-xs align-r">
+                                      <svg class='icon h24 w24 h30-mxl w30-mxl'><use xlink:href='#icon-arrive'></use></svg>
+                                    </div>
                                   </div>
-                                  <div id="current" class="col col--12 grid">
-                                    <span id="miles-in" class="col col--12 align-center hidden">
-                                      current:
-                                    </span>
-                                    <span id="compass" class="col col--4">
-                                      bearing
-                                    </span>
-                                    <span id="miles-in" class="col col--4 align-center hmax12">
-                                      miles in
-                                    </span>
-                                    <span id="elevation" class="col col--4 align-r">
-                                      elevation
-                                    </span>
+                                  <div id="compass" class="flex-parent flex-parent--center-cross flex-parent--center-main"><!--absolute left right top bottom-->
+                                    <svg class="flex-child flex-child--grow h36 w36 h60-mxl w60-mxl">
+                                      <g id="compass-bowl" class="h36 w36 h60-mxl w60-mxl"><!-- or rose? -->
+                                        <circle r="33%" cx="50%" cy="50%"></circle>
+                                      </g>
+                                      <g id="compass-needle" class='icon h24 w24 h30-mxl w30-mxl color-red'><use xlink:href='#icon-compass'></use></g>
+                                    </svg>
+                                  </div>
+                                  <div id="other-widgets" class="flex-parent flex-parent--center-cross grid">
+                                    <div class="flex-child flex-child--grow col col--6">
+                                      <svg class="h36 w36 h60-mxl w60-mxl txt-mono txt-xs txt-s-mxl">
+                                        <rect id="elevation" x="0" y="0" width="100%" height="100%"></rect>
+                                      </svg>
+                                    </div>
+                                    <div class="flex-child flex-child--grow col col--6 align-r">
+                                      <svg class="h36 w36 h60-mxl w60-mxl txt-mono txt-s txt-m-mxl">
+                                        <rect id="odometer" x="0" y="0" width="100%" height="100%">-0-</rect>
+                                        <text class="txt-xs txt-s-mxl">miles in</text>
+                                      </svg>
+                                    </div>
                                   </div>
                                   <!-- <div id="remaining" class="col col--12 grid">
                                     <span class="col col--12 align-center">remaining:</span>
@@ -216,8 +224,8 @@
                                   </div> -->
                                 </div>
 
-                                <!-- compass footer -->
-                                <div id="compass-footer" class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
+                                <!-- footer -->
+                                <div class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
 
                               </div>
 

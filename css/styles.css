@@ -13,7 +13,7 @@ body { margin:0; padding:0; } /* background-color:#fafafa; } */
 h1 { font-family: 'Mirza', cursive;} /* note that different fonts will require different margin adjustments */
 h2,h3,h4,h5,h6 { font-family: 'Buda', cursive; }
 p, span, a, li { font-family: 'Thasadith', sans-serif; line-height: 150%;}  /* Quattrocentro? py6? */
-a { color: whitesmoke; }
+a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
 svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-rendering: optimizeSpeed; } */
@@ -80,10 +80,25 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .hover { stroke-width: 0.2px; opacity: 1}
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
+.txt-xxs { font-size: 0.5em; }
 
 #encounters {
   overflow: hidden;
   transition: 0.4s;
+}
+#elevation,#odometer {
+  fill: none;
+  pointer-events: none;
+  stroke: black;
+  stroke-width: 2px;
+}
+#odometer {
+  border-radius: 5px;
+}
+#compass-bowl {
+  fill: gainsboro;
+  stroke: dimgray;
+  stroke-width: 1px;
 }
 
 /* .svg-content {

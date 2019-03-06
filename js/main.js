@@ -1839,7 +1839,7 @@
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, routeBoundsIdentity)
       .on("start", () => {
-        prepareEnvironment();  // now includes collapse("#about") & drawRoute()
+        prepEnvironment();  // now includes collapse("#about") & drawRoute()
       })
       .on("end", () => {
         // confirm g transform where it should be
@@ -1851,21 +1851,15 @@
         }, tPause);
       })
 
-    function prepareEnvironment() {
+    function prepEnvironment() {
+
+      setupDash(chosen)
 
       // collapse about pane
       collapse("about", collapseDirection(window.innerWidth))
       resize()
 
       drawRoute(chosen, tPause);
-
-      // let initialThree =
-      d3.select("#encounters").selectAll(".encounter")
-        .data(['Traversing special places','Encountering incredible things','Beholding the world made fresh again'])
-        .enter().append("div")
-          .classed("flex-child flex-child--grow encounter placeholder", true)
-          .property("name", d => d)
-          .html(d => `<span>${d}</span>`)
 
       // depending on direction of train, change #encounters div classes:
         // generally moving west: keep as is
@@ -1880,6 +1874,74 @@
       // setup / initiate select event listeners
         // use remoteControl.js for button functionality
       // activate newly relevant buttons
+
+// depart
+// arrive
+// zoom buttons: plus,minus
+// nps svg
+
+// move to wishlist:
+  // elevation tracker (mini grid + output within dash)
+
+      function setupDash(chosen) {
+
+        let agencies = [...new Set(chosen.segments.map(d => {
+          let line = (d.lineName !== d.agency.name) ? `'s ${d.lineName}` : '';
+          return `<a target="_blank" href="${d.agency.url}">${d.agency.name}${line}</a>`
+        }))]
+
+        let agencyHtml = `<span>--via--</span>`
+        if (agencies.length > 2) {
+
+          console.log(agencies.slice())
+
+          agencies.splice((agencies.length - 2),0,"&");
+
+          console.log(agencies)
+
+          // imma stickler for the oxford comma
+          agencyHtml += agencies.slice(0,agencies.length-1).join(", ") + agencies[agencies.length-1];
+
+// OUTPUT: FIXME
+// (3) ["<a target="_blank" href="http://www.amtrak.com">Amtrak's Blue Water</a>", "<a target="_blank" href="http://www.amtrak.com">Amtrak's Lake Shore Limited</a>", "<a target="_blank" href="http://www.amtrak.com">Amtrak's Vermonter</a>"]
+// main.js:1900 (4) ["<a target="_blank" href="http://www.amtrak.com">Amtrak's Blue Water</a>", "&", "<a target="_blank" href="http://www.amtrak.com">Amtrak's Lake Shore Limited</a>", "<a target="_blank" href="http://www.amtrak.com">Amtrak's Vermonter</a>"]
+// main.js:1911 <span>--via--</span><a target="_blank" href="http://www.amtrak.com">Amtrak's Blue Water</a>, &, <a target="_blank" href="http://www.amtrak.com">Amtrak's Lake Shore Limited</a><a target="_blank" href="http://www.amtrak.com">Amtrak's Vermonter</a>
+
+        } else if (agencies.length === 1) {
+          agencyHtml += agencies.join("<span> & </span>")
+        } else {
+          agencyHtml += agencies[0];
+        }
+
+        console.log(agencyHtml)
+
+// TODO: continue working on compsas bowl, odometer, elevation
+
+        d3.select("#from").append("span") // after deprat icon
+          .text(chosen.from.shortName)
+        d3.select("#to").insert("span") // before arrive icon
+          .text(chosen.to.shortName)
+        d3.select("#via").insert("div")
+          .html(agencyHtml)
+          .style("stroke","dimgray")
+
+        // chosen.totalDistance
+        // chosen.totalTime
+        // chosen.overallBearing
+        // stopping in [...new Set(chosen.allStops.map(d=>d.shortName))] where name is not from/to
+
+//  maki: all -11, -15: volcano, mountain,park,park-alt1,information, marker, marker-stroked,circle, circle-stroked,,bridge,heart
+
+        // let initialThree =
+        d3.select("#encounters").selectAll(".encounter")
+          .data(['Traversing special places','Encountering incredible things','Beholding the world made fresh again'])
+          .enter().append("div")
+            .classed("flex-child flex-child--grow encounter placeholder", true)
+            .property("name", d => d)
+            .html(d => `<span>${d}</span>`)
+
+      }
+
 
       function drawRoute(received,t) {
 
@@ -3326,6 +3388,11 @@
   }
 
   function trackerUpdate(current) {
+
+
+    // bearwithMe planar,
+    // orient (compass) geodesic
+
     // update dashboard elements: compass visual?, mileage tracker, elevation?
     // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
   }
@@ -3883,27 +3950,6 @@
       // Ft Lauderdale, FL
       // Oriole, ON
 
-// DONE:
-  // extract variables for easy access
-  // iprove/simplify getting route bounds (reduce redunant turf method calls)
-  // add options object to getTransform and centerTransform functions, allowing insertion of extra padding
-  // zoomAlong calls on centertransform() for consistency
-  // move around functions more logically, i.e. keep creation of second quadtree within enrichRoute (no need to pass around that data), and drawRoute() within prepareEnvironment()
-  // adjust zoom scale, options, focus point
-  // center zoomFollow further north to offset dash intrusion
-  // rm unncessary clearfix/fr classes from dash widgets
-  // clean data
-    // pts revamp: all below 2800000 (zeroes?) threshold
-    // removed handful of non-intersecting line remnants
-    // re-did ids, searchreps, triggerpts
-    // split certain rivers, removed a few doubles (those noticed earlier were almost all simply of different categories), rm radium, semisnapped and removed doubles for trigger pts (reduced #, reduced overlap, ensured close enough)
-  // getTriggerData - points no longer calls on turf.nearestPointOnLine()
-  // baseT now a property of enrich datum , not trigger pt
-  // testing restructure of getTriggerData wherein all triggerpts within buffer returned, no fancy baseT calculations
-  // "The" Lake Michigan,etc
-  // more data cleaning: doubles, rivers needing split, etc (see below)
-  // wrt functions relying on double defaults, extract into options objects
-
 ////////
 
 // new trigger structure:
@@ -3918,3 +3964,15 @@
   // get Lake Erie some more trigger pts!
 // add exclusive pass rail lines?
 // const miles = {units:"miles"}
+
+// points:
+// svg-icons:
+// mountain -- mount, mountain, volcano
+// depart
+// arrive
+// zoom buttons: plus,minus
+// nps svg
+
+
+// bearwithMe planar,
+// orient (compass) geodesic
