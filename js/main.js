@@ -35,7 +35,6 @@
     //     -o quantization=1e5 format=topojson mapshaped/*fileout*.json
     // then simplified and cleaned in browser for visual
 
-// then simplified and cleaned in browser for visual
   // background/reference
   var initBounds = d3.json("data/final/bounding.json"),
           admin0 = d3.json("data/final/admin0.json"),
@@ -48,9 +47,11 @@
         // passRail = d3.json("data/final/pass_railways.json"),
         railStns = d3.json("data/final/na_rr_stns.json"),
   // merged enrich data
-     enrichPolys = d3.json("data/final/enrich_polys.json"),
+     enrichPolys = d3.json("data/final/enrich_polys_plus.json"),
      enrichLines = d3.json("data/final/enrich_lines_plus.json"),
-       enrichPts = d3.json("data/final/enrich_pts.json");
+       enrichPts = d3.json("data/final/enrich_pts_plus.json"),
+  // quadtree ready
+    quadtreeReps = d3.json("data/final/quadtree_search_reps.json");
 
 
 //// ASSORTED VARIABLE DECLARATION
@@ -67,6 +68,13 @@
     zoomEase = d3.easeCubicIn,
     zoomAlongOptions = {padBottom: 1 + zoomFollowScale/10},
     relativeDim = 0.2  // dimBackground level
+
+  // default options
+  let quadtreeDefaultOpts = {
+    // bounding: ,
+    projectX: d => projection(d.geometry.coordinates)[0],
+    projectY: d => projection(d.geometry.coordinates)[1]
+  }
 
   var padX = 0,
       padY = -18;
@@ -363,13 +371,9 @@
 //// PREPARE MAP LAYERS
 
   // SET BOUNDING BOX
-  Promise.all([initBounds]).then(bindTo => {
-      let gj, key, data = (Array.isArray(bindTo)) ? bindTo[0] : bindTo;
-      if (data["type"] == "Topology") { key = Object.keys(data.objects)[0]; }
-      gj = key ? topojson.feature(data, data.objects[key]) : data;
-      // identity.fitExtent(extent0,gj)
-      projection.fitExtent(extent0,gj)
-    }, onError)
+  initBounds.then(data => {
+    projection.fitExtent(extent0,topojson.feature(data,data.objects.bounds))
+  }, onError)
 
   // DRAW VECTOR BASE
   Promise.all([admin0,admin1,hydroBase,urbanBase,railBase,railStns]).then(drawBase, onError);
@@ -846,21 +850,29 @@
       //  .attr("stroke","black")
 
       let likelyEnrich =
-      Promise.all([enrichPts,enrichLines,enrichPolys]).then(getIntersected,onError);
+      Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
 
       // bind all trigger points to the DOM for en route intersection
-      Promise.all([likelyEnrich]).then(data => {
+      likelyEnrich.then(data => {
 
-        let quadData = data[0].lines.filter(d => {
+        const withinBuffer = d => {
           let point = [d.properties.trigger_x,d.properties.trigger_y]
           return turf.booleanPointInPolygon(point,chosen.bufferedRoute);
-        })
-        // pts concat lines etc
+        }
 
-        const projectX = d => { return projection([d.properties.trigger_x,d.properties.trigger_y])[0] },
-              projectY = d => { return projection([d.properties.trigger_x,d.properties.trigger_y])[1] };
+        let quadPts = data.pts.filter(withinBuffer),
+          quadLines = data.lines.filter(withinBuffer),
+          quadPolys = data.polys.filter(withinBuffer);
 
-        routeQuadtree = makeQuadtree(quadData,chosen.bufferedRoute,projectX,projectY)
+        let quadData = quadPts.concat(quadLines).concat(quadPolys);
+
+        let options = {
+          bounding: chosen.bufferedRoute,
+          projectX: d =>  projection([d.properties.trigger_x,d.properties.trigger_y])[0],
+          projectY: d => projection([d.properties.trigger_x,d.properties.trigger_y])[1]
+        }
+
+        routeQuadtree = makeQuadtree(quadData,options)
 
         // // optional grid visualization:
         // visualizeGrid(routeQuadtree)
@@ -872,22 +884,23 @@
 
       return chosen;
 
-      function getIntersected([pts,lines,polys]) {
+      function getIntersected([searchReps,initBounds]) {
 
         // FIRST make a quadtree of all representative enrich data pts draped over North America
 
-        // pts = topojson.feature(pts, pts.objects.enrichPts,
-        lines = topojson.feature(lines, lines.objects.enrichLines)
-        // polys = topojson.feature(polys, polys.objects.enrichPolys
+        let quadtreeData = topojson.feature(searchReps,searchReps.objects.searchReps).features.filter(d => d.geometry);
 
-        let quadtreeData = lines.features
+        let bounding = topojson.feature(initBounds, initBounds.objects.bounds).features[0]
 
         let begin = performance.now();
 
-        const projectX = d => { return projection([d.properties.search_rep_x,d.properties.search_rep_y])[0] },
-              projectY = d => { return projection([d.properties.search_rep_x,d.properties.search_rep_y])[1] };
+        // let options = {
+        //   bounding: bounding,
+        //   projectX: d =>  projection([d.properties.search_rep_x,d.properties.search_rep_y])[0],
+        //   projectY: d => projection([d.properties.search_rep_x,d.properties.search_rep_y])[1]
+        // }
 
-        let quadtree = makeQuadtree(quadtreeData,lines,projectX,projectY)
+        let quadtree = makeQuadtree(quadtreeData,{bounding:bounding})
 
         // // optional data viz
         // visualizeGrid(quadtree);
@@ -928,11 +941,18 @@
 
         console.log("unique possibleFeatures by id:",possibleFeatures.length)
 
-        let likelyEnrich = {
-          // pts: pts.features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
-          lines: lines.features.filter(d => { return possibleFeatures.includes(d.properties.id) })
-          // polys: polys.features.filter(d => { return possibleFeatures.includes(d.properties.id) })
-        };
+        let likelyEnrich =
+        Promise.all([enrichPts,enrichLines,enrichPolys]).then(([pts,lines,polys]) => {
+
+          let likelyEnrich = {
+            pts: topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
+            lines: topojson.feature(lines, lines.objects.enrichLines).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
+            polys: topojson.feature(polys, polys.objects.enrichPolys).features.filter(d => { return possibleFeatures.includes(d.properties.id) })
+          };
+
+          return likelyEnrich;
+
+        });
 
         return likelyEnrich;
 
@@ -1845,19 +1865,21 @@
 
 //// QUADTREE / DATA / INTERSECT QUERIES
 
-  function makeQuadtree(data,boundingGJ,projectX,projectY) {
+  function makeQuadtree(data,options) {
     // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
     // make latter 3 options object with defaults: data, projection of data coords
 
+    options = {...quadtreeDefaultOpts,...options};
+
     // get projected bounding box of passed geoJSON
-    let pathBox = projPath.bounds(boundingGJ),
+    let pathBox = projPath.bounds(options.bounding),
              x0 = pathBox[0][0], // xmin
              y0 = pathBox[0][1], // ymin
              x1 = pathBox[1][0], // xmax
              y1 = pathBox[1][1]; // ymax
 
     // initiate quadtree with specified x and y functions
-    let quadtree = d3.quadtree(data,projectX,projectY)
+    let quadtree = d3.quadtree(data,options.projectX,options.projectY)
       .extent([[x0, y0], [x1, y1]])
 
     return quadtree;
@@ -2235,7 +2257,7 @@
     if (id.startsWith('pt')) {
 
       baseT = this.properties.SNAP_DISTANCE;
-      revealPt(this,t)
+      revealPt(this,baseT)
 
     } else {
 
@@ -2246,11 +2268,7 @@
         gjA,
         gjB;
 
-      // let splitter = turf.lineOffset(turf.lineString([allCoords[index0-1],allCoords[index0+1]]),90,{units:"degrees"});
-
       if (["River","River (Intermittent)"].includes(this.properties.CATEGORY)) {
-
-        // let split = turf.lineSplit(this.geometry,splitter.geometry)
 
         // store first and last points of flattened line geometry
         let index1A = 0,
@@ -2299,25 +2317,13 @@
         let index1 = getIndex1(index0,allCoords.length),
           i1 = turf.point(allCoords[index1])
 
-        if (id.slice(0,2) == "py") {
+        if (id.startsWith("py")) {
 
-          let center = turf.center(this.geometry),
-          centerOfMass = turf.centerOfMass(this.geometry),
-          centroid = turf.centroid(this.geometry)
-
-          console.log(center.geometry.coordinates)
-          console.log(centerOfMass.geometry.coordinates)
-          console.log(centroid.geometry.coordinates)
-
-          // console.log(turf.lineSplit(this.geometry,splitter))
-
-          console.log(turf.lineSplit(this.geometry,turf.lineString(i0,centerOfMass)))
-          console.log(turf.lineSplit(this.geometry,turf.lineString(i0,center)))
-          console.log(turf.lineSplit(this.geometry,turf.lineString(i0,centroid)))
+          let centroid = turf.centroid(this.geometry)
 
           // let spine = turf.lineString([i0,i1])
-          let spine = turf.lineString([i0,centerOfMass,i1]),
-               area = turf.convertArea(turf.area(d),"meters","miles");
+          let spine = turf.lineString([i0,centroid,i1].map(d=>d.geometry.coordinates)),
+               area = turf.convertArea(turf.area(this.geometry),"meters","miles");
 
           baseT = turf.round(Math.sqrt(Math.sqrt(area)))
           revealPolygon(this,spine,baseT)
@@ -2420,8 +2426,7 @@
               // size of circle is a factor of planar (why?) area of polygon the circle is representing, or 0.1 minimum
             .style("opacity", 1)    // COMBAK: aim for initial glow effect
             .on("start", function() {
-              console.log(this)
-              output(this)
+              output(d3.select(this))
             })
           ),
         update => update
@@ -2945,9 +2950,9 @@
     } else if (props.CATEGORY === "Ecoregion") {
       return getColor("Ecoregion",props.ECOZONE,props.LEVEL)
       // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
-    } else if (props.id.slice(0,2) === "ln") {  // only lake lines filled
+    } else if (props.id.startsWith("ln")) {  // only lake lines filled
       return "none";
-    } else if (props.id.slice(0,2) === "pt") {
+    } else if (props.id.startsWith("pt")) {
       return paletteScale(random());
     } else {
       let chosen = textureOpts[random(textureOpts.length-1)];
@@ -3022,7 +3027,7 @@
     let name = pre + `${d.property("name")}`
     if (d.property("category") === "Lake") {
       // type = "Lake"
-    } else if (d.property("id").slice(0,2) === "ln") {
+    } else if (d.property("id").startsWith("ln")) {
       name += ` ${d.property("category")}`
     } else if (d.property("description")) {
       name += ` ${d.property("description")}`
@@ -3401,3 +3406,9 @@
 
 // bearwithMe planar,
 // orient (compass) geodesic
+
+
+// zooming to tiny routes messed up
+// occasional disconnected missouri river fragment near start?
+
+// mouseover no longer working and ecoregion level zIndexes/opacity need some attention, but otherwise this is going to be BETTER
