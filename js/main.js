@@ -1033,41 +1033,41 @@
           .html(agencyHtml)
           .style("stroke","dimgray")
 
-        // // WIDGETS
+        // WIDGETS
         // setupCompass()
-        // initElevation()
-        // initOdometer()
+        initElevation()
+        initOdometer()
 
-        function setupCompass(){
-
-          let full = 36,
-              half = full/2;
-
-          let compass = d3.select("#compass").append("svg")
-            .attr("width", full)
-            .attr("height", full)
-            // .attr("preserveAspectRatio", "xMidYMid meet")
-            .attr("viewBox", `0 0 ${full} ${full}`)
-            .classed('h-full w-full bg-green round-br-full round-tl-full round-bl-full round-tr-full',true)
-
-          let bowl = compass.append("circle")
-            .attr("r", half)
-            .attr("cx", half)
-            .attr("cy", half)
-            .style("fill","none")
-            .style("stroke","darksalmon")
-            .style("stroke-width",2)
-
-          let needle = compass.append("use")
-            .attr("x", half/2)
-            .attr("y", half/2)
-            .attr("width", "50%")
-            .attr("height", "50%")
-            .attr("id","compass-needle")
-            .attr("xlink:href","#icon-compass")
-            .classed("icon color-red", true)
-
-        }
+        // function setupCompass(){
+        //
+        //   let full = 36,
+        //       half = full/2;
+        //
+        //   let compass = d3.select("#compass").append("svg")
+        //     .attr("width", full)
+        //     .attr("height", full)
+        //     // .attr("preserveAspectRatio", "xMidYMid meet")
+        //     .attr("viewBox", `0 0 ${full} ${full}`)
+        //     .classed('h-full w-full bg-green round-br-full round-tl-full round-bl-full round-tr-full',true)
+        //
+        //   let bowl = compass.append("circle")
+        //     .attr("r", half)
+        //     .attr("cx", half)
+        //     .attr("cy", half)
+        //     .style("fill","none")
+        //     .style("stroke","darksalmon")
+        //     .style("stroke-width",2)
+        //
+        //   let needle = compass.append("use")
+        //     .attr("x", half/2)
+        //     .attr("y", half/2)
+        //     .attr("width", "50%")
+        //     .attr("height", "50%")
+        //     .attr("id","compass-needle")
+        //     .attr("xlink:href","#icon-compass")
+        //     .classed("icon color-red", true)
+        //
+        // }
 
         function initElevation() {
 
@@ -2845,15 +2845,13 @@
       }
 
       function trackerUpdate(e) {
-        // bearwithMe planar,
-        // orient (compass) geodesic
 
-          // TrackerUpdate: (coordsNow)
-          //   d3.select("#current-feet").text(getElevation(coordsNow))
-          //   d3.select("#current-miles").text( )
-          //   d3.select("#current-bearing").transform(getRotate( ))
+        // TrackerUpdate: (coordsNow)
+        //   d3.select("#current-feet").text(getElevation(coordsNow))
+        //   d3.select("#current-miles").text( )
+        //   d3.select("#current-bearing").transform(getRotate( ))
 
-        // update dashboard elements: compass visual?, mileage tracker, elevation?
+        // update dashboard elements: mileage tracker, elevation?
         // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
       }
 
@@ -3453,17 +3451,12 @@
 
 //// INCOMPLETE TODO ////
 
-// FIRST PRIORITY:
-  // textures not rendering!!
-  // make ecoregion colors more distinct
 
-// THEN:
   // dashboard and log output!!
     // sizing of dash output text
     // data clumping / prepare for log out
     // dash jump when text scroll starts
     // add nonProjMM to thisRoute object for mileage/elevation checks
-    // ditch compass altogether?
     // separate journey log, narration txt?
   // about this map
     // sources.md -> links
@@ -3481,6 +3474,7 @@
   // const miles = {units:"miles"}
   // distinguish between stations and enrich pts
   // mouseover for stations
+  // Northern Thompson Upland?? falsely triggered
 
 // LITTLE BUT STUMPING ME RIGHT NOW
   // on form submit, modal element jumps, offsetting sizing (the excess padding issue that presented itself before and resolved mysteriously; well, it's back)
@@ -3488,8 +3482,10 @@
   // keeping zindexes in line on very small screen sizes
 
 // MEDIUM
+  // use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
+  // add level I ecozones again?
   // fix weird zoom on tiny routes
-    // eg Amsterdam -> Oshawa, lots of NY ones
+    // eg Amsterdam -> Oshawa, Mystic -> lots of NY ones
   // make lines/watersheds more sensitive to mousover?
   // new train icon / rotate along with headlights
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
@@ -3606,21 +3602,3 @@
       // Oriole, ON
 
 ////////
-
-
-// DONE:
-// changed reveal structure to avoid anticipating triggerpts
-// fixed bug in sliceMultiString (and then just started using splitMultiString) to avoid disconnected river fragments on large complex multilines
-// largely fixed zIndex equivalent (ordering SVG selections) / opacity of ecoregions
-// changeing svg preserveAspectRatio to "meet" resolves jump to center of wide routes upon collapse of #about (though not ideal in other ways, e.g. how small map remains upon user collapse of #about before route selected)
-// rework of line reveal relieves need to account for outputDelay triggerPt property
-// exclude redundant text in rail line output
-// got textures back
-// improved ecoregion color assignment
-// workable link color
-// added/moved lake michigan trigger pts
-
-// NEW TO DO:
-// Northern Thompson Upland?? falsely triggered
-// use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
-// add level I ecozones again?
