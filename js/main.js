@@ -63,11 +63,12 @@
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100, // miles in/out to initially focus view, start/stop
-    zoomFollowScale = 18, // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12 good
+    zoomFollowScale = 14, // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
     zoomDuration = tPause *2,
     zoomEase = d3.easeCubicIn,
     zoomAlongOptions = {padBottom: 1 + zoomFollowScale/10},
-    relativeDim = 0.2  // dimBackground level
+    relativeDim = 0.2, // dimBackground level
+    maxOutput = 30;  // max cells of narration text output during animation
 
   // default options
   let quadtreeDefaultOpts = {
@@ -119,12 +120,6 @@
   // all rendered/zoomable content
   var g = svg.append("g")
     .attr("id", "zoomable")
-
-  // enrich content groups
-  const enrichLayer = g.append("g").attr("id","enrich-layer"),
-        enrichPtGrp = enrichLayer.append("g").attr("id","enrich-pts"),
-      enrichLineGrp = enrichLayer.append("g").attr("id","enrich-lines"),
-      enrichPolyGrp = enrichLayer.append("g").attr("id","enrich-polygons");
 
 //// READY MAP
 
@@ -195,11 +190,10 @@
     // .on('tick', updateLabelPositions)
     .stop()  // will control ticks manually as labels are added
 
-  var labelNodes = g.append("g").attr("id", "labelNodes")
-
-  let encounteredPts = [],
-    encounteredLines = [],
-    encounteredPolys = [],
+  let encounteredPts = new Set(), // [],
+    encounteredLines = new Set(), // [],
+    encounteredPolys = new Set(), // [],
+    uniqueEncounters = new Set(),
        allEncounters = [];
 
   let enterAlign = "left",
@@ -231,12 +225,43 @@
 
 // COLORS
 
-  const palette = ['#483597','#94417f','#fa8253','#ec934a','#c7993f', '#b5be6a','#9dc579','#8bc188'];
+  const palette = ['#94417f','#CD5C5C','#fa8253','#ec934a','#c7993f'];
 
   const paletteScale = chroma.scale(palette).domain([1,0]).mode('lch').correctLightness();
 
-  const riverBlue = "cyan",
+  const riverBlue = "aquamarine",
          lakeBlue = "teal";
+
+  let colorAssignments = {
+    watersheds: {
+      // oceanId: { base: baseColor }
+      10: { base: "#F0F8FF" },
+      20: { base: "#a1d7df" },
+      30: { base: "#87CEEB" },
+      40: { base: "#20B2AA" },
+      50: { base: "#2F4F4F" }
+    },
+    ecoregions: {
+      // ecozone: { base: baseColor }
+      // originally based on https://www.epa.gov/eco-research/ecoregions-north-america#pane-1
+      // blues adjusted to retain contrast between ecoregions and lakes, rivers, and watershed boundaries
+      1: { base: "#800080" },
+      2: { base: "#7B68EE" }, // "#8c99cd" },
+      3: { base: "#587dbe" }, // "#80b8e4" },
+      4: { base: "#3ea3b1" },
+      5: { base: "#DDA0DD" }, // "#a1d7df" },
+      6: { base: "#50b244" },
+      7: { base: "#46b5b0" },
+      8: { base: "#b1d57b" },
+      9: { base: "#f3c28a" },
+      10: { base: "#f7d758" }, // '#b5be6a','#9dc579','#8bc188'
+      11: { base: "#c9e1a9" },
+      12: { base: "#d3cd80" },
+      13: { base: "#b1d57b" },
+      14: { base: "#e96c53" },
+      15: { base: "#b75b9f" }
+    }
+  };
 
   var linearGradientScale = d3.scaleLinear().range(palette);
 
@@ -277,54 +302,7 @@
       .attr("offset", function(d,i) { return i/(numColors-1)*50 + 40 + "%"; })
       .attr("stop-color", d => { return radialGradientScale(d) });
 
-  const oceanIds = ['10','20','30','40','50'],
-       oceanHues = chroma.scale(['paleturquoise','aquamarine']).mode('lch').correctLightness().colors(oceanIds.length);
-
-  let ecoZones = ['3','4','5','6','7','8','9','10','11','12','13','14','15']
-      zoneHues = chroma.scale(['#472e37','#e35c45','#e2754d','#ffa100','#dbea09']).mode('lch').correctLightness().colors(ecoZones.length);
-
-  let colorAssignments = {
-    watersheds: {},
-    ecoregions: {}
-  };
-
-  oceanIds.forEach(id => {
-    colorAssignments.watersheds[id] = {
-      base: chroma(oceanHues.shift().slice()).alpha(0.7)
-      // base: paletteScale(random()).alpha(0.5)
-    }
-  })
-  ecoZones.forEach(zone => {
-    colorAssignments.ecoregions[zone] = {
-      base: chroma(zoneHues.splice(random(zoneHues.length-1),1)[0].slice()).alpha(0.7)
-      // base: paletteScale(random()).alpha(0.5)
-    }
-  })
-
-  const levelStyles = {  // used for watersheds and ecoregions
-    "I": {
-      width: 0.01,
-      zIndex: 1
-    },
-    "II": {
-      width: 0.05,
-      zIndex: 2
-    },
-    "III": {
-      width: 0.05,
-      zIndex: 3
-    },
-    "IV": {
-      width: 0.1,
-      zIndex: 4
-    },
-    "V": {
-      zIndex: 5
-    }
-  }
-
 // TEXTURES
-
   let tWaves = textures.paths()
     .d("waves")
     .background(lakeBlue)
@@ -849,8 +827,7 @@
       //  .attr("fill","slateblue")
       //  .attr("stroke","black")
 
-      let likelyEnrich =
-      Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
+      let likelyEnrich = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
 
       // bind all trigger points to the DOM for en route intersection
       likelyEnrich.then(data => {
@@ -884,23 +861,16 @@
 
       return chosen;
 
-      function getIntersected([searchReps,initBounds]) {
+      function getIntersected([quadReps,quadBounds]) {
 
         // FIRST make a quadtree of all representative enrich data pts draped over North America
 
-        let quadtreeData = topojson.feature(searchReps,searchReps.objects.searchReps).features.filter(d => d.geometry);
-
-        let bounding = topojson.feature(initBounds, initBounds.objects.bounds).features[0]
+        let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features.filter(d => d.geometry),
+              dataExtent = topojson.feature(quadBounds,quadBounds.objects.bounds).features[0]
 
         let begin = performance.now();
 
-        // let options = {
-        //   bounding: bounding,
-        //   projectX: d =>  projection([d.properties.search_rep_x,d.properties.search_rep_y])[0],
-        //   projectY: d => projection([d.properties.search_rep_x,d.properties.search_rep_y])[1]
-        // }
-
-        let quadtree = makeQuadtree(quadtreeData,{bounding:bounding})
+        let quadtree = makeQuadtree(quadtreeData,{bounding:dataExtent})
 
         // // optional data viz
         // visualizeGrid(quadtree);
@@ -962,35 +932,6 @@
 
   }
 
-// USEFUL?
-
-  // // separate out lines into LINEGONS (aka a polygon I want to style as a line, eg watersheds; pronounced liney-gons; not to be confused with polylines) and regular lines:
-  // likely.lines.forEach(d => {
-  //   let coords = d.geometry.coordinates  // shorthand
-  //   if (coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {  // ie if line === closed
-  //     massagedEnrich.linegons.push(d)
-  //   } else {
-  //     massagedEnrich.regLines.push(d);
-  //   }
-  // })
-
-  // // polys => linestrings for purposes of extracting triggerData and styling associated features; will remain flagged as "polygons" within enrichData object
-  // likely.polys.forEach(d => {
-  //   if (this.geometry.type === "MultiPolygon") {
-  //     d = turf.multiLineString(turf.flatten(turf.polygonToLine(d)).features.map(d => d.geometry.coordinates),d.properties)
-  //   } else if (d.geometry.coordinates.length > 1) {
-  //     d = turf.multiLineString(turf.polygonToLine(d).geometry.coordinates,d.properties)
-  //   } else {
-  //     d = turf.lineString(turf.polygonToLine(d).geometry.coordinates,d.properties)
-  //   }
-  //   massagedEnrich.polys.push(d);
-  // })
-
-  // // filter null geometries
-  // let pts = updated.pts.filter(d => d.geometry.coordinates.length > 0),
-  //   lines = updated.lines.filter(d => d.geometry.coordinates.length > 0),
-  //   polys = updated.polys.filter(d => d.geometry.coordinates.length > 0);
-
 
 //// INITIATE EXPERIENCE
 
@@ -1036,6 +977,8 @@
       collapse("about", collapseDirection(window.innerWidth))
       resize()
 
+      setupEnrichLayer()
+
       drawRoute(chosen, tPause);
 
       // depending on direction of train, change #encounters div classes:
@@ -1052,20 +995,20 @@
         // use remoteControl.js for button functionality
       // activate newly relevant buttons
 
-// depart
-// arrive
-// zoom buttons: plus,minus
-// nps svg
-
-// move to wishlist:
-  // elevation tracker (mini grid + output within dash)
-
       function setupDash(chosen) {
 
+        // ROUTE SUMMARY
+        // agency names & lines
         let agencies = [...new Set(chosen.segments.map(d => {
-          let line = (d.lineName !== d.agency.name) ? `'s ${d.lineName} Line` : '';
-          return `<a target="_blank" href="${d.agency.url}">${d.agency.name}${line}</a>`
+          let lineName = exRedundant(d.lineName,d.agency.name);
+          let fullText = (lineName) ? `'s ${lineName} Line` : '';
+          return `<a target="_blank" href="${d.agency.url}">${d.agency.name}${fullText}</a>`
         }))]
+
+        function exRedundant(lineName,agencyName){
+          let regex = new RegExp(`${agencyName}\\s*`)
+          return lineName.replace(regex,'')
+        }
 
         let agencyHtml = `<span>via</span><br>`
         if (agencies.length > 2) {
@@ -1075,14 +1018,13 @@
           // imma stickler for the oxford comma
           agencyHtml += agencies.slice(0,agencies.length-1).join(", ") + agencies[agencies.length-1];
 
-        } else if (agencies.length === 1) {
+        } else if (agencies.length === 2) {
           agencyHtml += agencies.join(" <span>&</span> ")
         } else {
           agencyHtml += agencies[0];
         }
 
-// TODO: continue working on compass bowl, odometer, elevation
-
+        // origin & destination
         d3.select("#from").append("span") // after deprat icon
           .text(chosen.from.shortName)
         d3.select("#to").insert("span") // before arrive icon
@@ -1091,35 +1033,117 @@
           .html(agencyHtml)
           .style("stroke","dimgray")
 
+        // // WIDGETS
+        // setupCompass()
+        // initElevation()
+        // initOdometer()
 
-      let odometer =  d3.select("#odometer")
-          .style("fill","red")
-          .style("stroke","whitesmoke")
-          .insert("text")
-          .text("0")
+        function setupCompass(){
 
-          // chosen.arcPts.orient??
+          let full = 36,
+              half = full/2;
 
-      let elevation =  d3.select("#elevation")
-          .style("fill","red")
-          .style("stroke","whitesmoke")
-          .insert("text")
-          .text("0")
+          let compass = d3.select("#compass").append("svg")
+            .attr("width", full)
+            .attr("height", full)
+            // .attr("preserveAspectRatio", "xMidYMid meet")
+            .attr("viewBox", `0 0 ${full} ${full}`)
+            .classed('h-full w-full bg-green round-br-full round-tl-full round-bl-full round-tr-full',true)
 
-      // chosen.totalDistance
+          let bowl = compass.append("circle")
+            .attr("r", half)
+            .attr("cx", half)
+            .attr("cy", half)
+            .style("fill","none")
+            .style("stroke","darksalmon")
+            .style("stroke-width",2)
+
+          let needle = compass.append("use")
+            .attr("x", half/2)
+            .attr("y", half/2)
+            .attr("width", "50%")
+            .attr("height", "50%")
+            .attr("id","compass-needle")
+            .attr("xlink:href","#icon-compass")
+            .classed("icon color-red", true)
+
+        }
+
+        function initElevation() {
+
+          let initCoords = [chosen.from.lng,chosen.from.lat],
+              elevation0 = getElevation(initCoords).then(elevation => {
+
+                d3.select("#elevation").append("span")
+                  .attr("id","current-feet")
+                  .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+                  .style("stroke","whitesmoke")
+                  .text(elevation)
+
+                d3.select("#elevation").append("span")
+                  .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+                  .style("stroke","whitesmoke")
+                  .text("feet above sea level")
+
+              })
+
+        }
+
+        function getElevation([lng,lat]) {
+
+          let query = `https://elevation-api.io/api/elevation?points=(${lat},${lng})`
+
+          let elevation = d3.json(query).then(returned => {
+            return metersToFeet(returned.elevations[0].elevation);
+          }, onError);
+
+          return elevation;
+
+          function metersToFeet(m) {
+            return turf.round(m * 3.281);
+          }
+
+        }
+
+        function initOdometer() {
+
+          d3.select("#odometer").append("span")
+            .attr("id","current-miles")
+            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .style("stroke","whitesmoke")
+            .text("0")
+
+          d3.select("#odometer").append("span")
+            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+            .style("stroke","whitesmoke")
+            .text("miles in")
+
+        }
+
+        // chosen.totalDistance
         // chosen.totalTime
         // chosen.overallBearing
         // stopping in [...new Set(chosen.allStops.map(d=>d.shortName))] where name is not from/to
 
-//  maki: all -11, -15: volcano, mountain,park,park-alt1,information, marker, marker-stroked,circle, circle-stroked,,bridge,heart
+        // NARRATION
+        // remove placeholder text from #encounters
+        d3.select("#encounters").selectAll(".placeholder")
+          .remove()
 
-        // let initialThree =
-        d3.select("#encounters").selectAll(".encounter")
-          .data(['Traversing special places','Encountering incredible things','Beholding the world made fresh again'])
-          .enter().append("div")
-            .classed("flex-child flex-child--grow encounter placeholder", true)
-            .property("name", d => d)
-            .html(d => `<span>${d}</span>`)
+        // JOURNEY LOG
+
+      }
+
+      function setupEnrichLayer() {
+
+        // enrich content groups
+        const enrichLayer = g.append("g").attr("id","enrich-layer");
+
+        enrichLayer.append("g").attr("id","enrich-polygons")
+        enrichLayer.append("g").attr("id","enrich-lines")
+        enrichLayer.append("g").attr("id","enrich-pts")
+
+        enrichLayer.append("g").attr("id", "label-nodes")
 
       }
 
@@ -1196,7 +1220,7 @@
           .datum(arcPts)
           .attr("d", line)
           .style("fill", "none")
-          .style("stroke", "darkmagenta") // fiddle/improve
+          .style("stroke", "#333") // fiddle/improve
           .style("stroke-width", 0.3)
           .style("opacity",0)
           .style("stroke-dasharray", "0.8 1.6")
@@ -1487,6 +1511,9 @@
     function animate(elapsed) {
       // dispatch another move event
       dispatch.call("move", point)
+      // elevation update
+      // miles update
+      // etc
     }
 
   }
@@ -1974,8 +2001,11 @@
             // for flagged, en route trigger-pts only
             if ((g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).node()) && (g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).classed("trigger-pt"))) {
 
-              dispatch.call("encounter", d)
-              // slightly faster than external mutationObserver watching for class changes, though that may be a cleaner structure overall
+              if (!uniqueEncounters.has(d.properties.id)) {
+                uniqueEncounters.add(d.properties.id)
+                dispatch.call("encounter", d)
+                // slightly faster than external mutationObserver watching for class changes, though that may be a cleaner structure overall
+              }
 
             }
 
@@ -2061,7 +2091,7 @@
                   })
       })
 
-      headlights.raise() // keep headlights on top of extent visualizations
+      headlights.raise() // keep headlights on top of any extent visualizations
 
       this.raise(); // keep train on top of extentVis
 
@@ -2169,9 +2199,7 @@
     console.log("train arrived @ " + performance.now())
     timer.stop()
     // observer.disconnect()
-    let unique = [...new Set(allEncounters.map(d=>d.property("id")))]
-    console.log("unique encounters",unique.length)
-    console.log("all encounters",allEncounters.length)
+    console.log("unique encounters",uniqueEncounters.size)
   }
 
 //// TRANSITIONS AND TWEENS
@@ -2231,7 +2259,7 @@
     return ["M",pathStr.split('M')[1].split('L').reverse().join('L')].join('');
   }
 
-  function getDashStr(along,length,dash = "0.1 0.4") {
+  function getDashStr(length,dash = "0.1 0.4") {
 
     dash = dash.split(",").join(""); // standardize, in case passed dash includes commas
 
@@ -2303,8 +2331,9 @@
         } else {
 
           if (this.geometry.type === "MultiLineString") {
-            gjA = turf.multiLineString(reverseNested(sliceMultiString(i1A,i0,this).coords)),
-            gjB = turf.multiLineString(sliceMultiString(i0,i1B,this).coords)
+            let split = splitMultiString(triggerPt,this);
+            gjA = turf.multiLineString(split[0]),
+            gjB = turf.multiLineString(reverseNested(split[1]));
           } else {
             gjA = turf.lineString(allCoords.slice(index1A,index0+1).reverse()),
             gjB = turf.lineString(allCoords.slice(index0));
@@ -2332,27 +2361,11 @@
 
           // shift line geometry to start (and end) at i0
           if (this.geometry.type === "MultiLineString") {
-            let halfOne = [],
-                halfTwo = [],
-                shiftPtFound = false;
-            this.geometry.coordinates.forEach(arr => {
-              if (arr[index0] && index0 === turf.nearestPointOnLine(turf.lineString(arr),i0).properties.index) {
-                halfOne.push(arr.slice(index0)),
-                halfTwo.push(arr.slice(0,index0+1)),
-                shiftPtFound = true;
-              } else if (shiftPtFound) {
-                halfOne.push(arr);
-              } else {
-                halfTwo.push(arr);
-              }
-            })
 
-            let halves = [halfOne,halfTwo].sort((a,b) => {
-              return b.length - a.length;
-            })
+            let split = splitMultiString(triggerPt,this);
 
-            gjA = turf.multiLineString(halves[0]),
-            gjB = turf.multiLineString(reverseNested(halves[1]));
+            gjA = turf.multiLineString(split[0]),
+            gjB = turf.multiLineString(reverseNested(split[1]));
 
           } else {  // singlepart geometry
 
@@ -2376,7 +2389,7 @@
 
       if (gjA && gjB) { // if not, reveal should have already started
 
-        let origId = this.properties.id.slice(),
+        let origId = id.slice(),
            lengthA = turf.length(gjA, {units:"miles"}),
            lengthB = turf.length(gjB, {units:"miles"}),
              baseT = [lengthA,lengthB];
@@ -2393,15 +2406,95 @@
 
   }
 
+  function splitMultiString(triggerPt,d) {  // triggerPt == coords only
+
+    let i0 = turf.nearestPointOnLine(d,turf.point(triggerPt)),
+        index = i0.properties.index,
+        halfOne = [],
+        halfTwo = [],
+        shiftPtFound = false;
+
+    d.geometry.coordinates.forEach(arr => {
+      if (arr[index] && turf.nearestPointOnLine(turf.lineString(arr),arr[index]).properties.index === index) {
+        shiftPtFound = true;
+        halfOne.push(arr.slice(index));
+        halfTwo.push(arr.slice(0,index+1));
+      } else if (shiftPtFound) {
+        halfOne.push(arr);
+      } else {
+        halfTwo.push(arr);
+      }
+    })
+
+    return [halfOne,halfTwo]; // concat to shift multiLineString geometries such that line simply starts (and, if closed line, ends) at i0
+
+  }
+
+  function sliceMultiString(pt0,pt1,d) {
+
+    let seekingPt0 = true, seekingPt1 = true, slice = [];
+    iterateOver(d.geometry.coordinates)
+
+    if (!seekingPt0 && !seekingPt1) {
+      return slice; // coords only
+    }
+
+    function iterateOver(iterable){
+      iterable.forEach(arr => {
+        let found = seekPts(arr);
+        if (found && found.length) {
+          slice.push(found);
+        } else if (!found && !seekingPt0) {
+          slice.push(arr); // add whole chunk, must be between pt0 and pt1
+        }
+      })
+    }
+
+    function seekPts(arr) {
+
+      if (Array.isArray(arr[0][0])) iterateOver(arr[0]); // dive deeper if necessary
+
+      let i0 = (seekingPt0) ? arr.findIndex(coordMatch,pt0) : null,
+          i1 = (seekingPt1) ? arr.findIndex(coordMatch,pt1) : null;
+
+      if (i0 && !i1) {   // this array marks location of pt0
+        seekingPt0 = false;
+        return arr.slice(i0)
+      }
+      if (!seekingPt0 && i1) {
+        seekingPt1 = false;
+        return arr.slice(0,i1+1)
+      }
+      if (i0 && i1) {   // both pts found within same array
+        seekingPt0 = false;
+        seekingPt1 = false;
+        return arr.slice(i0,i1+1);
+      }
+
+      function coordMatch([x,y]) {
+        return x === this.geometry.coordinates[0] && y === this.geometry.coordinates[1];
+      }
+
+    }
+
+  }
+
   function revealPt(gj,baseT) {
 
     let t = Math.max(minT,baseT * tpm);
 
-    encounteredPts.push(gj)
+    encounteredPts.add(gj)
+    let sortedPts = [...encounteredPts].sort((a,b) => {
+      return b.properties.orig_area - a.properties.orig_area;
+    })
+
+    let ptOpacity = 0.6,
+      ptStrokeOpacity = 0.6;
 
     // update pts as group to allow for additional transitions on updating pts
-    enrichPtGrp.selectAll(".enrich-pt")
-      .data(encounteredPts, d => d.properties.id)
+    d3.select("#enrich-pts").selectAll(".enrich-pt")
+      .data(sortedPts, d => d.properties.id)
+      .order()
       .join(
         enter => enter.append("circle")
           .classed("enrich-pt", true)
@@ -2414,25 +2507,26 @@
           .property("description", d => d.properties.DESCRIPTION)
           .property("more-info", d => d.properties.MORE_INFO)
           .property("baseT", d => d.properties.SNAP_DISTANCE)
+          .property("orig-opacity", ptOpacity)
+          .property("orig-stroke-opacity", ptStrokeOpacity)
           .style("fill", getFill)
           .style("stroke", "whitesmoke")
           .style("stroke-width", "0.05px")
-          .style("z-index",7)
-          .style("opacity", 0.6)
-          .on("mouseover", onMouseover)
-          .on("mouseout", onMouseout)
+          .style("opacity", ptOpacity)
+          .style("stroke-opacity", ptStrokeOpacity)
           .call(enter => enter.transition(t)
             .attr("r", d => d.properties.orig_area * 0.00000002 || 0.1)
-              // size of circle is a factor of planar (why?) area of polygon the circle is representing, or 0.1 minimum
+              // size of circle is a factor of planar (why did i do it this way?) area of polygon the circle is representing, or 0.1 minimum
             .style("opacity", 1)    // COMBAK: aim for initial glow effect
-            .on("start", function() {
-              output(d3.select(this))
-            })
+            .on("start", output(enter))
           ),
         update => update
           .call(update => update.transition(t)
-            .style("stroke", "yellowgreen")
             .style("opacity", 0.8)  // make more subtle
+            .on("end", () =>
+              update.on("mouseover", onMouseover)
+                    .on("mouseout", onMouseout)
+            )
           )
       )
 
@@ -2440,58 +2534,53 @@
 
   function revealLine(gj,baseT) {
 
-    let t = Math.max(minT,baseT * tpm);
+    let t = Math.max(minT,baseT * tpm),
+      trans = d3.transition().duration(t).ease(d3.easeLinear)
 
-    // // update as group join?
-    // encounteredLines.push(gj)
+    let lineOpacity = 0.8;
 
-    // BIND
-    let newLine = enrichLineGrp.append("path")
-      .datum(gj)
-      .classed("enrich-line",true)
-      .attr("d", projPath)
-      .attr("id", d => d.properties.id)
-      .property("name", d => d.properties.NAME)
-      .property("category", d => d.properties.CATEGORY)
-      .property("level", d => d.properties.LEVEL)
-      .style("fill", getFill)
-      .style("stroke", getStroke)
-      .style("stroke-width", getStrokeWidth)
-      .style("stroke-dasharray", getDashArray)
-      .style("stroke-linecap", "round")
-      .style("z-index",getZIndex)
-      .style("opacity", 0)
-      .on("mouseover", onMouseover)
-      .on("mouseout", onMouseout)
+    // have to add these one at a time (rather than as a group join) to avoid recalculated dashArrays getting mixed up within group (esp as queue of entering elements get longer); ok because order of lines not essential for proper viewing
+    let newLine = d3.select("#enrich-lines").append("path")
+                    .datum(gj)
+                    .classed("enrich-line",true)
+                    .attr("d", projPath)
+                    .attr("id", d => d.properties.id)
+                    .property("name", d => d.properties.NAME)
+                    .property("category", d => d.properties.CATEGORY)
+                    .property("level", d => d.properties.LEVEL)
+                    .property("orig-opacity", lineOpacity)
+                    .property("orig-stroke-opacity", lineOpacity)
+                    .style("fill", getFill)
+                    .style("stroke", getStroke)
+                    .style("stroke-width", getStrokeWidth)
+                    .style("stroke-dasharray", "none")
+                    .style("stroke-linecap", "round")
+                    .style("opacity", lineOpacity)
+                    .on("mouseover", onMouseover)
+                    .on("mouseout", onMouseout)
 
-    // ANIMATE REVEAL
-    if (gj.properties.CATEGORY === "Watershed") {
-
-      // see https://bl.ocks.org/kafunk/91f7b870b79c2f104f1ebacf4197c9dc for more commentary
+    if (newLine.property("category") === "Watershed") {
 
       // reverse bound path to prepare for dashed line interpolation
-      let reversedPath = reverseSVGPath(newLine.attr("d"))
-      newLine.attr("d", reversedPath);
+      let initialPath = newLine.attr("d")
+      newLine.attr("d",reverseSVGPath(initialPath))
 
-      let dashArr = newLine.style("stroke-dasharray"),
-           length = newLine.node().getTotalLength(),
-          dashStr = getDashStr(newLine, length, dashArr);
-
+      let initArray = "0.1 0.2 0.4 0.2",
+        length = newLine.node().getTotalLength(),
+        dashStr = getDashStr(length, initArray);
       newLine.style("stroke-dasharray", dashStr)
-        .style("stroke-dashoffset", -length)
-        .style("opacity", 0.6)
-        .transition().duration(t).ease(d3.easeLinear)
+             .style("stroke-dashoffset", -length)
+
+      newLine.transition(trans)
         .styleTween("stroke-dashoffset",drawDashed)
 
     } else {
 
-      newLine.style("opacity",0.8)
-        .transition().duration(t).ease(d3.easeLinear)
+      newLine.transition(trans)
         .styleTween("stroke-dasharray",tweenDash)
 
     }
 
-    // could make output geom specific
     if (!gj.properties.id.includes("-")) {  // don't output partial geometries
       output(newLine)
     }
@@ -2500,41 +2589,64 @@
 
   function revealPolygon(gj,spine,baseT) {
 
-    let t = Math.max(minT,baseT * tpm);
+    let t = Math.max(minT,baseT * tpm),
+      trans = d3.transition().duration(t).ease(d3.easeLinear) // queer yesss
 
-    // // update as group join?
-    // encounteredPolys.push(gj)
+    // update as group join to keep elements properly layered (bigger on bottom)
+    encounteredPolys.add(gj)
 
-    // BIND
-    let newPoly = enrichPolyGrp.append("path")
-      .datum(gj)
-      .classed("enrich-polygon", true)
-      .attr("d", projPath)
-      .attr("id", d => d.properties.id)
-      .property("name", d => d.properties.NAME)
-      .property("category", d => d.properties.CATEGORY)
-      .property("level", d => d.properties.LEVEL)
-      .property("more-info", d => d.properties.MORE_INFO)
-      .property("description", d => d.properties.DESCRIPTION)
-      .style("fill", getFill)
-      .style("stroke", getStroke)
-      .style("z-index",getZIndex)
-      .style("opacity",0)
-      .on("mouseover",onMouseover)
-      .on("mouseout",onMouseout)
+    const byLevel = function(a,b) {
+      return unromanize(a.properties.LEVEL) - unromanize(b.properties.LEVEL);
+    }
 
-    // ANIMATE REVEAL
+    let ecoregions = [...encounteredPolys].filter(d => d.properties.LEVEL),
+         remaining = [...encounteredPolys].filter(d => !d.properties.LEVEL)
+    let sortedPolygons = ecoregions.sort(byLevel).concat(remaining);
 
-    // FOR NOW
-    newPoly.transition().duration(t).ease(d3.easeLinear)
-      .style("opacity", 0.6)
+    let polyOpacity = d => (d.properties.LEVEL) ? unromanize(d.properties.LEVEL) * 0.15 : 0.6,
+      polyStrokeOpacity = 0;
+
+    d3.select("#enrich-polygons").selectAll(".enrich-polygon")
+      .data(sortedPolygons, d => d.properties.id)
+      .order()  // is this an appropriate place to call this method?
+      .join(
+        enter => enter.append("path")
+          .classed("enrich-polygon", true)
+          .attr("d", projPath)
+          .attr("id", d => d.properties.id)
+          .property("name", d => d.properties.NAME)
+          .property("category", d => d.properties.CATEGORY)
+          .property("level", d => d.properties.LEVEL)
+          .property("more-info", d => d.properties.MORE_INFO)
+          .property("description", d => d.properties.DESCRIPTION)
+          .property("orig-opacity", polyOpacity)
+          .property("orig-stroke-opacity", polyStrokeOpacity)
+          .style("fill", getFill)
+          .style("stroke", getStroke)
+          .style("stroke-width", getStrokeWidth)
+          .style("stroke-opacity", polyStrokeOpacity)
+          .style("opacity", 0)
+          .call(enter => {
+            enter.transition(trans)
+              .style("opacity", polyOpacity)
+            output(enter)
+          })
+          .on("mouseover", onMouseover)
+          .on("mouseout", onMouseout)
+        // update => update,
+        // exit => exit.call(exit =>
+        //   exit.transition(t)
+        //     .style("opacity", 0)
+        //     .on("end", () =>
+        //       exit.remove()
+        //     )
+        // )
+      )
+      // .order()
 
     // SOON:
       // animate radial gradient outward from i0 -> i1
       // use line from i0 to i1 to determine baseT? and dictate direction of reveal
-
-    // could make output geom specific
-    output(newPoly)
 
   }
 
@@ -2573,21 +2685,21 @@
     return reversed;
   }
 
-  function sliceMultiString(pt0,pt1,d) {
-    let accumCoords = [],
-        accumLength = 0;
-    d.geometry.coordinates.forEach((arr,i) => {
-      let slice = turf.lineSlice(pt0,pt1,turf.lineString(arr));
-      if (slice.geometry.coordinates.length > 2) {
-        accumCoords.push(slice.geometry.coordinates);
-        accumLength += turf.length(turf.lineString(slice.geometry.coordinates),{units:"miles"});
-      }
-    })
-    return {
-      coords: accumCoords,
-      length: accumLength
-    }
-  }
+  // function sliceMultiString(pt0,pt1,d) {
+  //   let accumCoords = [],
+  //       accumLength = 0;
+  //   d.geometry.coordinates.forEach((arr,i) => {
+  //     let slice = turf.lineSlice(pt0,pt1,turf.lineString(arr));
+  //     if (slice.geometry.coordinates.length > 2) {
+  //       accumCoords.push(slice.geometry.coordinates);
+  //       accumLength += turf.length(turf.lineString(slice.geometry.coordinates),{units:"miles"});
+  //     }
+  //   })
+  //   return {
+  //     coords: accumCoords,
+  //     length: accumLength
+  //   }
+  // }
 
 //// OUTPUT AND ALERT incl DASHBOARD
 
@@ -2598,9 +2710,11 @@
 
     if (encountered.property("name")) {
 
-      allEncounters.unshift(encountered)
+      allEncounters.unshift(encountered) // array of selections
 
-      updateOutput(allEncounters.slice(0,3))
+      updateOutput(allEncounters.slice(0,maxOutput))
+
+      // updateOutput(encountered)
 
       flashLabel(encountered)
 
@@ -2608,33 +2722,45 @@
 
       log(encountered)
 
-      function updateOutput(encounters) {
+      function updateOutput(allEncounters) {
 
         // https://observablehq.com/@d3/selection-join
 
-        // const t = d3.transition().duration(750);
-          // unable to limit to 3 only when transition active
+        const t = d3.transition().duration(750);
 
+        // HOW TO SMOOTH OUT SCROLL?
         d3.select("#encounters").selectAll(".encounter")
-          .data(encounters, d => {
-            return (typeof d === "string") ? d : d.property("id")
-          })
+          .data(allEncounters, d => d.property("id"))
           .join(
             enter => enter.append("div")
-              .classed("flex-child flex-child--grow encounter mx3 my3 px3 py3", true)
+              .classed("flex-child flex-child--no-shrink encounter txt-compact mx3 my3 px3 py3", true)
               .html(getHtml)
-              // .call(enter => enter.transition(t)
-              //   .style("background", "green")),
-              ,
-            update => update
-              // .call(update => update.transition(t)
-              //   .style("background", "purple")),
-              ,
+              .style("opacity", 1),
+              // .call(enter => enter.transition(t)),
+            update => update,
+              // .call(update => update.transition(t)),
             exit => exit
-              // .call(exit => exit.transition(t)
-              //   .style("background", "tomato")
-              .remove() //)
+              .call(exit => exit.transition(t)
+                .style("opacity", 0))
+              .remove()
           );
+
+        // updateScroll(d3.select("#encounters").node())
+        // function updateScroll(element) {
+        //   element.scrollLeft = element.scrollWidth;
+        // }
+        // function getX(d) {
+        //   return d.node().getBoundingClientRect().x;
+        // }
+        // function getY(d) {
+        //   return d.node().getBoundingClientRect().y;
+        // }
+
+        // d3.select("#encounters").append("div")
+        //   .datum(encountered)
+        //   .classed("flex-child flex-child--no-shrink encounter mx3 my3 px3 py3", true)
+        //   .html(getHtml)
+        //   .style("opacity", 1)
 
       }
 
@@ -2654,13 +2780,13 @@
 
         // bring each label into full opacity, pause, & remove
         const t = d3.transition().duration(1200);
-
-        // update all visible labelNodes
-        labelNodes.selectAll(".labelNode")
+        const anchorOpts = ["left","right"]
+        // update all visible label nodes
+        d3.select("#label-nodes").selectAll(".label-node")
           .data(labels, d => d.id)
           .join(
             enter => enter.append("text")
-              .classed("labelNode", true)
+              .classed("label-node", true)
               .text(d => d.label)
               .attr("x", d => d.x0)
               .attr("y", d => d.y0)
@@ -2669,10 +2795,10 @@
               // .attr("cy", d => d.y0)
               // .attr("width", d => d.label.length)
               // .attr("height", 1)
-              .attr('text-anchor', "middle")  // could be based on L/R of route
+              .attr('text-anchor', d => anchorOpts[random(1)])  // could be based on L/R of route
               .style("fill", "whitesmoke")
               .style("opacity", 0) // initially
-              .style("stroke", "hotpink")
+              .style("stroke", "dimgray")
               .style("stroke-width", "0.01px")
               .style("font-size","1px")
               .call(enter => enter.transition(t)
@@ -2682,8 +2808,8 @@
               .call(update => update.transition(t)
                 // .attr("x", d => d.x) // glitchy when updated here; leave to updatedLabelPositions() function
                 // .attr("y", d => d.y)
-                .style("stroke", "yellowgreen")
-                .style("opacity", 0.8)
+                .style("stroke", "whitesmoke")
+                .style("opacity", 0.6)
               )
             // exit called below
           )
@@ -2701,7 +2827,7 @@
             dispatch.call("force")
 
             // exit and remove from SVG
-            labelNodes.selectAll(".labelNode")
+            d3.select("#label-nodes").selectAll(".label-node")
               .data(labels, d => d.id)
               .exit().call(exit => exit.transition(t)
                 .style("opacity", 0)
@@ -2721,6 +2847,11 @@
       function trackerUpdate(e) {
         // bearwithMe planar,
         // orient (compass) geodesic
+
+          // TrackerUpdate: (coordsNow)
+          //   d3.select("#current-feet").text(getElevation(coordsNow))
+          //   d3.select("#current-miles").text( )
+          //   d3.select("#current-bearing").transform(getRotate( ))
 
         // update dashboard elements: compass visual?, mileage tracker, elevation?
         // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
@@ -2895,37 +3026,117 @@
 //// PIZAZZ
 
   // STYLES
-  function getDashArray(d) {
-    return (d.properties.CATEGORY === "Watershed") ? "0.1 0.2 0.4 0.2" : "none";
-  }
-
   function getStrokeWidth(d) {
-    return (d.properties.STROKEWIDTH) ? d.properties.STROKEWIDTH : 0.1;
+    if (d.properties.STROKEWIDTH) {
+      return d.properties.STROKEWIDTH + "px";
+    } else if (d.properties.LEVEL) {
+      return 0.25/(unromanize(d.properties.LEVEL)) + "px";
+    } else {
+      return 0.1 + "px";
+    }
   }
 
-  function getZIndex(d) {
-    let zIndex = 10,  // default for non-watershed lines & non-ecoregion polygons
-      props = d.properties;  // shorthand
-    if (props.LEVEL) {  // ecoregions; FORMERLY watersheds
-      zIndex = levelStyles[props.LEVEL].zIndex;
-    } else if (props.CATEGORY === "Watershed") {
-      zIndex = 6
-    }
-    return zIndex;
-  }
+  // function getStrokeOpacity(d){
+  //   if (d.properties.CATEGORY === "Ecoregion") {
+  //     return 0;
+  //   } else {
+  //     return 0.5;
+  //   }
+  // }
+
+  // function getZIndex(d) {
+  //   let zIndex = 10,  // default for non-watershed lines & non-ecoregion polygons
+  //     props = d.properties;  // shorthand
+  //   if (d.geometry.type === "Point") {
+  //     zIndex = 100;
+  //     if (props.orig_area) {
+  //       zIndex -= Math.ceil(props.orig_area * 1e-6)
+  //     }
+  //   } else if (props.CATEGORY === "Watershed") {
+  //     zIndex = 6
+  //   } else if (props.LEVEL) {  // ecoregions
+  //     zIndex = unromanize(props.LEVEL);
+  //   }
+  //   return zIndex;
+  // }
 
   function getColor(type,parentId,level) {
-    if (type === "Ecoregion") {
-      // derive color as brighter (/more saturated? darker? more opaque?) version of parent level color assignment
-      if (!colorAssignments.ecoregions[parentId][level]) {
-        colorAssignments.ecoregions[parentId][level] = {
-          base: chroma(colorAssignments.ecoregions[parentId].base).saturate(unromanize(level))
-        }
+
+    // currently receives ecoregions only
+    // if (type === "Ecoregion") {
+
+    let arabicLevel = unromanize(level);
+
+    if (!colorAssignments.ecoregions[parentId][level]) {
+
+      // use arabicLevel to derive similarColor as base for current ecozone+level combination
+      colorAssignments.ecoregions[parentId][level] = {
+        base: similarColor(chroma(colorAssignments.ecoregions[parentId].base).rgb(),arabicLevel)
       }
-      return chroma(colorAssignments.ecoregions[parentId][level].base).set('lch.c', random(30));
-    } else {
-      return paletteScale(random());
+
+      // previously:
+      // use arabicLevel to derive ecozone@level base color as more saturated (brighter? darker? more opaque?) version of parent color assignment
+        // base: chroma(colorAssignments.ecoregions[parentId].base).saturate(arabicLevel/4).rgb()
+
     }
+
+    // else if (colorAssignments.ecoregions[parentId][level].mostRecent) {
+    //
+    //   // derive similar color and store within colorAssignments object as mostRecent before returning
+    //   let similarRGB = similarColor(colorAssignments.ecoregions[parentId][level].mostRecent,arabicLevel)
+    //
+    //   colorAssignments.ecoregions[parentId][level].mostRecent = similarRGB;
+    //
+    //   return chroma(similarRGB); // .brighten(arabicLevel);
+    //
+    // }  // else, the first time this ecozone+level combination is called
+
+    // derive similar color
+    let similarRGB = similarColor(chroma(colorAssignments.ecoregions[parentId][level].base).rgb(),arabicLevel)
+
+    // // from here in, similar color derived in succession from most recently derived
+    // colorAssignments.ecoregions[parentId][level].mostRecent = similarRGB;
+
+    return chroma(similarRGB); // .brighten(arabicLevel);
+
+    function similarColor([r,g,b],level) {
+
+      // OPTIMIZE: are all the below values calculated each time function called? postpone until chosen/necessary
+      let adjust1 = [[adjusted(r),g,b],
+                     [r,adjusted(g),b],
+                     [r,g,adjusted(b)]],
+          adjust2 = [[adjusted(r),adjusted(g),b],
+                     [r,adjusted(g),adjusted(b)],
+                     [adjusted(r),g,adjusted(b)]],
+          adjust3 = [adjusted(r),adjusted(g),adjusted(b)];
+
+      let options = {
+        1: [r,g,b],
+        2: adjust1[random(2)],
+        3: adjust2[random(2)],
+        4: adjust2[random(2)],
+        5: adjust3
+      }
+
+      return options[level];
+
+      function adjusted(c) {
+
+        // lower levels vary more drastically, though all should be distinct
+        let factor = 1/level,
+          i = random(factor * 120, factor * 60)  // upper,lower
+
+        // ensure return value is between 0 and 255
+        return Math.max(0,Math.min(255,(c + (Math.random() < 0.5 ? -i : i))))
+
+      }
+
+    }
+
+    // } else {
+    //   return paletteScale(random());
+    // }
+
   }
 
   function getStroke(d) {
@@ -2933,13 +3144,13 @@
     if (props.CATEGORY === "Watershed") {
       return colorAssignments.watersheds[props.OCEAN_ID].base;
     } else if (props.CATEGORY === "Ecoregion") {
-      return chroma(colorAssignments.ecoregions[props.ECOZONE][props.LEVEL].base).brighten(2)
-    } else if (props.CATEGORY === "River") {
+      return chroma(colorAssignments.ecoregions[props.ECOZONE].base).brighten(2)
+    } else if (props.CATEGORY.startsWith("River")) {
       return riverBlue;
-    } else if (props.CATEGORY === "Lake") {
+    } else if (props.CATEGORY.startsWith("Lake")) {
       return lakeBlue;
-    } else {  // ??
-      return paletteScale(random());
+    } else {  // hover effects on textured (non-ecoregion) polygons
+      return paletteScale(random()); // "dimgray"
     }
   }
 
@@ -2965,7 +3176,10 @@
   function onMouseover(d) {
 
     // visual affordance for element itself
-    d3.select(this).classed("hover", true) // .raise();
+    d3.select(this) // .classed("hover", true) //.raise();
+      .transition().duration(300)
+        .style("stroke-opacity", 1)
+        .style("opacity", 1)
 
     if (d3.select(this).property("name")) {
       // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
@@ -3039,33 +3253,31 @@
 
   function onMouseout(d) {
 
-    // d3.select("#current-hover").remove();
-
-    // console.log(d) // feature gj
-    // console.log(this) // dom node (svg)
-    // console.log(d3.event) // event
-    // console.log(d3.select("body").selectAll(".tooltip").node()) // tooltip
-    // console.log(d3.select("body").selectAll(".tooltip").nodes()) // array of all tooltips
-
     // reset visual affordances
-    d3.select(this).classed("hover", false) // .lower();
+    let resetStrokeOpacity = d3.select(this).property("orig-stroke-opacity") || 0,
+      resetOpacity = d3.select(this).property("orig-opacity") || 0;
+
+    d3.select(this) // .classed("hover", false) // .lower();
+      .transition().duration(750)
+        .style("stroke-opacity", resetStrokeOpacity)
+        .style("opacity", resetOpacity)
 
     // access existing
-    let tooltip = d3.select("body").selectAll(".tooltip") //.datum(d => { return d.properties.id; }) // key function? match by id
+    let tooltip = d3.select("body").selectAll(".tooltip") // don't bother matching by id; should only ever be one tooltip open at a time
 
     // transition tooltip away
     tooltip.transition().duration(300)
       .style("opacity", 0)
 
-    // remove tooltip from DOM? // COMBAK NOT WORKING
+    // remove tooltip from DOM
     tooltip.remove();
 
   }
 
   function updateLabelPositions() {
-    labelNodes.selectAll(".labelNode")
-              .attr('cx', d => d.x)
-              .attr('cy', d => d.y)
+    d3.select("#label-nodes").selectAll(".label-node")
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.y)
   }
 
 //// OTHER HELPER FUNCTIONS
@@ -3241,10 +3453,18 @@
 
 //// INCOMPLETE TODO ////
 
-// PRIORITIZE:
+// FIRST PRIORITY:
+  // textures not rendering!!
+  // make ecoregion colors more distinct
+
+// THEN:
   // dashboard and log output!!
     // sizing of dash output text
     // data clumping / prepare for log out
+    // dash jump when text scroll starts
+    // add nonProjMM to thisRoute object for mileage/elevation checks
+    // ditch compass altogether?
+    // separate journey log, narration txt?
   // about this map
     // sources.md -> links
     // writing real words
@@ -3256,21 +3476,27 @@
   // improve visual affordances on hover for pts & lines
   // new color for modal
   // change projection to equidistant (instead of equal area)
-  // workable link color
   // workable button hover color
   // add exclusive pass rail lines?
   // const miles = {units:"miles"}
+  // distinguish between stations and enrich pts
+  // mouseover for stations
 
 // LITTLE BUT STUMPING ME RIGHT NOW
   // on form submit, modal element jumps, offsetting sizing (the excess padding issue that presented itself before and resolved mysteriously; well, it's back)
   // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin)
   // keeping zindexes in line on very small screen sizes
-  // issue: jump to center of wide routes upon collapse of #about (meet/slice)
 
 // MEDIUM
-  // lines: account for outputDelay triggerPt property
+  // fix weird zoom on tiny routes
+    // eg Amsterdam -> Oshawa, lots of NY ones
+  // make lines/watersheds more sensitive to mousover?
   // new train icon / rotate along with headlights
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
+  // more interesting icon for point data?
+    // NPS svg
+    //  maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
+    // assembly #icon-mountain icon -- mount, mountain, mt, mtn
 
 // MAJOR!! *** = NEED HELP!
   // *** performance improvement! (see ideas below) ***
@@ -3301,6 +3527,7 @@
   // mousing over log elements highlights all within map
   // use x/y to transition-collapse down from tooltip/element itself into dash/log
   // more data-driven styling
+  // elevation grid/visual tracker from number data
 
 // MAAAAYBE
   // account for polygons a user STARTS in? (does not enter, may/may not exit)
@@ -3367,7 +3594,7 @@
       // Greenville, SC
       // Grand Junction, CO
       // Saskatoon, SK
-      // Memphis, TN?
+      // Memphis, TN
       // Burlington, IA
     // REMOVE
       // Lynn Lake, MB
@@ -3377,38 +3604,23 @@
       // Scheferville, QC
       // Severn, ON
       // Oriole, ON
-    // SEGMENT ISSUES?
-      // Ft Lauderdale, FL
 
 ////////
 
 
 // DONE:
-  // new trigger structure:
-    // points: straightforward
-    // regLines, on the fly: flow direction built in, forget timing?
-    // linegons, on the fly: whatever pt is intersect, that becomes based for shifted geom calculation; associated geoms bound and rendered on the fly??
-    // polygons, on the fly: whatever pt is intersected, that is base of spread/color fill (in direction perpendicular to triggerPt?)
-  // more split: The Colorado River, The Republican River, the Big Blue River
-    // Stillwater Swan Wooded Valley error led me to redo all US level IV ecoregions..
-    // got Lake Erie some more trigger pts!
+// changed reveal structure to avoid anticipating triggerpts
+// fixed bug in sliceMultiString (and then just started using splitMultiString) to avoid disconnected river fragments on large complex multilines
+// largely fixed zIndex equivalent (ordering SVG selections) / opacity of ecoregions
+// changeing svg preserveAspectRatio to "meet" resolves jump to center of wide routes upon collapse of #about (though not ideal in other ways, e.g. how small map remains upon user collapse of #about before route selected)
+// rework of line reveal relieves need to account for outputDelay triggerPt property
+// exclude redundant text in rail line output
+// got textures back
+// improved ecoregion color assignment
+// workable link color
+// added/moved lake michigan trigger pts
 
-
-
-// points:
-// svg-icons:
-// mountain -- mount, mountain, volcano
-// depart
-// arrive
-// zoom buttons: plus,minus
-// nps svg
-
-
-// bearwithMe planar,
-// orient (compass) geodesic
-
-
-// zooming to tiny routes messed up
-// occasional disconnected missouri river fragment near start?
-
-// mouseover no longer working and ecoregion level zIndexes/opacity need some attention, but otherwise this is going to be BETTER
+// NEW TO DO:
+// Northern Thompson Upland?? falsely triggered
+// use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
+// add level I ecozones again?
