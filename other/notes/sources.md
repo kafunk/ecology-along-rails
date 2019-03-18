@@ -21,7 +21,7 @@ _Ecoregions:_
 - Levels I-III: http://www.cec.org/tools-and-resources/map-files/terrestrial-ecoregions-level-iii
 - Level IV+ Supplements:
   - CAN: https://open.canada.ca/data/en/dataset/fe9fd41c-1f67-4bc5-809d-05b62986b26b
-  - USA: https://www.sciencebase.gov/catalog/item/59c6798de4b017cf313f0b18
+  - USA: https://www.epa.gov/eco-research/level-iii-and-iv-ecoregions-continental-united-states
   - MEX: http://www.conabio.gob.mx/informacion/metadata/gis/ecort08gw.xml?_xsl=/db/metadata/xsl/fgdc_html.xsl&_indent=no,
        http://www.conabio.gob.mx/institucion/proyectos/resultados/GT018/metadatos/SNIB-GT018-regiones-bioticas.pdf,
        https://apps1.semarnat.gob.mx:445/dgeia/compendio_2015/dgeiawf.semarnat.gob.mx_8080/ibi_apps/WFServletf0ba.html

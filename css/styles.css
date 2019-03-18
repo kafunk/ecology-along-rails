@@ -44,6 +44,8 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .bg-modal { background: #adbab8; }
 .bg-accent1 { background: var(--bg-accent1); }
 .bg-accent2 { background: var(--bg-accent2); }
+.bg-dark1 { background: var(--bg-dark1); }
+.bg-dark2 { background: var(--bg-dark2); }
 .txt-fancy { font-family: 'Raleway Dots', cursive; }
 .color-symbol { color: #2A4C48; }
 
@@ -77,13 +79,25 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .legend-item { }
 .legend-symbol { }
 .legend-text { }
-.hover { stroke-width: 0.2px; opacity: 1}
+.hover { stroke-opacity: 1; opacity: 1 }
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
 .txt-xxs { font-size: 0.5em; }
 
+.txt-compact { line-height: 0.8em; }
+.flex1 {
+  order: 1;
+}
+.flex2 {
+  order: 2;
+}
+.flex3 {
+  order: 3;
+}
+
 #encounters {
-  overflow: hidden;
+  overflow-x: scroll;
+  scroll-behavior: smooth;
   transition: 0.4s;
 }
 #elevation,#odometer {
@@ -92,13 +106,19 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   stroke: black;
   stroke-width: 2px;
 }
+#elevation {
+  border-radius: 15px 50px
+}
 #odometer {
-  border-radius: 5px;
+  border-radius: 50px 15px;
 }
 #compass-bowl {
   fill: gainsboro;
   stroke: dimgray;
   stroke-width: 1px;
+}
+#footer a {
+  color: darksalmon; /* rosybrown; */
 }
 
 /* .svg-content {
@@ -145,7 +165,14 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
     box-shadow: 1px 1px 1px 1px #2A4C48;
   }
 }
-@media screen and (min-width: 800px) { }
+@media screen and (min-width: 800px) {
+  .flex1-ml {
+    order: 1;
+  }
+  .flex2-ml {
+    order: 2;
+  }
+}
 /* @media screen and (min-width: 800px) and (max-width: 860px) {
   /* remove awkward padding from top/bottom of form
   fieldset { padding: 0 auto;}
