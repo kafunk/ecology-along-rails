@@ -139,10 +139,10 @@
                   <div id="dash-wrapper" class='flex-parent flex-parent--stretch-cross'>
 
                     <!-- dash content group -->
-                    <div id="dash-content" class='flex-child bg-lighten25 round-mm shadow-darken25-mm w-full mx6-mm bg-transparent'>
+                    <div id="dash-content" class='flex-child round-mm shadow-darken25-mm w-full mx6-mm bg-transparent'>
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main px6-mm py12-mm'>
+                      <div class='flex-parent flex-parent--column flex-parent--center-main pt3 px6-mm py12-mm'>
 
                         <!-- Dash--Header -->
                         <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl-mm round-tr-mm pb3 pt6"><!-- hmin18 if content-->
@@ -156,7 +156,7 @@
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid'>
 
                             <!-- Narration -->
-                            <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--5-ml bg-lighten25 px6 pt6 pb3 px12-mm pt12-mm pb6-mm pl12-mm pr6-ml py12-ml">
+                            <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--5-ml bg-lighten25 px6 pt6 pb3 px12-mm pt12-mm pb6-mm pl12-mm pr6-ml py12-ml hmax120">
 
                               <div class="flex-parent flex-parent--column flex-parent--center-main round h-full">
 
@@ -166,8 +166,17 @@
                                   <!-- You are currently:</h5> -->
                                 </div>
 
-                                <div id="narration-txt" class="flex-child flex-child--grow px6 bg-lighten50 flex-parent flex-parent--center-cross">
-                                  <div id="encounters" class="flex-child flex-child--grow flex-parent flex-parent--space-between-main flex-parent--center-cross txt-xs txt-s-mm"><!--hmax60 hmax120"><!-- flex-parent--row-reverse flex-parent--column-ml -->
+                                <div id="narration-txt" class="flex-child flex-child--grow bg-lighten50 flex-parent flex-parent--center-cross"><!--px6-->
+                                  <div id="encounters" class="flex-child scroll-auto flex-parent flex-parent--space-between-main flex-parent--center-cross"><!--hmax60 hmax120"><!-- flex-parent--row-reverse flex-parent--column-ml -->
+                                    <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3">
+                                      <span>Beholding the world made fresh again</span>
+                                    </div>
+                                    <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3">
+                                      <span>Encountering incredible things</span>
+                                    </div>
+                                    <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3">
+                                      <span>Traversing special places</span>
+                                    </div>
                                   </div>
                                 </div>
 
@@ -178,50 +187,27 @@
                             </div> <!-- end of narration -->
 
                             <!-- Compass -->
-                            <div id="widgets-plus" class="flex-child flex-child--grow col col--5 col--2-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml">
+                            <div id="widgets-plus" class="flex-child flex-child--grow col col--5 col--2-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml hmax120">
 
-                              <div class="flex-parent--column h-full flex-parent round flex-parent--end-main">
+                              <div class="flex-parent flex-parent--column h-full round">
 
                                 <!-- header -->
                                 <div class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
 
                                 <!-- content -->
-                                <div class="flex-child flex-child--grow bg-lighten50 px12 py6"><!--relative-->
-                                  <div id="from-to" class="flex-parent flex-parent--center-cross flex-parent--space-between-main">
-                                    <div id="from" class="flex-child txt-xs align-r">
-                                      <svg class='icon h24 w24 h30-mxl w30-mxl'><use xlink:href='#icon-depart'></use></svg>
+                                <div class="flex-child flex-child--grow bg-lighten50 px12 py6">
+                                  <div id="widgets" class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid">
+                                    <div id="compass-wrapper" class="flex-child flex-child--grow flex2 flex1-ml col col--6 col--offl2-ml col--8-ml col--offr2-ml flex-parent flex-parent--center-cross flex-parent--center-main bg-yellow">
+                                      <div id="compass" class="flex-child h-full w-full flex-parent flex-parent--center-cross flex-parent--center-main bg-purple px6 py6">
+                                      </div>
                                     </div>
-                                    <div id="via" class="flex-child flex-child--grow txt-spacing2 txt-xxs align-center"></div>
-                                    <div id="to" class="flex-child txt-xs align-r">
-                                      <svg class='icon h24 w24 h30-mxl w30-mxl'><use xlink:href='#icon-arrive'></use></svg>
+                                    <div id="elevation-wrapper" class="flex-child flex-child--no-shrink flex1 flex2-ml col col--3 col--5-ml col--offr1-ml h36-ml bg-blue round-br round-tl round-bl-bold round-tr-full pr6 py3">
+                                      <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono bg-red align-center"></div>
                                     </div>
-                                  </div>
-                                  <div id="compass" class="flex-parent flex-parent--center-cross flex-parent--center-main"><!--absolute left right top bottom-->
-                                    <svg class="flex-child flex-child--grow h36 w36 h60-mxl w60-mxl">
-                                      <g id="compass-bowl" class="h36 w36 h60-mxl w60-mxl"><!-- or rose? -->
-                                        <circle r="33%" cx="50%" cy="50%"></circle>
-                                      </g>
-                                      <g id="compass-needle" class='icon h24 w24 h30-mxl w30-mxl color-red'><use xlink:href='#icon-compass'></use></g>
-                                    </svg>
-                                  </div>
-                                  <div id="other-widgets" class="flex-parent flex-parent--center-cross grid">
-                                    <div class="flex-child flex-child--grow col col--6">
-                                      <svg class="h36 w36 h60-mxl w60-mxl txt-mono txt-xs txt-s-mxl">
-                                        <rect id="elevation" x="0" y="0" width="100%" height="100%"></rect>
-                                      </svg>
-                                    </div>
-                                    <div class="flex-child flex-child--grow col col--6 align-r">
-                                      <svg class="h36 w36 h60-mxl w60-mxl txt-mono txt-s txt-m-mxl">
-                                        <rect id="odometer" x="0" y="0" width="100%" height="100%">-0-</rect>
-                                        <text class="txt-xs txt-s-mxl">miles in</text>
-                                      </svg>
+                                    <div id="odometer-wrapper" class="flex-child flex-child--no-shrink flex3 col col--3 col--offl1-ml col--5-ml bg-blue h36-ml round-bl round-tr round-br-bold round-tl-full pl6 py3">
+                                      <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono bg-red align-center px3 py3"></div>
                                     </div>
                                   </div>
-                                  <!-- <div id="remaining" class="col col--12 grid">
-                                    <span class="col col--12 align-center">remaining:</span>
-                                    <span id="time" class="col col--6">time</span>
-                                    <span id="distance" class="col col--6 align-r">distance</span>
-                                  </div> -->
                                 </div>
 
                                 <!-- footer -->
@@ -229,16 +215,27 @@
 
                               </div>
 
-                            </div> <!-- end of compass+ -->
+                            </div> <!-- end of widgets+ -->
 
                             <!-- Legend-Log -->
-                            <div id="legend-log" class="flex-child flex-child--grow bg-lighten25 col col--7 col--5-ml pl3 pr6 pb6 pt3 pl6-mm pr12-mm pt6-mm pb12-mm py12-ml">
+                            <div id="legend-log" class="flex-child flex-child--grow bg-lighten25 col col--7 col--5-ml pl3 pr6 pb6 pt3 pl6-mm pr12-mm pt6-mm pb12-mm py12-ml hmax120">
 
                               <div class="flex-parent flex-parent--column round flex-parent--space-between-main h-full flex-parent--stretch-cross">
 
                                 <!-- header -->
                                 <div id="legend-log-header" class="flex-child flex-child-no-shrink bg-darken25 align-center round-tl round-tr color-lighten75 py3">
                                   <h5 class='txt-h6 txt-fancy txt-em txt-bold'>Journey Log</h5>
+                                </div>
+
+                                <!-- to-from insert -->
+                                <div id="from-to" class="flex-parent flex-parent--center-cross flex-parent--space-between-main">
+                                  <div id="from" class="flex-child txt-xs align-r">
+                                    <svg class='icon h18 w18 h24-mm w24-mm h30-mxl w30-mxl'><use xlink:href='#icon-depart'></use></svg>
+                                  </div>
+                                  <div id="via" class="flex-child flex-child--grow txt-spacing2 txt-xs align-center"></div>
+                                  <div id="to" class="flex-child txt-xs align-r">
+                                    <svg class='icon h18 w18 h24-mm w24-mm h30-mxl w30-mxl'><use xlink:href='#icon-arrive'></use></svg>
+                                  </div>
                                 </div>
 
                                 <!-- main content / dynamically populated legend items  -->
