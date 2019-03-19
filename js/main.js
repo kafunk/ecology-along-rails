@@ -951,33 +951,61 @@
 
     experience.initiated = true;
 
-    let transform0 = getTransform(projPath.bounds(chosen.lineString)),
-          options = { padBottom: 1 + transform0.k / 4 };  // ADJUSTABLE
+    let bounds = projPath.bounds(chosen.lineString),
+      boundsTransform = getTransform(bounds),  // first iteration used to get scale @ framed full route (k then used to calculate padding below)
+      padB1 = 1 + boundsTransform.k / 4,
+      options1 = { padBottom: padB1 };
+
+    let screenTarget = (window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight - d3.select("#about-up-btn").node().clientHeight - d3.select("#dash").node().clientHeight)/2,
+      height = bounds[1][1] - bounds[0][1],
+      padB2 = screenTarget / height,
+      options2 = { padBottom: padB2 };
 
     // zoom to bounds of chosen route
-    let routeTransform = getTransform(projPath.bounds(chosen.lineString),options),
-      boundsScale = Math.min(routeTransform.k,zoomFollowScale), // don't zoom in beyond set zoomFollowScale
-      routeBoundsIdentity = getIdentity(routeTransform,boundsScale);
+    // let routeTransform1 = getTransform(bounds,options1), // get transform again, this time with bottom padding (making way for dashboard)
+    let routeTransform2 = getTransform(bounds,options2), // get transform again, this time with bottom padding (making way for dashboard)
+      boundsScale0 = getBoundsScale(boundsTransform.k),
+      // boundsScale1 = getBoundsScale(routeTransform1.k), // don't zoom in beyond set zoomFollowScale
+      boundsScale2 = getBoundsScale(routeTransform2.k),
+      // routeBoundsIdentity = getIdentity(routeTransform1,boundsScale1),
+      routeBoundsIdentity2 = getIdentity(routeTransform2,boundsScale2)//,
+      // routeBoundsIdentity3 = getIdentity(routeTransform1,boundsScale2),
+      // routeBoundsIdentity4 = getIdentity(routeTransform2,boundsScale1);
 
-    // // testing
-    // let routeMidPt = turf.midpoint(turf.point(chosen.to.coords()),turf.point(chosen.from.coords())).geometry.coordinates,
-    //   routeCentroid = turf.centroid(chosen.lineString).geometry.coordinates,
-    //   midPtBoundsIdentity = getIdentity(centerTransform(projection(routeMidPt),boundsScale)),
-    //   centroidBoundsIdentity =  getIdentity(centerTransform(projection(routeCentroid),boundsScale));
+    let centroidTransform = centerTransform(projPath.centroid(chosen.lineString),boundsScale0,options1),
+    // centroidTransform2 = centerTransform(projPath.centroid(chosen.lineString),boundsScale0,options2)
+      centroidBoundsIdentity = getIdentity(centroidTransform,boundsScale0);
+      // ,
+      // centroidBoundsIdentity2 = getIdentity(centroidTransform2,boundsScale0);
+
+    // console.log(routeBoundsIdentity)
+    console.log(routeBoundsIdentity2)//**
+    // console.log(routeBoundsIdentity3)
+    // console.log(routeBoundsIdentity4)
+    console.log(centroidBoundsIdentity)//**
+    // console.log(centroidBoundsIdentity2)
+
+    function getBoundsScale(k) {
+      if (zoomFollowScale < k) console.log("USING DEFAULT SCALE")
+      return Math.min(k,zoomFollowScale)
+    }
 
     // control timing with transition start/end events
     svg.transition().duration(zoomDuration).ease(zoomEase)
-      .call(zoom.transform, routeBoundsIdentity)
+      .call(zoom.transform, routeBoundsIdentity2)
+      // .call(zoom.transform, centroidBoundsIdentity)
       .on("start", () => {
         prepEnvironment();  // now includes collapse("#about") & drawRoute()
       })
       .on("end", () => {
         // confirm g transform where it should be
-        g.attr("transform", routeBoundsIdentity.toString())
+        g.attr("transform", routeBoundsIdentity2.toString())
+        // g.attr("transform", centroidBoundsIdentity.toString())
         // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
         prepareUser();
         d3.timeout(() => {
-          initAnimation(chosen,routeBoundsIdentity);
+          initAnimation(chosen,routeBoundsIdentity2);
+          // initAnimation(chosen,centroidBoundsIdentity);
         }, tPause);
       })
 
@@ -1330,7 +1358,7 @@
       let zoomFollow = {
         necessary: true, // default
         focus: viewFocusInt,
-        limit: viewFocusInt *3,
+        limit: viewFocusInt * 2,
         scale: zoomFollowScale,
         arc: [],
         firstThree: [],
@@ -3541,7 +3569,6 @@
   // Northern Thompson Upland?? falsely triggered
 
 // LITTLE BUT STUMPING ME RIGHT NOW
-  // on form submit, modal element jumps, offsetting sizing (the excess padding issue that presented itself before and resolved mysteriously; well, it's back)
   // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin)
   // keeping zindexes in line on very small screen sizes
 
@@ -3551,12 +3578,13 @@
   // fix weird zoom on tiny routes
     // eg Amsterdam -> Oshawa, Mystic -> lots of NY ones
   // make lines/watersheds more sensitive to mousover?
-  // new train icon / rotate along with headlights
+  // new train icon that rotates along with headlights
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
   // more interesting icon for point data?
     // NPS svg
     //  maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
     // assembly #icon-mountain icon -- mount, mountain, mt, mtn
+  // avoid repeating content elements in HTML doc (widgets @ two screen sizes, about modal + aside)
 
 // MAJOR!! *** = NEED HELP!
   // *** performance improvement! (see ideas below) ***
@@ -3590,7 +3618,6 @@
   // elevation grid/visual tracker from number data
 
 // MAAAAYBE
-  // account for polygons a user STARTS in? (does not enter, may/may not exit)
   // verbose console errors (in Chrome)
     // "[Violation] Forced reflow while executing JavaScript took 39ms"
       // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
@@ -3673,5 +3700,8 @@
 // bg-lighten in journey-log
 // no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
 
-
-// avoid repeating content elements in HTML doc (widgets @ two screen sizes, about modal + aside)
+// NOTES
+// dash post jump on half size left: 719 w [orig 707]
+// 394narration [orig 387!] -- 7 px diff (12 split)
+// 276journeylog [orig 271] -- 5 px diff (12 split)
+// route reveal == red amsterdam
