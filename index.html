@@ -110,14 +110,14 @@
                     <!-- dash expand triggers -->
                     <label id="dash-expand" class="flex-child h24 z2">
                       <!-- dash expand triangle--u -->
-                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 color-darken25-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full' onclick="expand('dash','up')">
+                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full' onclick="expand('dash','up')">
                         <span id="dash-up" class='icon triangle-l triangle-l--u mx-auto mt-neg18 mt-neg6-mxl'></span>
                       </button>
                     </label>
 
                     <label id="dash-collapse" class="flex-child h12 z2 none">
                       <!-- dash collapse triangle--d -->
-                      <button class='absolute left right btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround w-full h18' onclick="collapse('dash','down')">
+                      <button class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround w-full h18' onclick="collapse('dash','down')">
                         <span class='icon triangle-l triangle-l--d mx-auto mt0 mt12-mm'></span>
                       </button>
                     </label>
@@ -209,17 +209,23 @@
                                   <div class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
 
                                   <!-- content -->
-                                  <div class="flex-child flex-child--grow bg-lighten50 px12 py6">
-                                    <div id="widgets" class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid">
-                                      <!-- <div id="compass-wrapper" class="flex-child flex-child--grow flex2 flex1-ml col col--6 col--offl2-ml col--8-ml col--offr2-ml flex-parent flex-parent--center-cross flex-parent--center-main bg-yellow">
-                                        <div id="compass" class="flex-child h-full w-full flex-parent flex-parent--center-cross flex-parent--center-main bg-purple px6 py6">
+                                  <div class="flex-child flex-child--grow bg-lighten50 px6 py3">
+                                    <div id="widgets" class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid round-full bg-darken50">
+                                      <div id="row1" class="col col--12 grid">
+                                        <div id="elevation-wrapper" class="flex-child col col--6 py3 px3">
+                                          <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
                                         </div>
-                                      </div> -->
-                                      <div id="elevation-wrapper" class="flex-child flex-child--no-shrink flex1 flex2-ml col col--3 col--5-ml col--offr1-ml h36-ml bg-blue round-br round-tl round-bl-bold round-tr-full pr6 py3">
-                                        <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono bg-red align-center"></div>
+                                        <div id="odometer-wrapper" class="flex-child col col--6 py3 px3">
+                                          <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
+                                        </div>
                                       </div>
-                                      <div id="odometer-wrapper" class="flex-child flex-child--no-shrink flex3 col col--3 col--offl1-ml col--5-ml bg-blue h36-ml round-bl round-tr round-br-bold round-tl-full pl6 py3">
-                                        <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono bg-red align-center px3 py3"></div>
+                                      <div id="row2" class="col col--12 grid">
+                                        <div id="compass-wrapper" class="flex-child col col--6 py3 px3">
+                                          <div id="compass" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
+                                        </div>
+                                        <div id="speed-wrapper" class="flex-child col col--6 py3 px3">
+                                          <div id="speedometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -318,12 +324,12 @@
 
             </div> <!-- end of dash pane -->
 
-            <!-- modal/veil/loader group -->
-            <div id="modal-plus" class="fixed left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none">
+            <div id="veil" class="absolute top bottom right left h-full z4 opacity50 bg-lighten50"></div>
 
-              <div id="veil" class="fixed top bottom right left z4 opacity50 bg-lighten50"></div>
+            <!-- modal/loader group -->
+            <div id="modal-plus" class="absolute left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none">
 
-              <div id="map-init-load" class='fixed left right loading z4 none'></div>
+              <div id="map-init-load" class='absolute left right loading z4 none'></div>
 
               <div id="modal-bg" class="flex-child flex-parent flex-parent--center-cross flex-parent--center-main bg-transparent z5"> <!--relative-->
 
@@ -487,14 +493,14 @@
                     <label id="about-expand" class="flex-child h24 w24-mxl none">
 
                       <!-- about expand triangle--u -->
-                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 color-darken25-on-hover color-darken75-on-active unround h24 w-full none-mxl' onclick="expand('about','up')"><!-- unround or round-t-full? border-t? -->
+                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround h24 w-full none-mxl' onclick="expand('about','up')"><!-- unround or round-t-full? border-t? -->
                         <span id="about-up" class='icon triangle-l triangle-l--u mx-auto mt-neg6'>
                           <!-- <svg class='icon absolute bg-transparent color-darken75 h36 w36 ml-neg18 pb12 z5'><use xlink:href='#icon-info'/></svg> -->
                         </span>
                       </button>
 
                       <!-- about expand triangle--l -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround border-r px0 none block-mxl z4' onclick="expand('about','left')"><!--opacity50 border-l bg-accent2-->
+                      <button class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z4' onclick="expand('about','left')"><!--opacity50 border-l bg-accent2-->
                         <span class='icon triangle-l triangle-l--l'></span>
                       </button>
 
@@ -504,12 +510,12 @@
                     <label id="about-collapse" class="flex-child h12 w6-mxl z4">
 
                       <!-- about collapse triangle--d -->
-                      <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl' onclick="collapse('about','down')">
+                      <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl' onclick="collapse('about','down')">
                         <span class='icon triangle-l triangle-l--d mx-auto'></span>
                       </button>
 
                       <!-- about collapse triangle--r -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active border-l unround none block-mxl' onclick="collapse('about','right')"><!-- border border--2 round-full py6 pr6 pl0 -->
+                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active border-l unround none block-mxl' onclick="collapse('about','right')"><!-- border border--2 round-full py6 pr6 pl0 -->
                         <span class='icon triangle-l triangle-l--r ml-neg3'></span> <!-- none inline-block-mxl absolute left -->
                       </button>
 
