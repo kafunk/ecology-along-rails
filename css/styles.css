@@ -20,7 +20,7 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
-#veil,#modal-bg { pointer-events: none; }
+#veil { pointer-events: none; }
 #modal-about,#get-options,#modal-close { pointer-events: all; }
 #map {  /* i.e. .svg-container */
   top:0;

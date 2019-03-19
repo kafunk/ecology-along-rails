@@ -3018,13 +3018,13 @@
         }
         isTogglable(subContent,true)
       }
-      d3.select("#modal-bg").classed("bg-lighten25", true)
+      d3.select("#veil").classed("none", false);
       d3.select(`#modal`).classed("none", false);
     } else {  // modal currently open
       // if toggling closed with close button (!subContent) or re-clicking subContent button recently used to open modal
       if (!subContent || (subContent && isTogglable(subContent))) {
-        d3.select(`#modal`).classed("none", true);
-        d3.select("#modal-bg").classed("bg-lighten25", false)
+        d3.select("#modal").classed("none", true);
+        d3.select("#veil").classed("none", true);
         d3.select("#get-options").classed("none", true)
         d3.select("#modal-about").classed("none", true)
         if (subContent) {
@@ -3037,6 +3037,8 @@
           let nowOpen = oppContent[subContent]
           d3.select(`#${subContent}`).classed("none",false)
           d3.select(`#${nowOpen}`).classed("none",true)
+          isTogglable(subContent,true)
+          isTogglable(nowOpen,false)
         } else {
           // offer visual affordance that selected content already open (jostle/shake element)
           d3.select(`#${subContent}`).classed("already-open",true)
@@ -3051,8 +3053,8 @@
 
   function isTogglable(content,set) {
     let btn = assocBtns[content];
-    if (set !== undefined) togglesOff.btn = set;
-    return togglesOff.btn;
+    if (set !== undefined) togglesOff[btn] = set;
+    return togglesOff[btn];
   }
 
 //// BUTTONS & FUNCTIONAL ICONS
@@ -3655,35 +3657,10 @@
       // Memphis, TN
       // Burlington, IA
     // REMOVE
-      // Lynn Lake, MB
-      // Sept-Iles, QC :(
-      // Quesnel, BC
-      // North Glengarry, ON
-      // Scheferville, QC
-      // Severn, ON
-      // Oriole, ON
-      // Moosonnee, ON
 
 ////////
 
 // DONE:
-  // thisRoute.totalDistance actually saved in miles now
-  // restructure goTrain() function so tDelay doesn't rely on false/simplified data (if zoomFollow timing becomes an issue again, RETURN HERE)
-  // milemarkers for trackerUpdate
-  // rename planar getAzimuth -> getRotate, new fn getAzimuth
-  // change getArcPts to getSteps; use getSteps for both arcPts (truncated, projected, fewer) and milemarkers (unprojecte)
-  // fix bug in getSteps
-
-  // separate veil from modal-plus group
-  // modal positioned absolute to map pane
-  // separate/double widgets (repetitive, find a better way)
-
-  // workable button hover color
-  // change tracker/widget/leaves background and borders
-  // veil only over map area (keep about accessible)
-
-  // clarify select-new and info button behavior when modal still open following initial load (including jostle/shake visua afforance)
-
 
 
 // TRYING TO RECONCILE ACTUAL DISTANCE WITH SIMP DISTANCE for purposes of tracking mileage, determining elevation at precise pt en route, etc.
@@ -3694,6 +3671,7 @@
 // east green ecozone --> more subtle
 // fix dash pop right when narration txt starts!
 // bg-lighten in journey-log
-// 2893 undefined not iterable
 // no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
-// fix get options jump; w600-mxl
+
+
+// avoid repeating content elements in HTML doc (widgets @ two screen sizes, about modal + aside)
