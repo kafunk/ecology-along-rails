@@ -18,7 +18,6 @@ a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
 svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-rendering: optimizeSpeed; } */
 
-
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
 #veil,#modal-bg { pointer-events: none; }
@@ -33,6 +32,35 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   vertical-align: middle;
   overflow: hidden;
   /* padding-bottom: 100%; /* aspect ratio = height/width * 50% */
+}
+#encounters {
+  overflow-x: scroll;
+  scroll-behavior: smooth;
+  transition: 0.4s;
+}
+#elevation,#speedometer {
+  border-radius: 5px 50px;
+  background: #dbd99f; /* #f2c690; */
+}
+#odometer,#compass {
+  border-radius: 50px 5px;
+  background: #dbd99f; /* #f2c690; */
+}
+#elevation,#odometer {
+  border-top: 1px double dimgray;
+}
+#odometer,#speedometer {
+  border-right: 1px double dimgray;
+}
+#compass,#speedometer {
+  border-bottom: 1px double dimgray;
+}
+#elevation,#compass {
+  border-left: 1px double dimgray;
+}
+#footer a {
+  color: darksalmon; /* rosybrown; */
+  font-weight: 700;
 }
 
 
@@ -95,30 +123,11 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   order: 3;
 }
 
-#encounters {
-  overflow-x: scroll;
-  scroll-behavior: smooth;
-  transition: 0.4s;
-}
-#elevation,#odometer {
-  fill: none;
-  pointer-events: none;
-  stroke: black;
-  stroke-width: 2px;
-}
-#elevation {
-  border-radius: 15px 50px
-}
-#odometer {
-  border-radius: 50px 15px;
-}
-#compass-bowl {
-  fill: gainsboro;
-  stroke: dimgray;
-  stroke-width: 1px;
-}
-#footer a {
-  color: darksalmon; /* rosybrown; */
+.already-open {
+  animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* .svg-content {
@@ -172,9 +181,32 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   .flex2-ml {
     order: 2;
   }
+  .flex3-ml {
+    order: 3;
+  }
 }
 /* @media screen and (min-width: 800px) and (max-width: 860px) {
   /* remove awkward padding from top/bottom of form
   fieldset { padding: 0 auto;}
 } */
 @media screen and (min-width: 1200px) { }
+
+
+/* ANIMATION */
+@keyframes shake {
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
