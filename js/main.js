@@ -962,28 +962,16 @@
       options2 = { padBottom: padB2 };
 
     // zoom to bounds of chosen route
-    // let routeTransform1 = getTransform(bounds,options1), // get transform again, this time with bottom padding (making way for dashboard)
-    let routeTransform2 = getTransform(bounds,options2), // get transform again, this time with bottom padding (making way for dashboard)
-      boundsScale0 = getBoundsScale(boundsTransform.k),
-      // boundsScale1 = getBoundsScale(routeTransform1.k), // don't zoom in beyond set zoomFollowScale
-      boundsScale2 = getBoundsScale(routeTransform2.k),
-      // routeBoundsIdentity = getIdentity(routeTransform1,boundsScale1),
-      routeBoundsIdentity2 = getIdentity(routeTransform2,boundsScale2)//,
-      // routeBoundsIdentity3 = getIdentity(routeTransform1,boundsScale2),
-      // routeBoundsIdentity4 = getIdentity(routeTransform2,boundsScale1);
+    let routeTransform = getTransform(bounds,options2), // get transform again, this time with bottom padding (making way for dashboard)
+      boundsScale0 = getBoundsScale(routeTransform.k),
+      routeBoundsIdentity = getIdentity(routeTransform,boundsScale0)//,
 
-    let centroidTransform = centerTransform(projPath.centroid(chosen.lineString),boundsScale0,options1),
-    // centroidTransform2 = centerTransform(projPath.centroid(chosen.lineString),boundsScale0,options2)
-      centroidBoundsIdentity = getIdentity(centroidTransform,boundsScale0);
-      // ,
-      // centroidBoundsIdentity2 = getIdentity(centroidTransform2,boundsScale0);
+    let boundsScale1 = getBoundsScale(boundsTransform.k),
+      centroidTransform = centerTransform(projPath.centroid(chosen.lineString),boundsScale1,options1),
+      centroidBoundsIdentity = getIdentity(centroidTransform,boundsScale1);
 
-    // console.log(routeBoundsIdentity)
-    console.log(routeBoundsIdentity2)//**
-    // console.log(routeBoundsIdentity3)
-    // console.log(routeBoundsIdentity4)
-    console.log(centroidBoundsIdentity)//**
-    // console.log(centroidBoundsIdentity2)
+    console.log("centroidBoundsIdentity",centroidBoundsIdentity)
+    console.log("routeBoundsIdentity",routeBoundsIdentity)
 
     function getBoundsScale(k) {
       if (zoomFollowScale < k) console.log("USING DEFAULT SCALE")
@@ -992,20 +980,20 @@
 
     // control timing with transition start/end events
     svg.transition().duration(zoomDuration).ease(zoomEase)
-      .call(zoom.transform, routeBoundsIdentity2)
-      // .call(zoom.transform, centroidBoundsIdentity)
+      // .call(zoom.transform, routeBoundsIdentity)
+      .call(zoom.transform, centroidBoundsIdentity)
       .on("start", () => {
         prepEnvironment();  // now includes collapse("#about") & drawRoute()
       })
       .on("end", () => {
         // confirm g transform where it should be
-        g.attr("transform", routeBoundsIdentity2.toString())
-        // g.attr("transform", centroidBoundsIdentity.toString())
+        // g.attr("transform", routeBoundsIdentity.toString())
+        g.attr("transform", centroidBoundsIdentity.toString())
         // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
         prepareUser();
         d3.timeout(() => {
-          initAnimation(chosen,routeBoundsIdentity2);
-          // initAnimation(chosen,centroidBoundsIdentity);
+          // initAnimation(chosen,routeBoundsIdentity);
+          initAnimation(chosen,centroidBoundsIdentity);
         }, tPause);
       })
 
@@ -3690,9 +3678,6 @@
 // DONE:
 
 
-// TRYING TO RECONCILE ACTUAL DISTANCE WITH SIMP DISTANCE for purposes of tracking mileage, determining elevation at precise pt en route, etc.
-// elapsed tpsm --> ? tpm
-
 // NEW TO DO:
 // ecozone 10 yellow --> more subtle
 // east green ecozone --> more subtle
@@ -3704,4 +3689,7 @@
 // dash post jump on half size left: 719 w [orig 707]
 // 394narration [orig 387!] -- 7 px diff (12 split)
 // 276journeylog [orig 271] -- 5 px diff (12 split)
-// route reveal == red amsterdam
+// route reveal ==> red?
+
+// TRYING TO RECONCILE ACTUAL DISTANCE WITH SIMP DISTANCE for purposes of tracking mileage, determining elevation at precise pt en route, etc.
+// elapsed tpsm --> ? tpm
