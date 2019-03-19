@@ -203,11 +203,14 @@
     info: false,
     select: false
   }
-
   let assocBtns = {
     // contentId: btn
     "modal-about": "info",
     "get-options": "select"
+  }
+  let oppContent = {
+    "modal-about": "get-options",
+    "get-options": "modal-about"
   }
 
   let defaultOptions = {
@@ -223,11 +226,15 @@
 
   let prevLocation, prevRotate, prevExtent, searchExtent;
 
+  let mm = 0, accumReset = 0, geoMM;
+
+  let totalMiles;
+
 // COLORS
 
-  const palette = ['#94417f','#CD5C5C','#fa8253','#ec934a','#c7993f'];
+  const palette = ['#94417f','#CD5C5C','#fa8253','#ec934a','#c7993f','#dbd99f']
 
-  const paletteScale = chroma.scale(palette).domain([1,0]).mode('lch').correctLightness();
+  const paletteScale = chroma.scale(palette).domain([1,0]).mode('lch') //.correctLightness();
 
   const riverBlue = "aquamarine",
          lakeBlue = "teal";
@@ -708,6 +715,7 @@
   }
 
 //// API / DATA-PROCESSING RELATED
+
   function queryAPI(opt0,opt1) {
 
     // save and parse user input
@@ -750,19 +758,24 @@
     function parseReceived(raw) {
 
       let route = raw.routes[0],
-       mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat());
+       mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat()),
+        inMiles = kmToMi(route.distance);
 
       let thisRoute = {
         from: raw.places[0],
         to: raw.places[1],
-        totalDistance: route.distance, // in miles,
+        totalDistance: inMiles,
         totalTime: route.totalTransitDuration, // not including transfers
         lineString: mergedGJ,
         segments: route.segments.map(storeSegmentDetails),
         allStops: raw.places,
         overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
-        arcPts: getArcPts(arcSteps)
+        arcPts: truncatedProject(getSteps(arcSteps)),
+        geoMM: getSteps(Math.round(inMiles))
       }
+
+      // store unprojected milemarkers as globally accessible coord array
+      geoMM = thisRoute.geoMM;
 
       // easily access to/from coords
       let getCoords = function() {
@@ -772,24 +785,23 @@
       thisRoute.to.coords = getCoords
       thisRoute.from.coords = getCoords
 
-      function getArcPts(steps = 500) {
+      function getSteps(steps = 500) {  // controlled simplification of route; returns one coord for every (inMiles/steps) miles
 
-        let lineChunks = turf.lineChunk(mergedGJ,route.distance/steps,{units:"miles"}).features,
-           firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
-             lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
-             lastCoord = lastChunk[lastChunk.length-1];
+        let chunkLength = Math.max(1,Math.round(inMiles/steps)),  // must be at least 1 to avoid errors (happens when getting arcPts on very short routes) but Math.ceil too frequently results in double-length milemarker segments
+          lineChunks = turf.lineChunk(mergedGJ,chunkLength,{units:"miles"}).features,
+          firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
+          lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
+          lastCoord = lastChunk[lastChunk.length-1];
 
-        let allCoords = firstCoords.concat([lastCoord]).map(d=>projection(turf.truncate(turf.point(d),{precision:5,mutate:true}).geometry.coordinates)),
-          getBearing = function(i) {
-            let prevPt = this.coordinates[i-1] || this.coordinates[i],
-                nextPt = this.coordinates[i+1] || this.coordinates[i];
-            return turf.bearing(projection.invert(prevPt),projection.invert(nextPt));
-          };
+        return firstCoords.concat([lastCoord]);
 
-        return {
-          coordinates: allCoords,
-          orient: getBearing // receives i as parameter (plus implicit this)
-        };
+      }
+
+      function truncatedProject(coords) {
+
+        let projected = coords.map(d => projection(turf.truncate(turf.point(d),{precision:5,mutate:true}).geometry.coordinates));
+
+        return projected;
 
       }
 
@@ -800,7 +812,7 @@
             agency: raw.agencies[segment.agencies[0].agency],
           lineName: segment.agencies[0].lineNames[0],
         lineString: polyline.toGeoJSON(segment.path),
-          distance: segment.distance,
+          distance: kmToMi(segment.distance),
              stops: segment.stops,
          departing: raw.places[segment.depPlace],
           arriving: raw.places[segment.arrPlace]
@@ -1034,93 +1046,71 @@
           .style("stroke","dimgray")
 
         // WIDGETS
-        // setupCompass()
         initElevation()
         initOdometer()
-
-        // function setupCompass(){
-        //
-        //   let full = 36,
-        //       half = full/2;
-        //
-        //   let compass = d3.select("#compass").append("svg")
-        //     .attr("width", full)
-        //     .attr("height", full)
-        //     // .attr("preserveAspectRatio", "xMidYMid meet")
-        //     .attr("viewBox", `0 0 ${full} ${full}`)
-        //     .classed('h-full w-full bg-green round-br-full round-tl-full round-bl-full round-tr-full',true)
-        //
-        //   let bowl = compass.append("circle")
-        //     .attr("r", half)
-        //     .attr("cx", half)
-        //     .attr("cy", half)
-        //     .style("fill","none")
-        //     .style("stroke","darksalmon")
-        //     .style("stroke-width",2)
-        //
-        //   let needle = compass.append("use")
-        //     .attr("x", half/2)
-        //     .attr("y", half/2)
-        //     .attr("width", "50%")
-        //     .attr("height", "50%")
-        //     .attr("id","compass-needle")
-        //     .attr("xlink:href","#icon-compass")
-        //     .classed("icon color-red", true)
-        //
-        // }
+        initSpeedometer()
+        initCompass()
 
         function initElevation() {
 
-          let initCoords = [chosen.from.lng,chosen.from.lat],
-              elevation0 = getElevation(initCoords).then(elevation => {
+          let initCoords = [chosen.from.lng,chosen.from.lat];
 
-                d3.select("#elevation").append("span")
-                  .attr("id","current-feet")
-                  .classed("flex-child txt-s txt-m-mxl txt-mono",true)
-                  .style("stroke","whitesmoke")
-                  .text(elevation)
+          getElevation(initCoords).then(elevation => {
 
-                d3.select("#elevation").append("span")
-                  .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
-                  .style("stroke","whitesmoke")
-                  .text("feet above sea level")
+            let test = d3.select("#elevation").append("span")
+              .attr("id","current-feet")
+              .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+              .text(elevation)
 
-              })
+            d3.select("#elevation").append("span")
+              .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+              .html(`feet above<br> sea level`)
 
-        }
-
-        function getElevation([lng,lat]) {
-
-          let query = `https://elevation-api.io/api/elevation?points=(${lat},${lng})`
-
-          let elevation = d3.json(query).then(returned => {
-            return metersToFeet(returned.elevations[0].elevation);
-          }, onError);
-
-          return elevation;
-
-          function metersToFeet(m) {
-            return turf.round(m * 3.281);
-          }
+          })
 
         }
 
         function initOdometer() {
 
+          totalMiles = Math.round(chosen.totalDistance);
+
           d3.select("#odometer").append("span")
             .attr("id","current-miles")
             .classed("flex-child txt-s txt-m-mxl txt-mono",true)
-            .style("stroke","whitesmoke")
             .text("0")
 
           d3.select("#odometer").append("span")
             .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
-            .style("stroke","whitesmoke")
-            .text("miles in")
+            .html(`of ${totalMiles} miles<br> elapsed`)
 
         }
 
-        // chosen.totalDistance
+        function initSpeedometer() {
+
+          d3.select("#speedometer").append("span")
+            .attr("id","current-pace")
+            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .text(getPace())
+
+          d3.select("#speedometer").append("span")
+            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+            .html(`milliseconds<br> per mile`)
+
+        }
+
+        function initCompass() {
+
+          d3.select("#compass").append("span")
+            .attr("id","current-bearing")
+            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .text(getAzimuth(0))
+
+          d3.select("#compass").append("span")
+            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+            .text("degrees")
+
+        }
+
         // chosen.totalTime
         // chosen.overallBearing
         // stopping in [...new Set(chosen.allStops.map(d=>d.shortName))] where name is not from/to
@@ -1202,7 +1192,7 @@
               allStns.remove();
             })
 
-        let arcPts = received.arcPts.coordinates;
+        let arcPts = received.arcPts;
 
         // LINE/ROUTE
         // faint underlying solid
@@ -1240,7 +1230,7 @@
           // .style("stroke-width","1px")
 
         // make headlights!
-        let azimuth0 = getAzimuth(semiSimp.geometry.coordinates[0],semiSimp.geometry.coordinates[1]),
+        let azimuth0 = getRotate(semiSimp.geometry.coordinates[0],semiSimp.geometry.coordinates[1]),
             radians0 = 0,            // start with unrotated arc
                  tau = 2 * Math.PI,  // 100% of a circle
              arcSpan = 0.16 * tau,   // hardcode as desired (in radians)
@@ -1286,6 +1276,19 @@
         //   .style("stroke-width",1.6)
         //   .style("stroke-dasharray", "0.1 0.4")
 
+        // // MM TEST
+        // let milemarkers = route.append("g").selectAll(".mm")
+        //   .attr("id","milemarkers")
+        //   .data(received.geoMM) // geoMM
+        //   .enter().append("circle")
+        //     .classed("mm",true)
+        //     .attr("r", 0.05)
+        //     .attr("cx", d => { return projection(d)[0]; })
+        //     .attr("cy", d => { return projection(d)[1]; })
+        //     .style("fill", "darkmagenta")
+        //     .style("stroke","gainsboro")
+        //     .style("stroke-width",0.005)
+
       }
 
     }
@@ -1319,7 +1322,7 @@
     // final user prompt/countdown??
     // if (confirm("Ready?")) {
       experience.animating = true;  // global flag that experience == in process
-      goTrain(zoomFollow,zoomArc,routeBoundsIdentity); // initiate movement!
+      goTrain(zoomFollow,zoomArc,routeBoundsIdentity,routeObj.totalDistance); // initiate movement!
     // }
 
     function getZoomFollow() { // requires access to routeObj
@@ -1332,23 +1335,15 @@
         arc: [],
         firstThree: [],
         lastThree: [],
-        pace: {
-          tpsm() {  // based on tpm, calculated per simplified miles
-            let result = tpm * Math.floor(routeObj.totalDistance) / this.simpLength;
-            this.tpsm = result;
-            return result;
-          }
-        },
+        // get tpsm() {  // based on tpm, calculated per simplified miles
+        //   return tpm * Math.round(routeObj.totalDistance) / this.simpLength;
+        // },
         simpSlice: [],
         fullSimp: getSimpRoute(routeObj.lineString),
-        simpLength() {
-          let result = Math.floor(turf.length(this.fullSimp, {units: "miles"}));
-          this.simpLength = result;
-          return result;
-        }
+        get simpLength() { return Math.round(turf.length(this.fullSimp, {units: "miles"})); }
       }
 
-      if (zoomFollow.simpLength() > zoomFollow.limit) {
+      if (zoomFollow.simpLength > zoomFollow.limit) {
 
         let firstLast = getFirstLast(zoomFollow.fullSimp,zoomFollow.focus);
 
@@ -1364,10 +1359,10 @@
 
       } else {
 
-        // console.log(`short route (< ${limit} miles -- specifically, ${zoomFollow.simpLength}. first/last frames identical; no zoomAlong necessary.`)
+        // short route, first/last frames identical; no zoomAlong necessary
 
         zoomFollow.necessary = false,
-              zoomFollow.arc = zoomFollow.fullSimp.geometry.coordinates.slice();
+        zoomFollow.arc = zoomFollow.fullSimp.geometry.coordinates.slice();
 
         // save start, mid, and end points as onlyThree
         let onlyThree = [zoomFollow.fullSimp.geometry.coordinates[0],turf.along(zoomFollow.fullSimp,zoomFollow.simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2)),zoomFollow.fullSimp.geometry.coordinates[zoomFollow.fullSimp.geometry.coordinates.length - 1]];
@@ -1376,8 +1371,6 @@
          zoomFollow.lastThree = onlyThree;
 
       }
-
-      // console.log(zoomFollow)
 
       return zoomFollow;
 
@@ -1410,12 +1403,18 @@
 
   }
 
-  function goTrain(zoomFollow,zoomArc,routeBoundsIdentity) {
+  function goTrain(zoomFollow,zoomArc,routeBoundsIdentity,fullDist) {
 
-    let t = 0, tDelay, tMid, firstIdentity, lastIdentity;
+    let t = 0,
+      tFull = Math.max(tpm * fullDist, tPause),
+      tDelay, tMid, firstIdentity, lastIdentity;
 
-    let simpDistance = Math.floor(turf.length(zoomFollow.fullSimp, {units: "miles"})),
-      tFull = Math.max(tpm * simpDistance, tPause);  // based on ms per simplified mile for so tDelay calculation is accurate
+    // let simpDistance = Math.round(turf.length(zoomFollow.fullSimp, {units: "miles"})),
+    //   tFull = Math.max(tpm * simpDistance, tPause);  // based on ms per simplified mile so tDelay calculation is accurate; NOT DOING SO, ZOOMFOLLOW OCCASSIONALLY OVERSHOOTS DESTINATION
+
+    // console.log("tfull",tFull)
+    // console.log("tpsm",zoomFollow.tpsm)
+    // console.log("wouldbe",Math.max(zoomFollow.tpsm * simpDistance, tPause))
 
     let headlights = g.select("#headlights"),
           semiSimp = g.select("#semi-simp"),
@@ -1425,17 +1424,13 @@
 
     if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame
 
-      // firstIdentity = getIdentity(getTransform(projPath.bounds(turf.lineString(zoomFollow.firstThree)),options),zoomFollowScale);
-      //
-      // lastIdentity = getIdentity(getTransform(projPath.bounds(turf.lineString(zoomFollow.lastThree)),options),zoomFollowScale);
-
       firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),zoomFollowScale,zoomAlongOptions))
 
       lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),zoomFollowScale,zoomAlongOptions))
 
       t = zoomDuration,
-      tDelay = (simpDistance > zoomFollow.limit) ? tpm * zoomFollow.focus : tpm * 0,      // delay zoomFollow until train hits mm <zoomFollow.focus> (of fullSimp) IF route long enough
-        tMid = tFull - (tDelay*2);  // tDelay doubled to account for stopping <zoomFollow.focus> miles from end
+      tDelay = (fullDist > zoomFollow.limit) ? tpm * zoomFollow.focus : tpm * 0,      // delay zoomFollow until train hits mm <zoomFollow.focus> IF route long enough; NOTE: WAS simpDistance
+      tMid = tFull - (tDelay*2);  // tDelay doubled to account for stopping <zoomFollow.focus> miles from end
 
     } else {
       firstIdentity = routeBoundsIdentity,
@@ -1459,7 +1454,7 @@
         // confirm g exactly in alignment for next transition
         g.attr("transform",firstIdentity.toString())
         // call initial point transition, passing simplified path
-        goOnNow(zoomFollow.scale,lastIdentity,zoomArc)
+        goOnNow(zoomArc,zoomFollow.scale,lastIdentity)
       })
 
     function dimBackground(t) {
@@ -1474,7 +1469,7 @@
 
     }
 
-    function goOnNow(scale,lastIdentity,simpPath) {
+    function goOnNow(simpPath,scale,lastIdentity) {
       dispatch.call("depart", this)
       // transition train along entire route
     	point.transition().delay(tPause).duration(tFull).ease(d3.easeSinInOut)
@@ -1511,9 +1506,7 @@
     function animate(elapsed) {
       // dispatch another move event
       dispatch.call("move", point)
-      // elevation update
-      // miles update
-      // etc
+      trackerUpdate(getMM(elapsed))
     }
 
   }
@@ -1725,7 +1718,7 @@
   //
   // }
 
-  function getAzimuth(p0,p1,isInitial = false) {
+  function getRotate(p0,p1,isInitial = false) {
     let slope, y0, y1;
     // adjust slope calculation to account for reflectedY!
     if (p0.x) {   // assume two svg pts
@@ -2198,6 +2191,7 @@
   function arrived() {
     console.log("train arrived @ " + performance.now())
     timer.stop()
+    d3.select("#current-miles").text(totalMiles)
     // observer.disconnect()
     console.log("unique encounters",uniqueEncounters.size)
   }
@@ -2248,7 +2242,7 @@
              pt0 = path.node().getPointAtLength(0);
       return function(t) {
         let pt1 = path.node().getPointAtLength(t * l);  // svg pt
-        if (!(pt0.x === pt1.x)) rotate = getAzimuth(pt0,pt1);
+        if (!(pt0.x === pt1.x)) rotate = getRotate(pt0,pt1);
         pt0 = pt1;  // shift pt values pt0 >> pt1
         return transform = "translate(" + pt1.x + "," + pt1.y + ") rotate(" + rotate + ")";
       }
@@ -2430,54 +2424,54 @@
 
   }
 
-  function sliceMultiString(pt0,pt1,d) {
-
-    let seekingPt0 = true, seekingPt1 = true, slice = [];
-    iterateOver(d.geometry.coordinates)
-
-    if (!seekingPt0 && !seekingPt1) {
-      return slice; // coords only
-    }
-
-    function iterateOver(iterable){
-      iterable.forEach(arr => {
-        let found = seekPts(arr);
-        if (found && found.length) {
-          slice.push(found);
-        } else if (!found && !seekingPt0) {
-          slice.push(arr); // add whole chunk, must be between pt0 and pt1
-        }
-      })
-    }
-
-    function seekPts(arr) {
-
-      if (Array.isArray(arr[0][0])) iterateOver(arr[0]); // dive deeper if necessary
-
-      let i0 = (seekingPt0) ? arr.findIndex(coordMatch,pt0) : null,
-          i1 = (seekingPt1) ? arr.findIndex(coordMatch,pt1) : null;
-
-      if (i0 && !i1) {   // this array marks location of pt0
-        seekingPt0 = false;
-        return arr.slice(i0)
-      }
-      if (!seekingPt0 && i1) {
-        seekingPt1 = false;
-        return arr.slice(0,i1+1)
-      }
-      if (i0 && i1) {   // both pts found within same array
-        seekingPt0 = false;
-        seekingPt1 = false;
-        return arr.slice(i0,i1+1);
-      }
-
-      function coordMatch([x,y]) {
-        return x === this.geometry.coordinates[0] && y === this.geometry.coordinates[1];
-      }
-
-    }
-
-  }
+  // function sliceMultiString(pt0,pt1,d) {
+  //
+  //   let seekingPt0 = true, seekingPt1 = true, slice = [];
+  //   iterateOver(d.geometry.coordinates)
+  //
+  //   if (!seekingPt0 && !seekingPt1) {
+  //     return slice; // coords only
+  //   }
+  //
+  //   function iterateOver(iterable){
+  //     iterable.forEach(arr => {
+  //       let found = seekPts(arr);
+  //       if (found && found.length) {
+  //         slice.push(found);
+  //       } else if (!found && !seekingPt0) {
+  //         slice.push(arr); // add whole chunk, must be between pt0 and pt1
+  //       }
+  //     })
+  //   }
+  //
+  //   function seekPts(arr) {
+  //
+  //     if (Array.isArray(arr[0][0])) iterateOver(arr[0]); // dive deeper if necessary
+  //
+  //     let i0 = (seekingPt0) ? arr.findIndex(coordMatch,pt0) : null,
+  //         i1 = (seekingPt1) ? arr.findIndex(coordMatch,pt1) : null;
+  //
+  //     if (i0 && !i1) {   // this array marks location of pt0
+  //       seekingPt0 = false;
+  //       return arr.slice(i0)
+  //     }
+  //     if (!seekingPt0 && i1) {
+  //       seekingPt1 = false;
+  //       return arr.slice(0,i1+1)
+  //     }
+  //     if (i0 && i1) {   // both pts found within same array
+  //       seekingPt0 = false;
+  //       seekingPt1 = false;
+  //       return arr.slice(i0,i1+1);
+  //     }
+  //
+  //     function coordMatch([x,y]) {
+  //       return x === this.geometry.coordinates[0] && y === this.geometry.coordinates[1];
+  //     }
+  //
+  //   }
+  //
+  // }
 
   function revealPt(gj,baseT) {
 
@@ -2512,17 +2506,19 @@
           .style("fill", getFill)
           .style("stroke", "whitesmoke")
           .style("stroke-width", "0.05px")
-          .style("opacity", ptOpacity)
-          .style("stroke-opacity", ptStrokeOpacity)
+          .style("opacity", 0)
+          .style("stroke-opacity", 0)
           .call(enter => enter.transition(t)
             .attr("r", d => d.properties.orig_area * 0.00000002 || 0.1)
               // size of circle is a factor of planar (why did i do it this way?) area of polygon the circle is representing, or 0.1 minimum
             .style("opacity", 1)    // COMBAK: aim for initial glow effect
+            .style("stroke-opacity", 1)
             .on("start", output(enter))
           ),
         update => update
           .call(update => update.transition(t)
-            .style("opacity", 0.8)  // make more subtle
+            .style("opacity", ptOpacity)  // make more subtle
+            .style("stroke-opacity", ptStrokeOpacity)
             .on("end", () =>
               update.on("mouseover", onMouseover)
                     .on("mouseout", onMouseout)
@@ -2718,8 +2714,6 @@
 
       flashLabel(encountered)
 
-      trackerUpdate(encountered)
-
       log(encountered)
 
       function updateOutput(allEncounters) {
@@ -2781,6 +2775,7 @@
         // bring each label into full opacity, pause, & remove
         const t = d3.transition().duration(1200);
         const anchorOpts = ["left","right"]
+
         // update all visible label nodes
         d3.select("#label-nodes").selectAll(".label-node")
           .data(labels, d => d.id)
@@ -2844,17 +2839,6 @@
 
       }
 
-      function trackerUpdate(e) {
-
-        // TrackerUpdate: (coordsNow)
-        //   d3.select("#current-feet").text(getElevation(coordsNow))
-        //   d3.select("#current-miles").text( )
-        //   d3.select("#current-bearing").transform(getRotate( ))
-
-        // update dashboard elements: mileage tracker, elevation?
-        // time limited, automatic tooltip raises as new points and layers encountered (taken care of through event listeners?)
-      }
-
       function log(encounter) {
 
         // // initial element type/symbol, plus counter +=1 on each subsequent
@@ -2877,6 +2861,67 @@
 
   }
 
+  function trackerUpdate(i) {
+
+    let coordsNow = geoMM[i];
+
+    if (coordsNow) {
+      getElevation(coordsNow).then(elevation => {
+        d3.select("#current-feet").text(elevation)
+      });
+    }
+
+    d3.select("#current-miles").text(i+1)
+    d3.select("#current-pace").text(getPace())
+    d3.select("#current-bearing").text(getAzimuth(i))
+
+    // .attr("transform", "translate(" + arcPts[0] + ") rotate(" + azimuth0 +")")
+
+  }
+
+  function getMM(t) {
+    // if tpm variable, current mm is would be pace calculation - previous total (already elapsed, cannot undo)
+    let atPace = Math.floor(t/tpm);
+    mm = (accumReset) ? atPace - accumReset : atPace;
+    return mm;
+  }
+
+  function adjustTPM() {
+    // account for trackerUpdate which calculates milemarker using elapsed time
+    accumReset += mm;  // cumulative total of elapsed at all TPMs thus far
+  }
+
+  function getPace() {
+    return tpm;
+  }
+
+  function getElevation([lng,lat]) {
+
+    // if (lng && lat) {  // avoid error at end?
+
+      let query = `https://elevation-api.io/api/elevation?points=(${lat},${lng})`
+
+      let elevation = d3.json(query).then(returned => {
+        return metersToFeet(returned.elevations[0].elevation);
+      }, onError);
+
+      return elevation;
+
+      function metersToFeet(m) {
+        return turf.round(m * 3.281);
+      }
+
+    // }
+  }
+
+  function getAzimuth(i) {  // returns rounded/approximate value
+
+    let prevPt = geoMM[i-1] || geoMM[i],
+        nextPt = geoMM[i+1] || geoMM[i];
+
+    return Math.round(turf.bearingToAzimuth(turf.bearing(prevPt,nextPt)));
+
+  }
 
 //// HTML/CSS VISIBILITY MANAGEMENT
 
@@ -2975,8 +3020,8 @@
       }
       d3.select("#modal-bg").classed("bg-lighten25", true)
       d3.select(`#modal`).classed("none", false);
-    } else {
-      // modal currently open; only close if trigger button was recently used to open this content
+    } else {  // modal currently open
+      // if toggling closed with close button (!subContent) or re-clicking subContent button recently used to open modal
       if (!subContent || (subContent && isTogglable(subContent))) {
         d3.select(`#modal`).classed("none", true);
         d3.select("#modal-bg").classed("bg-lighten25", false)
@@ -2985,13 +3030,28 @@
         if (subContent) {
           isTogglable(subContent,false)
         }
+      } else {  // subContent && (!isTogglable(subContent))
+        // user wants to switch modal subContent with modal open
+        if (d3.select(`#${subContent}`).classed("none")) {
+          // open user selected subContent via switch
+          let nowOpen = oppContent[subContent]
+          d3.select(`#${subContent}`).classed("none",false)
+          d3.select(`#${nowOpen}`).classed("none",true)
+        } else {
+          // offer visual affordance that selected content already open (jostle/shake element)
+          d3.select(`#${subContent}`).classed("already-open",true)
+          d3.timeout(() => {
+            d3.select(`#${subContent}`).classed("already-open",false);
+          }, 300);
+        }
       }
     }
   }
+  // change tracker/widget/leaves background and borders
 
   function isTogglable(content,set) {
     let btn = assocBtns[content];
-    if (set) togglesOff.btn = set;
+    if (set !== undefined) togglesOff.btn = set;
     return togglesOff.btn;
   }
 
@@ -3177,7 +3237,7 @@
     d3.select(this) // .classed("hover", true) //.raise();
       .transition().duration(300)
         .style("stroke-opacity", 1)
-        .style("opacity", 1)
+        .style("opacity", 0.9)
 
     if (d3.select(this).property("name")) {
       // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
@@ -3290,7 +3350,7 @@
   }
 
   // THE PARSING OF THINGS
-  function replaceCommas(string){
+  function replaceCommas(string) {
     let commaFree = string.replace(/\s*,\s*|\s+,/g, '%2C');
     return commaFree;
   }
@@ -3305,6 +3365,10 @@
       "V": 5
     };
     return unromanized[romanNum];
+  }
+
+  function kmToMi(km) {
+    return turf.convertLength(km,"kilometers","miles");
   }
 
   // BROADLY APPLICABLE OR NOT AT ALL
@@ -3463,13 +3527,11 @@
     // writing real words
 
 // LITTLE THINGS
-  // veil only over map area (keep about accessible)
   // less padding around about map on mm
   // line-dash ease slower at end
   // improve visual affordances on hover for pts & lines
   // new color for modal
   // change projection to equidistant (instead of equal area)
-  // workable button hover color
   // add exclusive pass rail lines?
   // const miles = {units:"miles"}
   // distinguish between stations and enrich pts
@@ -3600,5 +3662,38 @@
       // Scheferville, QC
       // Severn, ON
       // Oriole, ON
+      // Moosonnee, ON
 
 ////////
+
+// DONE:
+  // thisRoute.totalDistance actually saved in miles now
+  // restructure goTrain() function so tDelay doesn't rely on false/simplified data (if zoomFollow timing becomes an issue again, RETURN HERE)
+  // milemarkers for trackerUpdate
+  // rename planar getAzimuth -> getRotate, new fn getAzimuth
+  // change getArcPts to getSteps; use getSteps for both arcPts (truncated, projected, fewer) and milemarkers (unprojecte)
+  // fix bug in getSteps
+
+  // separate veil from modal-plus group
+  // modal positioned absolute to map pane
+  // separate/double widgets (repetitive, find a better way)
+
+  // workable button hover color
+  // change tracker/widget/leaves background and borders
+  // veil only over map area (keep about accessible)
+
+  // clarify select-new and info button behavior when modal still open following initial load (including jostle/shake visua afforance)
+
+
+
+// TRYING TO RECONCILE ACTUAL DISTANCE WITH SIMP DISTANCE for purposes of tracking mileage, determining elevation at precise pt en route, etc.
+// elapsed tpsm --> ? tpm
+
+// NEW TO DO:
+// ecozone 10 yellow --> more subtle
+// east green ecozone --> more subtle
+// fix dash pop right when narration txt starts!
+// bg-lighten in journey-log
+// 2893 undefined not iterable
+// no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
+// fix get options jump; w600-mxl
