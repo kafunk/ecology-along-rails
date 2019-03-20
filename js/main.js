@@ -1062,6 +1062,8 @@
           .style("stroke","dimgray")
 
         // WIDGETS
+          // all doubles referenced in below functions temporary until i figure out how to center same widgets element within dash on both small & large screens
+          // use double ids instead of changing to classes for more control AND in anticipation of resolving this issue / avoiding reclassifying index.html
         initElevation()
         initOdometer()
         initSpeedometer()
@@ -1073,12 +1075,21 @@
 
           getElevation(initCoords).then(elevation => {
 
-            let test = d3.select("#elevation").append("span")
+            d3.select("#elevation").append("span")
               .attr("id","current-feet")
               .classed("flex-child txt-s txt-m-mxl txt-mono",true)
               .text(elevation)
 
             d3.select("#elevation").append("span")
+              .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+              .html(`feet above<br> sea level`)
+
+            d3.select("#elevation2").append("span")
+              .attr("id","current-feet2")
+              .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+              .text(elevation)
+
+            d3.select("#elevation2").append("span")
               .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
               .html(`feet above<br> sea level`)
 
@@ -1099,6 +1110,15 @@
             .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
             .html(`of ${totalMiles} miles<br> elapsed`)
 
+          d3.select("#odometer2").append("span")
+            .attr("id","current-miles2")
+            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .text("0")
+
+          d3.select("#odometer2").append("span")
+            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+            .html(`of ${totalMiles} miles<br> elapsed`)
+
         }
 
         function initSpeedometer() {
@@ -1112,6 +1132,15 @@
             .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
             .html(`milliseconds<br> per mile`)
 
+          d3.select("#speedometer2").append("span")
+            .attr("id","current-pace2")
+            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .text(getPace())
+
+          d3.select("#speedometer2").append("span")
+            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+            .html(`milliseconds<br> per mile`)
+
         }
 
         function initCompass() {
@@ -1122,6 +1151,15 @@
             .text(getAzimuth(0))
 
           d3.select("#compass").append("span")
+            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+            .text("degrees")
+
+          d3.select("#compass2").append("span")
+            .attr("id","current-bearing2")
+            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .text(getAzimuth(0))
+
+          d3.select("#compass2").append("span")
             .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
             .text("degrees")
 
@@ -1226,7 +1264,7 @@
           .datum(arcPts)
           .attr("d", line)
           .style("fill", "none")
-          .style("stroke", "#333") // fiddle/improve
+          .style("stroke", "#682039")
           .style("stroke-width", 0.3)
           .style("opacity",0)
           .style("stroke-dasharray", "0.8 1.6")
@@ -1612,7 +1650,7 @@
           // make sure section-wrapper not "relative"
           d3.select("#section-wrapper").classed("relative",false)
           // adjust dash padding so long as #about collapsed on mxl
-          d3.select("#dash-content").classed("mx30-mxl",true)
+          d3.select("#dash-content").classed("px30-mxl",true)
           // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
@@ -1648,7 +1686,7 @@
           d3.select("#section-wrapper").classed("relative", true);
           // reset dash and attribution margins
           d3.select("#attribution").classed("mr24-mxl", false)
-          d3.select("#dash-content").classed("mx30-mxl",false)
+          d3.select("#dash-content").classed("px30-mxl",false)
         }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
         d3.select("#about").classed("disappear-right", false)
@@ -2208,6 +2246,7 @@
     console.log("train arrived @ " + performance.now())
     timer.stop()
     d3.select("#current-miles").text(totalMiles)
+    d3.select("#current-miles2").text(totalMiles) // TEMP
     // observer.disconnect()
     console.log("unique encounters",uniqueEncounters.size)
   }
@@ -2879,17 +2918,27 @@
 
   function trackerUpdate(i) {
 
+    // all doubles temporary until i figure out how to center same widgets element within dash on both small & large screens
+
     let coordsNow = geoMM[i];
 
     if (coordsNow) {
       getElevation(coordsNow).then(elevation => {
         d3.select("#current-feet").text(elevation)
+        d3.select("#current-feet2").text(elevation)
       });
     }
 
-    d3.select("#current-miles").text(i+1)
-    d3.select("#current-pace").text(getPace())
-    d3.select("#current-bearing").text(getAzimuth(i))
+    let miles = i + 1,
+      pace = getPace(),
+      degrees = getAzimuth(i);
+
+    d3.select("#current-miles").text(miles)
+    d3.select("#current-pace").text(pace)
+    d3.select("#current-bearing").text(degrees)
+    d3.select("#current-miles2").text(miles)
+    d3.select("#current-pace2").text(pace)
+    d3.select("#current-bearing2").text(degrees)
 
     // .attr("transform", "translate(" + arcPts[0] + ") rotate(" + azimuth0 +")")
 
@@ -2961,7 +3010,7 @@
         if (window.innerWidth > 1200) {
           d3.select("#section-wrapper").classed("relative", true);
           d3.select("#attribution").classed("mr24-mxl", false)
-          d3.select("#dash-content").classed("mx30-mxl",false)
+          d3.select("#dash-content").classed("px30-mxl",false)
         } else {
           d3.select("#dash-up").classed("mt-neg18", true)
           d3.select("#dash-up").classed("mt-neg6", false)
@@ -3000,7 +3049,7 @@
       if (window.innerWidth > 1200) {
         d3.select("#section-wrapper").classed("relative", false)
         d3.select("#attribution").classed("mr24-mxl", true)
-        d3.select("#dash-content").classed("mx30-mxl",true)
+        d3.select("#dash-content").classed("px30-mxl",true)
       } else {
         d3.select("#dash-up").classed("mt-neg6", true)
         d3.select("#dash-up").classed("mt-neg18", false)
@@ -3676,20 +3725,25 @@
 ////////
 
 // DONE:
-
+  // dash widget styling on small screens
+  // fix dash pop right when narration txt starts!
+  // bg-lighten in journey-log
+  // lighten certain dash element bgs 
 
 // NEW TO DO:
 // ecozone 10 yellow --> more subtle
 // east green ecozone --> more subtle
-// fix dash pop right when narration txt starts!
-// bg-lighten in journey-log
 // no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
 
 // NOTES
 // dash post jump on half size left: 719 w [orig 707]
 // 394narration [orig 387!] -- 7 px diff (12 split)
 // 276journeylog [orig 271] -- 5 px diff (12 split)
-// route reveal ==> red?
 
 // TRYING TO RECONCILE ACTUAL DISTANCE WITH SIMP DISTANCE for purposes of tracking mileage, determining elevation at precise pt en route, etc.
 // elapsed tpsm --> ? tpm
+
+// author txt bunches up on small screens when making font-weight of links bold
+
+// ABQ->vancouver UNDERshoots within current timing/zoom
+// columbia river disconnect around watershed mid WA
