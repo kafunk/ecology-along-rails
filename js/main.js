@@ -952,55 +952,35 @@
     experience.initiated = true;
 
     let bounds = projPath.bounds(chosen.lineString),
-      boundsTransform = getTransform(bounds),  // first iteration used to get scale @ framed full route (k then used to calculate padding below)
-      padB1 = 1 + boundsTransform.k / 4,
-      options1 = { padBottom: padB1 };
+      boundsTransform = getTransform(bounds),  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
+      routeBoundsIdentity;
 
-    let screenTarget = (window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight - d3.select("#about-up-btn").node().clientHeight - d3.select("#dash").node().clientHeight)/2,
-      height = bounds[1][1] - bounds[0][1],
-      padB2 = screenTarget / height,
-      options2 = { padBottom: padB2 };  // if I use padB2, update zoomAlong Options as well?
-
-    // zoom to bounds of chosen route
-    let routeTransform = getTransform(bounds,options2), // get transform again, this time with bottom padding (making way for dashboard)
-      boundsScale0 = getBoundsScale(routeTransform.k),
-      routeBoundsIdentity = getIdentity(routeTransform,boundsScale0)//,
-
-    let boundsScale1 = getBoundsScale(boundsTransform.k),
-      centroidTransform = centerTransform(projPath.centroid(chosen.lineString),boundsScale1,options1),
-      centroidBoundsIdentity = getIdentity(centroidTransform,boundsScale1);
-
-    console.log("centroidBoundsIdentity",centroidBoundsIdentity)
-    console.log("routeBoundsIdentity",routeBoundsIdentity)
-
-  // USE THIS STUFF WHEN CALCULATING ORIG ROUTE BOUNDS, WHICH WILL BE FIRST/LAST FRAME BY DEFAULT
-    // CENTER TRANSFORM PROJECTION OF turf.centroid(chosen.lineString)
-      // VS projPath.centroid()? difference?
-      // MODEL THAT WORKS:
-        // (centerTransform(projection(zoomFollow.lastThree[1]),zoomFollow.scale,zoomAlongOptions))
-    // USE ZOOMALONGOPTIONS FOR PADDING?
-
-    function getBoundsScale(k) {
-      if (zoomFollowScale < k) console.log("USING DEFAULT SCALE")
-      return Math.min(k,zoomFollowScale)
+    if (boundsTransform.k <= zoomFollowScale) {
+      // preferred
+      routeBoundsIdentity = getIdentity(boundsTransform);
+    } else {
+      // backup, avoids severe transform bug on tiny routes where calculated transform would overzoom default zoomFollowScale
+      let centroidTransform = centerTransform(projPath.centroid(chosen.lineString),zoomFollowScale);
+      routeBoundsIdentity = getIdentity(centroidTransform);
     }
+
+    // either way, transform north to make space for dash
+    let halfDash = d3.select("#dash").node().clientHeight/2;
+    routeBoundsIdentity.y -= halfDash;
 
     // control timing with transition start/end events
     svg.transition().duration(zoomDuration).ease(zoomEase)
-      // .call(zoom.transform, routeBoundsIdentity)
-      .call(zoom.transform, centroidBoundsIdentity)
+      .call(zoom.transform, routeBoundsIdentity)
       .on("start", () => {
         prepEnvironment();  // now includes collapse("#about") & drawRoute()
       })
       .on("end", () => {
         // confirm g transform where it should be
-        // g.attr("transform", routeBoundsIdentity.toString())
-        g.attr("transform", centroidBoundsIdentity.toString())
+        g.attr("transform", routeBoundsIdentity.toString())
         // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
         prepareUser();
         d3.timeout(() => {
-          // initAnimation(chosen,routeBoundsIdentity);
-          initAnimation(chosen,centroidBoundsIdentity);
+          initAnimation(chosen,routeBoundsIdentity);
         }, tPause);
       })
 
@@ -3598,49 +3578,49 @@
 
 //// INCOMPLETE TODO ////
 
-  // ASAP
-    // use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
+// ASAP
+  // use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
+  // dashboard and log output!!
     // set up journey log structure / start to populate
     // narration txt -> 3 columns? scroll up/down vs left/right
-  // dashboard and log output!!
     // data clumping / prepare for log out
   // about this map
     // sources.md -> links
     // writing real words
 
 // LITTLE THINGS
-  // dim state outlines and railroad nameless
+  // dim state outlines and railroad less
+  // make timing of split lines the same again; no fun / disorienting for one to wait for the other
   // less padding around about map on mm
   // line-dash ease slower at end
-  // improve visual affordances on hover for pts & lines
+  // improve visual affordances on hover for lines (and make more sensitive to mouseover?)
+  // mouseover --> mouseenter to avoid tooltips popping up automatically where mouse paused following submit button click
   // new color for modal
   // new font for SELECT ROUTE prompt
   // change projection to equidistant (instead of equal area)
-  // add exclusive pass rail lines?
   // const miles = {units:"miles"}
   // distinguish between stations and enrich pts (station icons simplest for now)
   // mouseover for stations
-// DATA STUFF
-  // Northern Thompson Upland?? falsely triggered
+  // ecozone 10 yellow --> more subtle base
+  // east green ecozone --> more subtle base
+  // no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
 
 // LITTLE BUT STUMPING ME RIGHT NOW
   // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin)
   // keeping zindexes in line on very small screen sizes
 
 // MEDIUM
-  // add level I ecozones again?
-  // make lines/watersheds more sensitive to mousover?
-  // new train icon that rotates along with headlights
+  // add level I ecozones again
+  // add exclusive pass rail lines
+  // avoid repeating content elements in HTML doc (widgets @ two screen sizes, about modal + aside)
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
   // more interesting icon for point data?
     // NPS svg
     //  maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
     // assembly #icon-mountain icon -- mount, mountain, mt, mtn
-  // avoid repeating content elements in HTML doc (widgets @ two screen sizes, about modal + aside)
 
 // MAJOR!! *** = NEED HELP!
   // *** performance improvement! (see ideas below) ***
-  // backburner:
 
 // WISHLIST/FUN
   // polygon radial animation / so fancy (see styling notes below)
@@ -3669,6 +3649,7 @@
   // elevation grid/visual tracker from number data
 
 // MAAAAYBE
+  // new train icon that rotates along with headlights
   // verbose console errors (in Chrome)
     // "[Violation] Forced reflow while executing JavaScript took 39ms"
       // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
@@ -3702,7 +3683,6 @@
       // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
       // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
 
-
 // STYLING NOTES:
   // polygon transitions: ideally, if I do end up using canvas, something akin to https://observablehq.com/@mbostock/randomized-flood-fill
   // if SVG, advanced play:
@@ -3720,8 +3700,6 @@
 // CODE CLEAN
   // be super consistent and clear including '' vs "", use of var/const/let, spacing, semicolons, etc
   // refactor, optimize, condense, DRY, improve structure
-  // revisit older functions (eg zoomFollow group) in particular
-
 
 // DATA CLEAN!
 
@@ -3737,24 +3715,11 @@
       // Burlington, IA
     // REMOVE
 
+// BACKBURNER ISSUES
+  // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
+  // columbia river disconnect around watershed mid WA
+  // Northern Thompson Upland falsely triggered (?)
+
 ////////
 
 // DONE:
-
-
-// NEW TO DO:
-// ecozone 10 yellow --> more subtle base
-// east green ecozone --> more subtle base
-// no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
-
-
-// TRYING TO RECONCILE ACTUAL DISTANCE WITH SIMP DISTANCE for purposes of tracking mileage, determining elevation at precise pt en route, etc.
-// elapsed tpsm --> ? tpm
-
-// BACKBURNER ISSUES
-  // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
-  // ABQ->vancouver UNDERshoots within current timing/zoom
-  // columbia river disconnect around watershed mid WA
-
-
-// make timing of split lines the same; no fun / disorienting for one to wait for the other
