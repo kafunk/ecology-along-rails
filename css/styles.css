@@ -34,33 +34,55 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   /* padding-bottom: 100%; /* aspect ratio = height/width * 50% */
 }
 #encounters {
-  overflow-x: scroll;
   scroll-behavior: smooth;
   transition: 0.4s;
 }
-#elevation,#speedometer {
+#elevation,#compass {
   border-radius: 5px 50px;
-  background: #dbd99f; /* #f2c690; */
-}
-#odometer,#compass {
-  border-radius: 50px 5px;
-  background: #dbd99f; /* #f2c690; */
-}
-#elevation,#odometer {
-  border-top: 1px double dimgray;
+  background: #dbd99f;
 }
 #odometer,#speedometer {
-  border-right: 1px double dimgray;
+  border-radius: 50px 5px;
+  background: #dbd99f;
+}
+#elevation,#speedometer,#compass,#odometer {
+  border-top: 1px double dimgray;
 }
 #compass,#speedometer {
+  border-right: 1px double dimgray;
+}
+#compass,#odometer,#elevation,#speedometer {
   border-bottom: 1px double dimgray;
 }
-#elevation,#compass {
+#elevation,#odometer {
   border-left: 1px double dimgray;
 }
+
+/* all doubles belwo temporary until i figure out how to center same widgets element within dash on both small & large screens */
+#elevation2,#speedometer2 {
+  border-radius: 5px 50px;
+  background: #dbd99f;
+}
+#odometer2,#compass2 {
+  border-radius: 50px 5px;
+  background: #dbd99f;
+}
+#elevation2,#odometer2 {
+  border-top: 1px double dimgray;
+}
+#odometer2,#speedometer2 {
+  border-right: 1px double dimgray;
+}
+#compass2,#speedometer2 {
+  border-bottom: 1px double dimgray;
+}
+#elevation2,#compass2 {
+  border-left: 1px double dimgray;
+}
+
 #footer a {
   color: darksalmon; /* rosybrown; */
-  font-weight: 700;
+  /* font-weight: 700; */
 }
 
 
