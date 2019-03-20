@@ -1856,8 +1856,14 @@
   }
 
   function getSimpRoute(full,tolerance = 1) {
-    let options = {tolerance: tolerance, highQuality: false, mutate: false};
-    return turf.simplify(full, options);
+    let options = {tolerance: tolerance, highQuality: false, mutate: false},
+     simplified = turf.simplify(full, options);
+    // make sure simp routes have detail of at least 5 coordinates, otherwise leads to zoomFollow issues eg ABQ->VAN,BC
+    while (simplified.geometry.coordinates.length < 5) {
+      options.tolerance -= 0.1;
+      simplified = turf.simplify(full, options);
+    }
+    return simplified;
   }
 
 //// ZOOM BEHAVIOR
