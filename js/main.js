@@ -64,7 +64,7 @@
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100, // miles in/out to initially focus view, start/stop
     zoomFollowScale = 14, // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
-    zoomDuration = tPause *2,
+    zoomDuration = tPause *2, // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     zoomAlongOptions = {padBottom: 1 + zoomFollowScale/10},
     relativeDim = 0.2, // dimBackground level
@@ -959,7 +959,7 @@
     let screenTarget = (window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight - d3.select("#about-up-btn").node().clientHeight - d3.select("#dash").node().clientHeight)/2,
       height = bounds[1][1] - bounds[0][1],
       padB2 = screenTarget / height,
-      options2 = { padBottom: padB2 };
+      options2 = { padBottom: padB2 };  // if I use padB2, update zoomAlong Options as well?
 
     // zoom to bounds of chosen route
     let routeTransform = getTransform(bounds,options2), // get transform again, this time with bottom padding (making way for dashboard)
@@ -972,6 +972,13 @@
 
     console.log("centroidBoundsIdentity",centroidBoundsIdentity)
     console.log("routeBoundsIdentity",routeBoundsIdentity)
+
+  // USE THIS STUFF WHEN CALCULATING ORIG ROUTE BOUNDS, WHICH WILL BE FIRST/LAST FRAME BY DEFAULT
+    // CENTER TRANSFORM PROJECTION OF turf.centroid(chosen.lineString)
+      // VS projPath.centroid()? difference?
+      // MODEL THAT WORKS:
+        // (centerTransform(projection(zoomFollow.lastThree[1]),zoomFollow.scale,zoomAlongOptions))
+    // USE ZOOMALONGOPTIONS FOR PADDING?
 
     function getBoundsScale(k) {
       if (zoomFollowScale < k) console.log("USING DEFAULT SCALE")
@@ -1001,7 +1008,7 @@
 
       setupDash(chosen)
 
-      // collapse about pane
+      // collapse about pane  // COMBAK: anyway to have svg preserveAspectRatio be "slice" in this moment only?
       collapse("about", collapseDirection(window.innerWidth))
       resize()
 
@@ -1359,27 +1366,30 @@
 
   function initAnimation(routeObj,routeBoundsIdentity) {
 
-    // get zoomFollow object including simplified zoomArc, pace, and first/last zoom frames
-    let zoomFollow = getZoomFollow();
+    // get zoomFollow object including simplified zoomArc (if applicable) and first/last zoom frames
+    let zoomFollow = getZoomFollow(routeObj);
 
     // bind zoomArc to DOM for tracking only (not visible)
-    let zoomArc = g.append("path")
-      .attr("id", "zoom-arc")
-      .datum(zoomFollow.arc.map(d => projection(d)))
-      .attr("d", line)
-      .style("fill","none")
-      // toggle below for visual of zoomArc
-      // .style("stroke","none")
-      // .style("stroke", "rebeccapurple")
-      // .style("stroke-width",1)
+    let zoomArc;
+    if (zoomFollow.arc.length) {
+      zoomArc = g.append("path")
+        .attr("id", "zoom-arc")
+        .datum(zoomFollow.arc.map(d => projection(d)))
+        .attr("d", line)
+        .style("fill","none")
+        // // toggle below for visual of zoomArc
+        // .style("stroke","none")
+        // .style("stroke", "rebeccapurple")
+        // .style("stroke-width",1)
+    }
 
     // final user prompt/countdown??
     // if (confirm("Ready?")) {
       experience.animating = true;  // global flag that experience == in process
-      goTrain(zoomFollow,zoomArc,routeBoundsIdentity,routeObj.totalDistance); // initiate movement!
+      goTrain(zoomFollow,zoomArc,routeBoundsIdentity); // initiate movement!
     // }
 
-    function getZoomFollow() { // requires access to routeObj
+    function getZoomFollow(routeObj) {
 
       let zoomFollow = {
         necessary: true, // default
@@ -1389,65 +1399,72 @@
         arc: [],
         firstThree: [],
         lastThree: [],
-        // get tpsm() {  // based on tpm, calculated per simplified miles
-        //   return tpm * Math.round(routeObj.totalDistance) / this.simpLength;
-        // },
-        simpSlice: [],
+        fullFull: routeObj.lineString,
         fullSimp: getSimpRoute(routeObj.lineString),
-        get simpLength() { return Math.round(turf.length(this.fullSimp, {units: "miles"})); }
+        fullDist: routeObj.totalDistance,
+        get simpDist() { return Math.round(turf.length(this.fullSimp, {units: "miles"})) },
+        get tpsm() /* t per simplified mile */ { return tpm * Math.round(this.fullDist) / this.simpDist }
       }
 
-      if (zoomFollow.simpLength > zoomFollow.limit) {
+      if (zoomFollow.simpDist > zoomFollow.limit) {
 
-        let firstLast = getFirstLast(zoomFollow.fullSimp,zoomFollow.focus);
+        let firstLast = getFirstLastThree(zoomFollow.fullSimp,zoomFollow.focus);
 
         zoomFollow.firstThree = firstLast[0],
-         zoomFollow.lastThree = firstLast[1],
-         zoomFollow.simpSlice = turf.lineSlice(zoomFollow.firstThree[1],zoomFollow.lastThree[1],zoomFollow.fullSimp).geometry.coordinates;
+         zoomFollow.lastThree = firstLast[1];
 
-        // update firstLast with exact in/out focus coordinates (prevents stutter at moment of zoomAlong "takeoff")
-        zoomFollow.firstThree[1] = zoomFollow.simpSlice[0],
-         zoomFollow.lastThree[1] = zoomFollow.simpSlice[zoomFollow.simpSlice.length-1];
+        zoomFollow.arc = turf.lineSlice(zoomFollow.firstThree[1],zoomFollow.lastThree[1],zoomFollow.fullSimp).geometry.coordinates;
 
-        zoomFollow.arc = zoomFollow.simpSlice;
+        // make sure firstLast focus coords align exactly with zoomFollow.arc start/stop (as returned by turf.lineSlice()); prevents stutter at moment of zoomAlong "takeoff"
+        zoomFollow.firstThree[1] = zoomFollow.arc[0],
+         zoomFollow.lastThree[1] = zoomFollow.arc[zoomFollow.arc.length-1];
+        // or??
+        // zoomFollow.arc[0] = zoomFollow.firstThree[1],
+        // zoomFollow.arc[zoomFollow.arc.length-1] = zoomFollow.lastThree[1];
 
       } else {
 
         // short route, first/last frames identical; no zoomAlong necessary
-
-        zoomFollow.necessary = false,
-        zoomFollow.arc = zoomFollow.fullSimp.geometry.coordinates.slice();
-
-        // save start, mid, and end points as onlyThree
-        let onlyThree = [zoomFollow.fullSimp.geometry.coordinates[0],turf.along(zoomFollow.fullSimp,zoomFollow.simpLength/2,{ units: "miles" }).geometry.coordinates.map(d => +d.toFixed(2)),zoomFollow.fullSimp.geometry.coordinates[zoomFollow.fullSimp.geometry.coordinates.length - 1]];
-
-        zoomFollow.firstThree = onlyThree,
-         zoomFollow.lastThree = onlyThree;
+        zoomFollow.necessary = false;
 
       }
 
       return zoomFollow;
 
-      function getFirstLast(fullLine,focusInt = 100) {
+      function getFirstLastThree(fullSimp,focusInt = 100) {
 
-        // turf.js returning same three coordinates at distance minus int * 2, distance minus int, & distance; reversing instead
-        let fullLineReversed = turf.lineString(fullLine.geometry.coordinates.slice().reverse());
+        // turf.along() sometimes returns same three coordinates for distance minus int * 2, distance minus int, & distance; also turf.along(fullLine,fullDist) !== last point of fullLine?; reversing instead!
+        //
+        // let simpDist = zoomFollow.simpDist;
+        //
+        // let firstThree = [
+        //   turf.along(fullSimp,0*focusInt,{units: "miles"}).geometry.coordinates,
+        //   turf.along(fullSimp,1*focusInt,{units: "miles"}).geometry.coordinates,
+        //   turf.along(fullSimp,2*focusInt,{units: "miles"}).geometry.coordinates
+        // ].map(c => c.map(d => +d.toFixed(5)));
+        //
+        // let lastThree = [
+        //   turf.along(fullSimp,simpDist-(2*focusInt),{units: "miles"}).geometry.coordinates,
+        //   turf.along(fullSimp,simpDist-(1*focusInt),{units: "miles"}).geometry.coordinates,
+        //   turf.along(fullSimp,simpDist-(0*focusInt),{units: "miles"}).geometry.coordinates
+        // ].map(c => c.map(d => +d.toFixed(5)));
 
-        let firstThree = threePts(fullLine,focusInt),
-             lastThree = threePts(fullLineReversed,focusInt).reverse();
+        let fullSimpReversed = turf.lineString(fullSimp.geometry.coordinates.slice().reverse());
+
+        let firstThree = threePts(fullSimp,focusInt),
+             lastThree = threePts(fullSimpReversed,focusInt).reverse();
 
         return [firstThree,lastThree];
 
         // returns three points along route; origin | trailing corner, zoom focus, leading corner | destination
-        function threePts(fullLine,int,i = 0) {
+        function threePts(line,int,i = 0) {
 
-          let miles = { units: 'miles' }; // turf unit options
-          let pt0 = turf.along(fullLine,int*i,miles).geometry.coordinates,
-              pt1 = turf.along(fullLine,int*i+int,miles).geometry.coordinates,
-              pt2 = turf.along(fullLine,int*i+2*int,miles).geometry.coordinates;
+          let pt0 = turf.along(line,int*i,{units: "miles"}).geometry.coordinates,
+            pt1 = turf.along(line,int*i+int,{units: "miles"}).geometry.coordinates,
+            pt2 = turf.along(line,int*i+2*int,{units: "miles"}).geometry.coordinates;
 
-          // toFixed() rounds... truncate instead?
-          return [pt0.map(d => +d.toFixed(5)),pt1.map(d => +d.toFixed(5)),pt2.map(d => +d.toFixed(5))];
+          // return rounded
+          return [pt0,pt1,pt2].map(c => c.map(d => +d.toFixed(5)));
 
         }
 
@@ -1457,18 +1474,11 @@
 
   }
 
-  function goTrain(zoomFollow,zoomArc,routeBoundsIdentity,fullDist) {
+  function goTrain(zoomFollow,zoomArc,routeBoundsIdentity) {
 
-    let t = 0,
-      tFull = Math.max(tpm * fullDist, tPause),
+    let t = zoomDuration, // even if no need to zoom to different frame (tiny route), still need this time to turn on headlights/dimBackground/etc
+      tFull = tpm * zoomFollow.fullDist, // was Math.max(tpm * zoomFollow.fullDist,tPause)
       tDelay, tMid, firstIdentity, lastIdentity;
-
-    // let simpDistance = Math.round(turf.length(zoomFollow.fullSimp, {units: "miles"})),
-    //   tFull = Math.max(tpm * simpDistance, tPause);  // based on ms per simplified mile so tDelay calculation is accurate; NOT DOING SO, ZOOMFOLLOW OCCASSIONALLY OVERSHOOTS DESTINATION
-
-    // console.log("tfull",tFull)
-    // console.log("tpsm",zoomFollow.tpsm)
-    // console.log("wouldbe",Math.max(zoomFollow.tpsm * simpDistance, tPause))
 
     let headlights = g.select("#headlights"),
           semiSimp = g.select("#semi-simp"),
@@ -1478,13 +1488,14 @@
 
     if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame
 
-      firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),zoomFollowScale,zoomAlongOptions))
+      firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),zoomFollow.scale,zoomAlongOptions))
 
-      lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),zoomFollowScale,zoomAlongOptions))
+      lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),zoomFollow.scale,zoomAlongOptions))
 
-      t = zoomDuration,
-      tDelay = (fullDist > zoomFollow.limit) ? tpm * zoomFollow.focus : tpm * 0,      // delay zoomFollow until train hits mm <zoomFollow.focus> IF route long enough; NOTE: WAS simpDistance
-      tMid = tFull - (tDelay*2);  // tDelay doubled to account for stopping <zoomFollow.focus> miles from end
+      // TESTING USING TPSM INSTEAD
+      // tDelay = tpm * zoomFollow.focus,  // delay zoomFollow until train hits mm <zoomFollow.focus>
+      tDelay = zoomFollow.tpsm * zoomFollow.focus,  // use tpsm to delay zoomFollow until train hits mm <zoomFollow.focus> (tps(implified)m because focusPt is calculated from simplified route)
+        tMid = tFull - (tDelay*2);  // tDelay doubled to account for stopping <zoomFollow.focus> miles from end
 
     } else {
       firstIdentity = routeBoundsIdentity,
@@ -2920,27 +2931,26 @@
 
     // all doubles temporary until i figure out how to center same widgets element within dash on both small & large screens
 
-    let coordsNow = geoMM[i];
+    let coordsNow = geoMM[i],
+            miles = i + 1,
+             pace = getPace();
 
     if (coordsNow) {
       getElevation(coordsNow).then(elevation => {
         d3.select("#current-feet").text(elevation)
         d3.select("#current-feet2").text(elevation)
       });
-    }
 
-    let miles = i + 1,
-      pace = getPace(),
-      degrees = getAzimuth(i);
+      let degrees = getAzimuth(i);
+      d3.select("#current-bearing").text(degrees)
+      d3.select("#current-bearing2").text(degrees)
+
+    }
 
     d3.select("#current-miles").text(miles)
     d3.select("#current-pace").text(pace)
-    d3.select("#current-bearing").text(degrees)
     d3.select("#current-miles2").text(miles)
     d3.select("#current-pace2").text(pace)
-    d3.select("#current-bearing2").text(degrees)
-
-    // .attr("transform", "translate(" + arcPts[0] + ") rotate(" + azimuth0 +")")
 
   }
 
@@ -3582,27 +3592,29 @@
 
 //// INCOMPLETE TODO ////
 
-
+  // ASAP
+    // use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
+    // set up journey log structure / start to populate
+    // narration txt -> 3 columns? scroll up/down vs left/right
   // dashboard and log output!!
-    // sizing of dash output text
     // data clumping / prepare for log out
-    // dash jump when text scroll starts
-    // add nonProjMM to thisRoute object for mileage/elevation checks
-    // separate journey log, narration txt?
   // about this map
     // sources.md -> links
     // writing real words
 
 // LITTLE THINGS
+  // dim state outlines and railroad nameless
   // less padding around about map on mm
   // line-dash ease slower at end
   // improve visual affordances on hover for pts & lines
   // new color for modal
+  // new font for SELECT ROUTE prompt
   // change projection to equidistant (instead of equal area)
   // add exclusive pass rail lines?
   // const miles = {units:"miles"}
-  // distinguish between stations and enrich pts
+  // distinguish between stations and enrich pts (station icons simplest for now)
   // mouseover for stations
+// DATA STUFF
   // Northern Thompson Upland?? falsely triggered
 
 // LITTLE BUT STUMPING ME RIGHT NOW
@@ -3610,10 +3622,7 @@
   // keeping zindexes in line on very small screen sizes
 
 // MEDIUM
-  // use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
   // add level I ecozones again?
-  // fix weird zoom on tiny routes
-    // eg Amsterdam -> Oshawa, Mystic -> lots of NY ones
   // make lines/watersheds more sensitive to mousover?
   // new train icon that rotates along with headlights
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
@@ -3625,11 +3634,10 @@
 
 // MAJOR!! *** = NEED HELP!
   // *** performance improvement! (see ideas below) ***
-  // resolve all dash output / user information INCL legend/log (lots of data clumping)
-  // resolve all colors, stroke-dasharrays, textures, styling issues of every kind (see more style notes below)
+  // backburner:
 
 // WISHLIST/FUN
-  // polygon radial animation / so fancy
+  // polygon radial animation / so fancy (see styling notes below)
   // add autocomplete/suggestions to R2R search
   // add features:
     // ability to "select random" in prompt route
@@ -3690,17 +3698,18 @@
 
 
 // STYLING NOTES:
-  // transitions can interpolate between:
-    // visibility: visible and visibility: hidden
-    // opacity [0, 1]
-    // colors
-    // location/size
-  // PLAY/ADVANCED:
+  // polygon transitions: ideally, if I do end up using canvas, something akin to https://observablehq.com/@mbostock/randomized-flood-fill
+  // if SVG, advanced play:
     // CSS filters: blur(),brightness(),hueRotate()
     // mix-blend-mode, filters: sepia(), blur(), drop-shadow(), grayscale()
     // backdrop filters? (not much browser compatability?)
     // SVG filters: feGaussianBlur, etc
-
+  // basic transitions can also interpolate between:
+    // visibility: visible and visibility: hidden
+    // opacity [0, 1]
+    // colors
+    // location
+    // size
 
 // CODE CLEAN
   // be super consistent and clear including '' vs "", use of var/const/let, spacing, semicolons, etc
@@ -3725,25 +3734,21 @@
 ////////
 
 // DONE:
-  // dash widget styling on small screens
-  // fix dash pop right when narration txt starts!
-  // bg-lighten in journey-log
-  // lighten certain dash element bgs 
+
 
 // NEW TO DO:
-// ecozone 10 yellow --> more subtle
-// east green ecozone --> more subtle
+// ecozone 10 yellow --> more subtle base
+// east green ecozone --> more subtle base
 // no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
 
-// NOTES
-// dash post jump on half size left: 719 w [orig 707]
-// 394narration [orig 387!] -- 7 px diff (12 split)
-// 276journeylog [orig 271] -- 5 px diff (12 split)
 
 // TRYING TO RECONCILE ACTUAL DISTANCE WITH SIMP DISTANCE for purposes of tracking mileage, determining elevation at precise pt en route, etc.
 // elapsed tpsm --> ? tpm
 
-// author txt bunches up on small screens when making font-weight of links bold
+// BACKBURNER ISSUES
+  // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
+  // ABQ->vancouver UNDERshoots within current timing/zoom
+  // columbia river disconnect around watershed mid WA
 
-// ABQ->vancouver UNDERshoots within current timing/zoom
-// columbia river disconnect around watershed mid WA
+
+// make timing of split lines the same; no fun / disorienting for one to wait for the other
