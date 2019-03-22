@@ -47,11 +47,12 @@
         // passRail = d3.json("data/final/pass_railways.json"),
         railStns = d3.json("data/final/na_rr_stns.json"),
   // merged enrich data
-     enrichPolys = d3.json("data/final/enrich_polys_plus.json"),
-     enrichLines = d3.json("data/final/enrich_lines_plus.json"),
-       enrichPts = d3.json("data/final/enrich_pts_plus.json"),
+     enrichPolys = d3.json("data/final/enrich_polys.json"),
+     enrichLines = d3.json("data/final/enrich_lines.json"),
+       enrichPts = d3.json("data/final/enrich_pts.json"),
   // quadtree ready
-    quadtreeReps = d3.json("data/final/quadtree_search_reps.json");
+    quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
+      triggerPts = d3.json("data/final/enrich_trigger_pts.json");
 
 
 //// ASSORTED VARIABLE DECLARATION
@@ -176,59 +177,6 @@
     .on("arrive.train", arrived)
     .on("force.tick", updateLabelPositions)
 
-// DECLARE (BUT DON'T NECESSARILY DEFINE) CERTAIN VARIABLES FOR LATER ACCESS
-
-  let timer, routeQuadtree; // observer
-
-  var labels = [];
-
-  var labelLayout = d3.forceSimulation(labels)
-    // .force('collision', rectCollide().size(d => [d.label.length, 1])) // size is relative estimate based on number of letters long (x constant letters high)
-    // .force('collision', d3.forceCollide().radius(1))
-    .force('x', d3.forceX().x(d => d.x0).strength(100))
-    .force('y', d3.forceY().y(d => d.y0).strength(100))
-    // .on('tick', updateLabelPositions)
-    .stop()  // will control ticks manually as labels are added
-
-  let encounteredPts = new Set(), // [],
-    encounteredLines = new Set(), // [],
-    encounteredPolys = new Set(), // [],
-    uniqueEncounters = new Set(),
-       allEncounters = [];
-
-  let enterAlign = "left",
-       exitAlign = "right";
-
-  let togglesOff = {
-    info: false,
-    select: false
-  }
-  let assocBtns = {
-    // contentId: btn
-    "modal-about": "info",
-    "get-options": "select"
-  }
-  let oppContent = {
-    "modal-about": "get-options",
-    "get-options": "modal-about"
-  }
-
-  let defaultOptions = {
-    extent: extent0,
-    scalePad: 0.1,
-    padTop: 0,
-    padRight: 0,
-    padBottom: 0,
-    padLeft: 0
-  }
-
-  const cityState = d => { return d.city + ", " + d.state; }
-
-  let prevLocation, prevRotate, prevExtent, searchExtent;
-
-  let mm = 0, accumReset = 0, geoMM;
-
-  let totalMiles;
 
 // COLORS
 
@@ -238,6 +186,15 @@
 
   const riverBlue = "aquamarine",
          lakeBlue = "teal";
+
+  const purple = '#c97b9f',
+     purpleRed = '#94417f',
+     orangeRed = '#f94545',
+   peachOrange = '#f9b640',
+   yellowPeach = '#ec934a',
+    yellowGold = '#c7993f',
+     goldGreen = '#b5be6a',
+     groupBlue = '#09a094';
 
   let colorAssignments = {
     watersheds: {
@@ -327,11 +284,16 @@
     .lighter(12)
     .thicker(18)
     .shapeRendering("crispEdges")
-  let tLines = textures.lines()
+  let tLines1 = textures.lines()
     // .size(0.5)
     .thicker(18)
     .lighter(12)
-    .orientation("diagonal")
+    .orientation("4/8")
+  let tLines2 = textures.lines()
+    // .size(0.5)
+    .thicker(18)
+    .lighter(12)
+    .orientation("8/8")
   let tCircles = textures.circles()
     .complement()
     .thicker(18)
@@ -346,11 +308,229 @@
 
   svg.call(tWaves)
 
-  let textureOpts = [tCircles,tHexagons,tNylon,tCrosses,tLines]
+  let textureOpts = [tCircles,tHexagons,tNylon,tCrosses,tLines1,tLines2]
 
   textureOpts.forEach(d => {
     d.stroke(paletteScale(random()))
   })
+
+  const outline1 = "rgba(76, 83, 91, .6)",  // could also be url(#pattern)s
+        outline2 = "rgba(76, 83, 91, .3)"
+
+// DECLARE (BUT DON'T NECESSARILY DEFINE) MORE VARIABLES FOR LATER ACCESS
+
+  let timer, routeQuadtree; // observer
+
+  var labels = [];
+
+  var labelLayout = d3.forceSimulation(labels)
+    // .force('collision', rectCollide().size(d => [d.label.length, 1])) // size is relative estimate based on number of letters long (x constant letters high)
+    // .force('collision', d3.forceCollide().radius(1))
+    .force('x', d3.forceX().x(d => d.x0).strength(100))
+    .force('y', d3.forceY().y(d => d.y0).strength(100))
+    // .on('tick', updateLabelPositions)
+    .stop()  // will control ticks manually as labels are added
+
+  let encounteredPts = new Set(), // [],
+    encounteredLines = new Set(), // [],
+    encounteredPolys = new Set(), // [],
+    uniqueEncounters = new Set(),
+       allEncounters = [];
+
+  let logGroups = new Set(),
+        paTypes = new Set(),
+      symbolIds = [];
+
+  let enrichCats = {  // enrichData categories/logTypes
+    "ECOREGION": {
+      divId: "ecoregions",
+      fullTxt: "Ecoregions" //,
+      // subTxt: "Level " + level
+      // no keywords; CATEGORY === "Ecoregion"
+      // subId = ecoZone + LEVEL
+      // fill only, no texture;:
+        // base color derived from one of 13 parent ecoZones
+          // 5 shades/variations by level?
+    },
+    "WATERSHED": {
+      divId: "watersheds",
+      fullTxt: "Watersheds" //,
+      // subTxt: "Drains to " + getDrainName(oceanId)
+      // no keywords; CATEGORY === "Watershed"
+      // subId = oceanId (no levels)
+      // lines only, no texture:
+        // same dash-array, 5 colors (per oceanId)
+    },
+    "LAKE": {
+      divId: "lakes",
+      fullTxt: "Lakes",
+      texture: tWaves
+      // no keywords, CATEGORY.startsWith("Lake")
+    },
+    "RIVER": {
+      divId: "rivers",
+      fullTxt: "Rivers"
+      // no keywords, CATEGORY.startsWith("River")
+      // lines only, no texture
+        // color === riverBlue
+    },
+    "INVENTORIED ROADLESS": {
+      divId: "roadless-areas",
+      fullTxt: "Inventoried Roadless Areas",
+      texture: tNylon
+      // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
+    },
+    "VOLCANO": {
+      divId: "volcanoes",
+      fullTxt: "Volcanoes",
+      texture: tLines1 // rarely used:  will either be protected area (and thus share protected area texturing) or be a simple pt to begin with
+      // no keywords; CATEGORY.startsWith("Volcano")
+    },
+    "GEOTHERM": {
+      divId: "geothermal-areas",
+      fullTxt: "Other Geothermal Areas",
+      texture: tLines2  // rarely used:  will either be protected area (and thus share protected area texturing) or be a simple pt to begin with
+      // no keywords; CATEGORY === "Geothermal System"
+    },
+    "PA1": {  // must match one of EACH keyword category
+      divId: "pa-grp1",
+      fullTxt: "Protected Areas - Group 1",  // primary
+      keywords1: ["national", "state", "provincial"].map(d => d.toUpperCase()),
+      keywords2: ["park", "parks", "monument", "monuments", "seashore", "lakeshore", "forest", "forests", "refuge", "grassland", "grasslands"].map(d => d.toUpperCase()),
+      // kw2Slimmed: [park*, monument*, forest*, grassland*],
+      weight: 1,
+      texture: tHexagons,  // honeycomb
+      getStroke(d) {
+        let description = d.properties.DESCRIPTION.toUpperCase();
+        if (description.match("NATIONAL")) {
+          return outline1;
+        } else if (description.match("STATE") || description.match("PROVINCIAL")) {
+          return outline2;
+        }
+      }
+    },
+    "PA2": {
+      divId: "pa-grp2",
+      fullTxt: "Protected Areas - Group 2",  // secondary
+      keywords: ["national", "state", "provincial", "park", "parks", "monument", "monuments", "seashore", "lakeshore", "forest", "forests", "refuge", "grassland", "grasslands", "reserve", "preserve", "conservation", "conservancy", "environmental", "critical", "wetland", "wetlands", "wilderness", "ecological", "biodiversity", "botanical", "study", "research", "science"].map(d => d.toUpperCase()), // ??
+      // kwSlimmed: [park*, monument*, forest*, grassland*, conserv*, wetland*],
+      weight: 2,
+      texture: tCrosses
+      // national, state, provincial, park, monument, etc matches will be disjoint from PA1 group above (matched only one keyword group, not both)
+    },
+    "PA3": {
+      divId: "pa-grp3",
+      fullTxt: "Protected Areas - Group 3",  // remaining
+      weight: 3,
+      texture: tCircles
+      // no keywords; CATEGORY === "Protected Area" && DESCRIPTION !== "Inventoried Roadless Area"
+    }
+  },
+         catKeys = Object.keys(enrichCats);
+
+  let paTags = {  // protected area tags; not mutually exclusive with protected area categories, but mutually exclusive amongst each other; catalogued in order of first preference / weight
+    "geo": {
+      divId: "pa-geo",
+      fullTxt: "Geothermal",  // or likely so
+      keywords: ["geothermal", "geologic", "geological", "volcano", "volcanoes", "volcanic", "stratovolcano", "stratovolanic", "stratovolcanoes", "lava", "lavas", "dome", "domes", "cone", "cones", "cinder", "cinders", "maar", "maars", "caldera", "calderas", "tuff ring", "tuff rings", "pyroclastic", "geyser", "geysers", "hot spring", "hot springs", "hot well", "hot wells", "sulphur", "sulphuric", "boiling", "mount", "mt"].map(d => d.toUpperCase()),
+      // kwSlimmed: [geo*, volcan*, strato*, lava*, dome*, cone*, cinder*, maar*, caldera*, tuff*, geyser*, pyro*, sulphur*, /^(hot)\s+/, /\s+(cone)\s*/],  // these regexes don't necessary work yet!
+      weight: 1,
+      color: orangeRed
+    },
+    "hab": {
+      divId: "pa-hab",
+      fullTxt: "Habitat",
+      keywords: ["habitat", "habitats", "wildlife", "den", "dens", "breeding", "migratory", "migration", "critical", "gathering", "species", "sccc", "fish", "fauna", "range", "ranges", "nest", "nesting", "pupping", "grounds"].map(d => d.toUpperCase()), // ALSO, HABITAT FLAG!
+      // kwSlimmed: [habitat*, den*, migrat*, nest*, range*],
+      weight: 2,
+      color: goldGreen
+    },
+    "water": {
+      divId: "pa-water",
+      fullTxt: "Water-Related",
+      keywords: ["wetland", "wetlands", "sea", "seashore", "seashores", "lake", "lakeshore", "lakeshores", "beach", "beaches", "coast", "coasts", "coastal", "marine", "estuary", "estuarine", "estuaries", "riparian", "spring", "springs", "water", "waters", "waterway", "waterways", "creek", "creeks", "stream", "streams", "river", "rivers", "confluence", "lake", "lakes", "bog", "bogs", "delta", "deltas", "tributary", "tributaries", "rapid", "rapids", "cove", "coves"].map(d => d.toUpperCase()),
+      // kwSlimmed: [water*, wetland*, sea*, stream*, creek*, bog*, lake*, beach*, coast*, estuar*, spring*, river*, lake*, delta*, tributar*, rapid*, cove*],
+      weight: 3,
+      color: groupBlue
+    },
+    "wild": {
+      divId: "pa-wild",
+      fullTxt: "Other Wildlands",
+      keywords: ["wild", "wilds", "wildland", "wildlands", "wilderness", "ecology", "ecological", "grassland", "grasslands", "biodiverse", "biodiversity", "refuge", "refuges", "botanical"].map(d => d.toUpperCase()),
+      // kwSlimmed: [wild*, ecolog*, grass*, biodivers*, refuge*],
+      weight: 4,
+      color: yellowGold
+    },
+    "sci": {
+      divId: "pa-sci",
+      fullTxt: "Science & Research",
+      keywords: ["experiment", "experimental", "study", "studies", "station", "stations", "research", "science", "scientific", "school", "schools"].map(d => d.toUpperCase()),
+      // kwSlimmed: [experiment*, stud*, station*, scien*, school*],
+      weight: 5,
+      color: peachOrange
+    },
+    "rec": {
+      divId: "pa-rec",
+      fullTxt: "Recreational",
+      keywords: ["recreation", "recreational", "trail", "trails", "greenway", "greenways"].map(d => d.toUpperCase()),
+      // kwSlimmed: [recreat*, trail*, greenway*],
+      weight: 6,
+      color: purpleRed
+    },
+    "rpc": {
+      divId: "pa-rpc",
+      fullTxt: "Otherwise Reserved/Preserved/Conserved",
+      keywords: ["reserve", "reserves", "preserve", "preserves", "conservation", "conservancy", "conservancies", "easement", "easements"].map(d => d.toUpperCase()),
+      // kwSlimmed: [reserve*, preserve*, conserv*, easement*],
+      weight: 7,
+      color: yellowPeach
+    },
+    "other": {
+      divId: "pa-other",
+      fullTxt: "Other Protected Area",  // vaguest
+      keywords: ["nature", "natural", "open", "scenic", "historic", "blm", "land", "lands", "area", "areas", "protection", "protected"].map(d => d.toUpperCase()),  // only match if no better fit
+      // kwSlimmed: [natur*, land*, area*, protect*],
+      weight: 8,
+      color: purple
+    }
+    // ANYTHING LEFTOVER??
+  },
+      paKeys = Object.keys(paTags),
+    tagWords = Object.values(paTags).map(d => d.keywords);
+
+  // let enterAlign = "left",
+  //      exitAlign = "right";
+
+  let togglesOff = {
+    info: false,
+    select: false
+  }
+  let assocBtns = {
+    // contentId: btn
+    "modal-about": "info",
+    "get-options": "select"
+  }
+  let oppContent = {
+    "modal-about": "get-options",
+    "get-options": "modal-about"
+  }
+
+  let defaultOptions = {
+    extent: extent0,
+    scalePad: 0.1,
+    padTop: 0,
+    padRight: 0,
+    padBottom: 0,
+    padLeft: 0
+  }
+
+  const cityState = d => { return d.city + ", " + d.state; }
+
+  let prevLocation, prevRotate, prevExtent, searchExtent;
+
+  let mm = 0, accumReset = 0, geoMM;
+
+  let totalMiles;
 
 
 //// PREPARE MAP LAYERS
@@ -2328,6 +2508,15 @@
     let id = this.properties.id,
       baseT;
 
+    // let reveal = // get assoc geom/gj
+    // console.log(this)
+
+    // get and save logGroup/category and protected area tags
+    let logGroup = getGroup(this),
+           paTag = (logGroup.fullTxt.startsWith("Protected Area")) ? getTag(this) : null;
+    this.properties.logGroup = logGroup,
+      this.properties.paTag = paTag;
+
     if (id.startsWith('pt')) {
 
       baseT = this.properties.SNAP_DISTANCE;
@@ -2450,6 +2639,80 @@
 
     }
 
+    function getGroup(gj) {
+
+      // SWING ONE
+      let catMatch;
+      if (gj.properties.CATEGORY) {
+        catMatch = gj.properties.CATEGORY.toUpperCase(),
+        catIndex = catKeys.findIndex(startsWith,catMatch);
+        if (catIndex >= 0) {
+          return enrichCats[catKeys[catIndex]];
+        }
+      }
+
+      // SWING TWO
+      let descrMatch;
+      if (gj.properties.DESCRIPTION) {
+        descrMatch = gj.properties.DESCRIPTION.toUpperCase(),
+        descrIndex = catKeys.findIndex(startsWith,descrMatch);
+        if (descrIndex >= 0) {
+          return enrichCats[catKeys[descrIndex]];
+        }
+      }
+
+      // FINAL SWING
+      if (catMatch === "PROTECTED AREA") {  // it must be; get tier
+        if (enrichCats["PA1"].keywords1.some(match,descrMatch) && enrichCats["PA1"].keywords2.some(match,descrMatch)) {
+          return enrichCats["PA1"];
+        } else if (enrichCats["PA2"].keywords.some(match,descrMatch)) {
+          return enrichCats["PA2"];
+        } else {
+          return enrichCats["PA3"];
+        }
+      } else {
+        console.log("WHAA??")
+        console.log(catMatch)
+        console.log(descrMatch)
+        console.log(catKeys)
+        console.log(gj.properties) // GRASSLAND, PA?
+      }
+
+      function match(text) {
+        return this.match(text) // || text.match(this);
+      }
+      function startsWith(text) {
+        return text.startsWith(this) || this.startsWith(text);
+      }
+
+    }
+
+    function getTag(gj) {
+
+      console.log(tagWords)
+
+      if (gj.properties.flag === "habitat") return paTags["hab"];
+
+      // else
+      let paDescr = gj.properties.DESCRIPTION,
+         tagIndex = tagWords.findIndex(someMatch,paDescr);
+
+      console.log(tagIndex)
+      console.log(paTags[paKeys[tagIndex]])
+
+      return paTags[paKeys[tagIndex]];
+
+      function someMatch(arr) {
+        return arr.some(match,this);
+
+        function match(text) {
+          return this.match(text);
+        }
+
+      }
+
+    }
+
   }
 
   function splitMultiString(triggerPt,d) {  // triggerPt == coords only
@@ -2553,6 +2816,8 @@
           .property("description", d => d.properties.DESCRIPTION)
           .property("more-info", d => d.properties.MORE_INFO)
           .property("baseT", d => d.properties.SNAP_DISTANCE)
+          .property("log-group", d => d.properties.logGroup)
+          .property("pa-tag", d => d.properties.paTag)
           .property("orig-opacity", ptOpacity)
           .property("orig-stroke-opacity", ptStrokeOpacity)
           .style("fill", getFill)
@@ -2596,6 +2861,8 @@
                     .property("name", d => d.properties.NAME)
                     .property("category", d => d.properties.CATEGORY)
                     .property("level", d => d.properties.LEVEL)
+                    .property("log-group", d => d.properties.logGroup)
+                    .property("pa-tag", d => d.properties.paTag)
                     .property("orig-opacity", lineOpacity)
                     .property("orig-stroke-opacity", lineOpacity)
                     .style("fill", getFill)
@@ -2667,6 +2934,8 @@
           .property("level", d => d.properties.LEVEL)
           .property("more-info", d => d.properties.MORE_INFO)
           .property("description", d => d.properties.DESCRIPTION)
+          .property("log-group", d => d.properties.logGroup)
+          .property("pa-tag", d => d.properties.paTag)
           .property("orig-opacity", polyOpacity)
           .property("orig-stroke-opacity", polyStrokeOpacity)
           .style("fill", getFill)
@@ -2762,9 +3031,7 @@
 
       updateOutput(allEncounters.slice(0,maxOutput))
 
-      // updateOutput(encountered)
-
-      flashLabel(encountered)
+      // flashLabel(encountered) // pausing on this for now
 
       log(encountered)
 
@@ -2891,21 +3158,117 @@
 
       }
 
-      function log(encounter) {
+      function log(encountered) {
 
-        // // initial element type/symbol, plus counter +=1 on each subsequent
-        // // subsequent encounters
-        //   // add 1 to log count
-        // const logTypes = {}
-        //
-        // function styleToSymbol() {}
-        //
-        // if (!logTypes[type]) {
-        //   logTypes[type] = {
-        //     count: 0
-        //   }
-        //   logTypes[type].count++
-        // }
+        let group = encountered.property("log-group"),
+              tag = encountered.property("pa-tag");
+
+        logGroups.has(group.divId) ? addToCount(group.divId) : addNewGroup(encountered,group);
+
+        if (tag) {
+          console.log("here") // tags not updating
+          paTypes.has(tag.divId) ? addToCount(tag.divId) : addNewGroup(encountered,tag,paTypes,group.divId,6);
+        }
+
+        function addToCount(id) {
+
+          // access current
+          let logCount = d3.select("#legend-log-content").select(`#${id}`).select("span.log-count"),
+               current = logCount.text()
+
+          // add one & update
+          logCount.text(+current+1)
+
+        }
+
+        function addNewGroup(encountered,group,parentSet = logGroups, parentDivId = "legend-log-content",padLeft = 0) {
+
+          parentSet.add(group.divId);
+
+          let symbol = styleToSymbol(encountered,group);
+
+          symbolIds.push(symbol.id)
+          console.log(symbolIds) // use this list to style!
+
+          let newItem = d3.select(`#${parentDivId}`).append("div")
+            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm border-b border--dash legend-log-item",true)
+            .html(getLogHtml(group,symbol.id))
+            .style("opacity", 0)  // initially
+
+      // use css or d3 to style symbol spans?
+          console.log(newItem.select(`#${symbol.id}`).node())
+      // don't forget to specify 'px'
+
+          console.log(symbol)
+          console.log(newItem.select(`#${symbol.id}`).style("fill"))
+          console.log(newItem.select(`#${symbol.id}`).style("stroke"))
+          console.log(newItem.select(`#${symbol.id}`).style("stroke-width"))
+          console.log(newItem.select(`#${symbol.id}`).style("opacity"))
+
+          // add fill to new HTML element within newItem
+          newItem.select(`#${symbol.id}`)
+            .style("fill",symbol.fill)
+            .style("stroke",symbol.stroke)
+            .style("stroke-width",symbol.strokeWidth)
+            .style("stroke-dasharray",symbol.strokeDashArray)
+            .style("stroke-opacity",symbol.strokeOpacity)
+            .style("opacity",symbol.opacity)
+            .attr("transform",symbol.transform)
+
+          // transition whole line into full opacity
+          newItem.transition().duration(300)
+            .style("opacity", 1)
+
+          function getLogHtml(group,fillId) {
+            let initCount = 1,
+              html = `
+                <div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross pl${padLeft}">
+                  <span id="${fillId}" class="flex-child flex-child--no-shrink h24 w24 log-symbol"></span>
+                  <label class="flex-child flex-child--grow log-name">${group.fullTxt}</label>
+                  <span class="flex-child flex-child--no-shrink h24 w24 log-count">${initCount}</span>
+                </div>
+              `
+            return html;
+          }
+
+          function styleToSymbol(encountered,group) {
+
+            // element will already be styled appropriately at this point; turn style to symbol
+            let divId = (encountered.property("pa-tag")) ? encountered.property("pa-tag").divId : encountered.property("log-group").divId;
+
+            // h24, w24 square:
+            let symbol = {
+              id: divId + "-sym",
+              fill: encountered.style("fill"),
+              stroke: encountered.style("stroke"),
+              strokeWidth: encountered.style("stroke-width"),
+              strokeDashArray: encountered.style("stroke-dasharray"),
+              strokeOpacity: encountered.style("orig-stroke-opacity"),
+              opacity: encountered.style("orig-opacity"),
+              get transform() { if (!this.fill) return "rotate(45)" }
+            }
+
+            // legend outright:
+              // circle size calculation
+              // line dash array / watershed colors
+              // ecozone color bases
+
+            // pts:
+              // circle
+              // size? color?
+            // lines:
+              // diagonal line across sq
+              // dash-array, color
+            // polygons:
+              // square patch
+
+            // "Note there may be some overlap among categories (and their visual representation), e.g., a portion of the _ National Wild & Scenic River counting toward rivers and protected areas"
+
+            return symbol;
+
+          }
+
+        }
 
       }
 
@@ -3262,7 +3625,9 @@
 
   function getStroke(d) {
     let props = d.properties; // shorthand
-    if (props.CATEGORY === "Watershed") {
+    if (props.logGroup.divId === "pa-grp1") {
+      return props.logGroup.getStroke(d);
+    } else if (props.CATEGORY === "Watershed") {
       return colorAssignments.watersheds[props.OCEAN_ID].base;
     } else if (props.CATEGORY === "Ecoregion") {
       return chroma(colorAssignments.ecoregions[props.ECOZONE].base).brighten(2)
@@ -3270,24 +3635,37 @@
       return riverBlue;
     } else if (props.CATEGORY.startsWith("Lake")) {
       return lakeBlue;
+    } else if (props.paTag && props.paTag.color) {
+      return props.paTag.color
     } else {  // hover effects on textured (non-ecoregion) polygons
-      return paletteScale(random()); // "dimgray"
+      console.log("???") // currently, protected areas
+      console.log(d)
+      return paletteScale(random());
     }
   }
 
   function getFill(d) {
     let props = d.properties; // shorthand
-    if (props.CATEGORY === "Lake") {
-      return tWaves.url();
+    let texture = props.logGroup.texture;
+    if (props.logGroup.texture) {
+      if (props.paTag && props.paTag.color) {
+        let stroked = props.logGroup.texture.stroke(props.paTag.color);
+        svg.call(stroked);
+        return stroked.url();
+      } else {
+        return props.logGroup.texture.url();
+      }
     } else if (props.CATEGORY === "Ecoregion") {
       return getColor("Ecoregion",props.ECOZONE,props.LEVEL)
       // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
     } else if (props.id.startsWith("ln")) {  // only lake lines filled
       return "none";
-    } else if (props.id.startsWith("pt")) {
-      return paletteScale(random());
+    } else if (props.paTag && props.paTag.color) {
+      return props.paTag.color;
     } else {
-      let chosen = textureOpts[random(textureOpts.length-1)];
+      console.log("???")
+      console.log(d)
+      let chosen = textureOpts[random(textureOpts.length-1)].stroke(paletteScale(random()));
       svg.call(chosen)
       return chosen.url();
     }
