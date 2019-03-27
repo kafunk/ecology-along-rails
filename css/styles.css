@@ -80,11 +80,15 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   border-left: 1px double dimgray;
 }
 
+
+#legend-log {
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+}
+
 #footer a {
   color: darksalmon; /* rosybrown; */
   /* font-weight: 700; */
 }
-
 
 .bg-base { background: #2A4C48; } /* #dbd99f; } */
 /* .bg-main {} */
@@ -135,21 +139,36 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .txt-xxs { font-size: 0.5em; }
 
 .txt-compact { line-height: 0.8em; }
-.flex1 {
-  order: 1;
-}
-.flex2 {
-  order: 2;
-}
-.flex3 {
-  order: 3;
-}
+.flex1 { order: 1; }
+.flex2 { order: 2; }
+.flex3 { order: 3; }
 
 .already-open {
   animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
+}
+
+/* details triangle marker position is absolute to legend-log-item (in chrome, anyway)*/
+/* details > summary,  */
+details > summary::-webkit-details-marker {
+  position: absolute;
+  top: 0.5; left: 8px;
+}
+/* hide details triangle marker until child content added */
+details.hide-triangle > summary {
+  list-style: none;
+}
+details.hide-triangle > summary::-webkit-details-marker {
+  display: none;
+}
+/* adjust indent/border-l on child legend items only, while keeping all label text centered */
+details .legend-log-item {
+  margin-left: 12px
+}
+details .legend-log-item label {  /*log-name*/
+  margin-left: -12px
 }
 
 /* .svg-content {
@@ -188,7 +207,7 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 }
 
 /* MEDIA QUERIES */
-@media screen and (min-width: 400px) { }
+/* @media screen and (min-width: 400px) { } */
 @media screen and (min-width: 640px) {
   .widget {
     border: 4px solid #6B7063;
@@ -197,38 +216,16 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   }
 }
 @media screen and (min-width: 800px) {
-  .flex1-ml {
-    order: 1;
-  }
-  .flex2-ml {
-    order: 2;
-  }
-  .flex3-ml {
-    order: 3;
-  }
+  .flex1-ml { order: 1; }
+  .flex2-ml { order: 2; }
+  .flex3-ml { order: 3; }
 }
-/* @media screen and (min-width: 800px) and (max-width: 860px) {
-  /* remove awkward padding from top/bottom of form
-  fieldset { padding: 0 auto;}
-} */
-@media screen and (min-width: 1200px) { }
-
+/* @media screen and (min-width: 1200px) { } */
 
 /* ANIMATION */
 @keyframes shake {
-  10%, 90% {
-    transform: translate3d(-1px, 0, 0);
-  }
-
-  20%, 80% {
-    transform: translate3d(2px, 0, 0);
-  }
-
-  30%, 50%, 70% {
-    transform: translate3d(-4px, 0, 0);
-  }
-
-  40%, 60% {
-    transform: translate3d(4px, 0, 0);
-  }
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
 }
