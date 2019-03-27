@@ -156,11 +156,10 @@
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid'>
 
                             <!-- Legend-Log -->
-                            <div class="col col--5 hmax120 hmax180-ml"><!--grid flex1 -->
+                            <div class="col col--5 hmax120 hmax180-ml">
 
-                              <div id="legend-log" class="flex-child flex-child--grow h-full bg-lighten25 py6 py12-mm pr6 pl6 pl12-mm"><!--col col--12 flex1-->
+                              <div id="legend-log" class="flex-child flex-child--grow h-full py6 py12-mm pr6 pl6 pl12-mm">
 
-                                <!-- <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross h-full round"> -->
                                 <div class="flex-parent flex-parent--column h-full round">
 
                                   <!-- header -->
@@ -184,13 +183,6 @@
                                   <!-- main content / dynamically populated legend items  -->
                                   <div id="log-content-wrapper" class="flex-child flex-child--grow align-center w-full bg-lighten75 px12 py6 scroll-auto">
                                     <div id="legend-log-content" class="flex-parent flex-parent--column border-b border--dash">
-                                      <!-- <div class="flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm border-b border--dash legend-log-item">
-                                        <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
-                                          <span id="log-symbol" class="flex-child flex-child--no-shrink placeholder h24 w24 bg-blue"></span>
-                                          <span id="log-name" class="flex-child flex-child--grow placeholder">name</span>
-                                          <span id="log-count" class="flex-child placeholder flex-child--no-shrink h24 w24 bg-red">#</span>
-                                        </div>
-                                      </div> -->
                                     </div>
                                   </div>
 
@@ -199,15 +191,14 @@
 
                                 </div>
 
-                              </div> <!--end of legend-log -->
+                              </div>
 
                             </div>
 
                             <!-- Widgets -->
-                            <div class="col none block-ml col--2-ml  hmax180-ml"><!--grid flex2-ml-->
+                            <div class="col none block-ml col--2-ml  hmax180-ml">
 
-                              <!-- Widgets --> <!-- SO REPETITIVE; but how else can i get this element to be centered @media screen-mxl? -->
-                              <div id="widgets-plus2" class="flex-child flex-child--grow h-full bg-lighten25 pt3 pb6 pb12-mm py12-ml pr6 pr12-mm pr6-ml pl3 pl6-mm"><!--col col--12 flex3 flex2-ml-->
+                              <div id="widgets-plus" class="flex-child flex-child--grow h-full px6 py6 py12-mm">
 
                                 <div class="flex-parent flex-parent--column h-full round">
 
@@ -241,126 +232,63 @@
 
                                 </div>
 
-                              </div> <!-- end of widgets+ -->
+                              </div>
 
                             </div>
 
-                            <!-- Narration (+ Widgets on Small Screens) -->
-                            <div class="col col--7 col--5-ml hmax120 hmax180-ml"><!-- grid flex2 flex3-ml -->
+                            <!-- Narration -->
+                            <div class="col col--7 col--5-ml hmax120 hmax180-ml">
 
-                              <!-- Narration -->
-                              <div id="narration" class="flex-child flex-child--grow h-full bg-lighten25 pt6 pt12-mm pr6 pr12-mm pb3 pb6-mm pl3 pl6-mm py12-ml">
+                              <div id="narration" class="flex-child flex-child--grow h-full py6 py12-mm pl6 pr6 pr12-mm">
 
                                 <div class="flex-parent flex-parent--column h-full round">
 
                                   <!-- header -->
-                                  <div id="narration-header" class="flex-child flex-child-no-shrink hmin18 py3 bg-darken25 round-tl round-tr color-lighten75 flex-parent flex-parent--center-cross flex-parent--center-main">
+                                  <div id="narration-header" class="flex-child flex-child-no-shrink bg-darken25 round-tl round-tr color-lighten75 hmin24 py3 flex-parent flex-parent--center-cross flex-parent--center-main">
                                     <h5 class='flex-child txt-h6 txt-fancy txt-em txt-bold'>You are currently:</h5>
                                   </div>
 
-                                  <div id="narration-txt" class="flex-child flex-child--grow bg-lighten75 grid"><!--#encounters-->
-                                    <!-- <div id="encounters" class="flex-parent h-full grid"> -->
-                                      <div id="encounters-A" class="h-full col col--4 flex-parent flex-parent--column scroll-auto">
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Traversing special places</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Encountering incredible things</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Beholding the world made fresh again</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Traversing special places</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Encountering incredible things</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Beholding the world made fresh again</span>
-                                        </div>
+                                  <div id="narration-txt" class="flex-child flex-child--grow bg-lighten75 px3 py3 grid">
+                                    <div id="encounters-A" class="h-full col col--4 flex-parent flex-parent--column scroll-auto">
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Traversing special places</span>
                                       </div>
-                                      <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column align-center scroll-auto">
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Encountering incredible things</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Beholding the world made fresh again</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Traversing special places</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Encountering incredible things</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Beholding the world made fresh again</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Traversing special places</span>
-                                        </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Encountering incredible things</span>
                                       </div>
-                                      <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column align-r scroll-auto">
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Beholding the world made fresh again</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Traversing special places</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Encountering incredible things</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Beholding the world made fresh again</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Traversing special places</span>
-                                        </div>
-                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
-                                          <span>Encountering incredible things</span>
-                                        </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Beholding the world made fresh again</span>
                                       </div>
-                                    <!-- </div> -->
+                                    </div>
+                                    <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column align-center scroll-auto">
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Encountering incredible things</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Beholding the world made fresh again</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Traversing special places</span>
+                                      </div>
+                                    </div>
+                                    <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column align-r scroll-auto">
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Beholding the world made fresh again</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Traversing special places</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Encountering incredible things</span>
+                                      </div>
+                                    </div>
                                   </div>
 
                                   <div id="narration-footer" class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
 
                                 </div>
 
-                              </div> <!-- end of narration -->
-
-                              <!-- Widgets -->
-                              <!-- <div id="widgets-plus" class="flex-child col col--12 bg-lighten25 pt3 pb6 pb12-mm py12-ml pr6 pr12-mm pr6-ml pl3 pl6-mm flex3 flex2-ml none-ml">
-
-                                <div class="flex-parent flex-parent--column h-full round"> -->
-
-                                  <!-- header -->
-                                  <!-- <div class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div> -->
-
-                                  <!-- content -->
-                                  <!-- <div class="flex-child flex-child--grow bg-lighten75 px6 py3">
-                                    <div id="widgets" class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid">
-                                      <div id="elevation-wrapper" class="flex-child col col--3 py3 pl3">
-                                        <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
-                                      </div>
-                                      <div id="compass-wrapper" class="flex-child col col--3 py3 pr6">
-                                        <div id="compass" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
-                                      </div>
-                                      <div id="odometer-wrapper" class="flex-child col col--3 py3 pl6">
-                                        <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
-                                      </div>
-                                      <div id="speed-wrapper" class="flex-child col col--3 py3 pr3">
-                                        <div id="speedometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
-                                      </div>
-                                    </div>
-                                  </div> -->
-
-                                  <!-- footer -->
-                                  <!-- <div class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
-
-                                </div> -->
-
-                              <!-- </div> --> <!-- end of widgets+ -->
+                              </div>
 
                             </div>
 
