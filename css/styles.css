@@ -7,7 +7,6 @@
   --bg-accent2: #5d7876;
 }
 
-
 body { margin:0; padding:0; } /* background-color:#fafafa; } */
 /* h1 { font-family: 'Stardos Stencil', cursive; } */
 h1 { font-family: 'Mirza', cursive;} /* note that different fonts will require different margin adjustments */
@@ -17,6 +16,27 @@ a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
 svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-rendering: optimizeSpeed; } */
+
+/* details triangle marker position is absolute to legend-log-item (in chrome, anyway)*/
+/* details > summary,  */
+details > summary::-webkit-details-marker {
+  position: absolute;
+  top: 0.5; left: 8px;
+}
+/* hide details triangle marker until child content added */
+details.hide-triangle > summary {
+  list-style: none;
+}
+details.hide-triangle > summary::-webkit-details-marker {
+  display: none;
+}
+/* adjust indent/border-l on child legend items only, while keeping all label text centered */
+details .legend-log-item {
+  margin-left: 12px
+}
+details .legend-log-item label {  /*log-name*/
+  margin-left: -12px
+}
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
@@ -37,56 +57,28 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   scroll-behavior: smooth;
   transition: 0.4s;
 }
-#elevation,#compass {
+#elevation,#speedometer {
   border-radius: 5px 50px;
   background: #dbd99f;
 }
-#odometer,#speedometer {
+#odometer,#compass {
   border-radius: 50px 5px;
   background: #dbd99f;
-}
-#elevation,#speedometer,#compass,#odometer {
-  border-top: 1px double dimgray;
-}
-#compass,#speedometer {
-  border-right: 1px double dimgray;
-}
-#compass,#odometer,#elevation,#speedometer {
-  border-bottom: 1px double dimgray;
 }
 #elevation,#odometer {
-  border-left: 1px double dimgray;
-}
-
-/* all doubles belwo temporary until i figure out how to center same widgets element within dash on both small & large screens */
-#elevation2,#speedometer2 {
-  border-radius: 5px 50px;
-  background: #dbd99f;
-}
-#odometer2,#compass2 {
-  border-radius: 50px 5px;
-  background: #dbd99f;
-}
-#elevation2,#odometer2 {
   border-top: 1px double dimgray;
 }
-#odometer2,#speedometer2 {
+#odometer,#speedometer {
   border-right: 1px double dimgray;
 }
-#compass2,#speedometer2 {
+#compass,#speedometer {
   border-bottom: 1px double dimgray;
 }
-#elevation2,#compass2 {
+#elevation,#compass {
   border-left: 1px double dimgray;
 }
-
-
-#legend-log {
-  box-shadow: 0 0 15px rgba(0,0,0,0.2);
-}
-
 #footer a {
-  color: darksalmon; /* rosybrown; */
+  color: darksalmon;
   /* font-weight: 700; */
 }
 
@@ -149,34 +141,6 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   backface-visibility: hidden;
   perspective: 1000px;
 }
-
-/* details triangle marker position is absolute to legend-log-item (in chrome, anyway)*/
-/* details > summary,  */
-details > summary::-webkit-details-marker {
-  position: absolute;
-  top: 0.5; left: 8px;
-}
-/* hide details triangle marker until child content added */
-details.hide-triangle > summary {
-  list-style: none;
-}
-details.hide-triangle > summary::-webkit-details-marker {
-  display: none;
-}
-/* adjust indent/border-l on child legend items only, while keeping all label text centered */
-details .legend-log-item {
-  margin-left: 12px
-}
-details .legend-log-item label {  /*log-name*/
-  margin-left: -12px
-}
-
-/* .svg-content {
-  display: inline-block;
-  position: absolute;
-  top: 0;
-  left: 0;
-} */
 
 /* TRIGGER PTS and other quadtree data */
 .quad-datum {
