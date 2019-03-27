@@ -39,6 +39,8 @@
   var initBounds = d3.json("data/final/bounding.json"),
           admin0 = d3.json("data/final/admin0.json"),
           admin1 = d3.json("data/final/admin1.json"),
+            land = d3.json("data/final/land.json"),
+          places = d3.json("data/final/places.json"),
          // terrain = d3.buffer("data/final/terrain.tif"),
        hydroBase = d3.json("data/final/hydro_base.json"),
        urbanBase = d3.json("data/final/urban_areas.json"), // add major roads?
@@ -194,6 +196,7 @@
    yellowPeach = '#ec934a',
     yellowGold = '#c7993f',
      goldGreen = '#b5be6a',
+    groupGreen = '#8bc188',
      groupBlue = '#09a094';
 
   let colorAssignments = {
@@ -216,12 +219,12 @@
       5: { base: "#DDA0DD" }, // "#a1d7df" },
       6: { base: "#50b244" },
       7: { base: "#46b5b0" },
-      8: { base: "#b1d57b" },
+      8: { base: "#8bc188" },
       9: { base: "#f3c28a" },
-      10: { base: "#f7d758" }, // '#b5be6a','#9dc579','#8bc188'
-      11: { base: "#c9e1a9" },
+      10: { base: "#EEE8AA" }, // '#9dc579','#8bc188'
+      11: { base: "#c9e1a9" }, // #EEE8AA
       12: { base: "#d3cd80" },
-      13: { base: "#b1d57b" },
+      13: { base: "#8bc188" }, // #b1d57b
       14: { base: "#e96c53" },
       15: { base: "#b75b9f" }
     }
@@ -266,54 +269,6 @@
       .attr("offset", function(d,i) { return i/(numColors-1)*50 + 40 + "%"; })
       .attr("stop-color", d => { return radialGradientScale(d) });
 
-// TEXTURES
-  let tWaves = textures.paths()
-    .d("waves")
-    .background(lakeBlue)
-    .stroke("mediumseagreen")
-    .thicker(18)
-    .lighter(12)
-    .shapeRendering("crispEdges")
-  let tCrosses = textures.paths()
-    .d("crosses")
-    .thicker(18)
-    .lighter(12)
-    .shapeRendering("crispEdges")
-  let tNylon = textures.paths()
-    .d("nylon")
-    .lighter(12)
-    .thicker(18)
-    .shapeRendering("crispEdges")
-  let tLines1 = textures.lines()
-    // .size(0.5)
-    .thicker(18)
-    .lighter(12)
-    .orientation("4/8")
-  let tLines2 = textures.lines()
-    // .size(0.5)
-    .thicker(18)
-    .lighter(12)
-    .orientation("8/8")
-  let tCircles = textures.circles()
-    .complement()
-    .thicker(18)
-    .lighter(12)
-    .fill(paletteScale(random()))
-  let tHexagons = textures.paths()
-    .d("hexagons")
-    .thicker(24)
-    .lighter(18)
-    .shapeRendering("crispEdges")
-    .fill("transparent")
-
-  svg.call(tWaves)
-
-  let textureOpts = [tCircles,tHexagons,tNylon,tCrosses,tLines1,tLines2]
-
-  textureOpts.forEach(d => {
-    d.stroke(paletteScale(random()))
-  })
-
   const outline1 = "rgba(76, 83, 91, .6)",  // could also be url(#pattern)s
         outline2 = "rgba(76, 83, 91, .3)"
 
@@ -331,15 +286,27 @@
     // .on('tick', updateLabelPositions)
     .stop()  // will control ticks manually as labels are added
 
+  let readyAndWaiting = {};
+
+  let assocCols = {
+    "pt": "A",
+    "py": "B",
+    "ln": "C"
+  }
+
   let encounteredPts = new Set(), // [],
     encounteredLines = new Set(), // [],
     encounteredPolys = new Set(), // [],
     uniqueEncounters = new Set(),
-       allEncounters = [];
+       allEncounters = {
+         "A": [],
+         "B": [],
+         "C": []
+       };
 
   let logGroups = new Set(),
-        paTypes = new Set(),
-      symbolIds = [];
+       tagTypes = new Set(),
+      symbolSet = new Set();
 
   let enrichCats = {  // enrichData categories/logTypes
     "ECOREGION": {
@@ -364,7 +331,9 @@
     "LAKE": {
       divId: "lakes",
       fullTxt: "Lakes",
-      texture: tWaves
+      // texture: tWaves
+      textureType: "paths",
+      textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 36, lighter: 24, shapeRendering: "crispEdges"}
       // no keywords, CATEGORY.startsWith("Lake")
     },
     "RIVER": {
@@ -374,22 +343,36 @@
       // lines only, no texture
         // color === riverBlue
     },
-    "INVENTORIED ROADLESS": {
+    "ROADLESS": {
       divId: "roadless-areas",
       fullTxt: "Inventoried Roadless Areas",
-      texture: tNylon
+      // texture: tNylon
+      textureType: "paths",
+      textureProps: {d: "nylon", thicker: 36, lighter: 24, shapeRendering: "crispEdges"}
       // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
+    },
+    "GRASSLAND": {
+      divId: "grassland",
+      fullTxt: "Grasslands",
+      // texture: tLines1
+      textureType: "lines",
+      textureProps: {thicker: 36, lighter: 24, orientation: "1/8"}
     },
     "VOLCANO": {
       divId: "volcanoes",
       fullTxt: "Volcanoes",
-      texture: tLines1 // rarely used:  will either be protected area (and thus share protected area texturing) or be a simple pt to begin with
+      // texture: tCaps
+      textureType: "paths",
+      textureProps: {d: "caps", thicker: 36, lighter: 24, shapeRendering: "crispEdges"}
+      // rarely used:  will either be protected area (and thus share protected area texturing) or be a simple pt to begin with
       // no keywords; CATEGORY.startsWith("Volcano")
     },
-    "GEOTHERM": {
+    "GEOTHERMAL": {
       divId: "geothermal-areas",
       fullTxt: "Other Geothermal Areas",
-      texture: tLines2  // rarely used:  will either be protected area (and thus share protected area texturing) or be a simple pt to begin with
+      // texture: tLines2
+      textureType: "lines",
+      textureProps: {thicker: 36, lighter: 24, orientation: "8/8"} // rarely used:  will either be protected area (and thus share protected area texturing) or be a simple pt to begin with
       // no keywords; CATEGORY === "Geothermal System"
     },
     "PA1": {  // must match one of EACH keyword category
@@ -399,7 +382,9 @@
       keywords2: ["park", "parks", "monument", "monuments", "seashore", "lakeshore", "forest", "forests", "refuge", "grassland", "grasslands"].map(d => d.toUpperCase()),
       // kw2Slimmed: [park*, monument*, forest*, grassland*],
       weight: 1,
-      texture: tHexagons,  // honeycomb
+      // texture: tHexagons,  // honeycomb
+      textureType: "paths",
+      textureProps: {d: "hexagons", thicker: 36, lighter: 24, shapeRendering: "crispEdges"},
       getStroke(d) {
         let description = d.properties.DESCRIPTION.toUpperCase();
         if (description.match("NATIONAL")) {
@@ -415,14 +400,18 @@
       keywords: ["national", "state", "provincial", "park", "parks", "monument", "monuments", "seashore", "lakeshore", "forest", "forests", "refuge", "grassland", "grasslands", "reserve", "preserve", "conservation", "conservancy", "environmental", "critical", "wetland", "wetlands", "wilderness", "ecological", "biodiversity", "botanical", "study", "research", "science"].map(d => d.toUpperCase()), // ??
       // kwSlimmed: [park*, monument*, forest*, grassland*, conserv*, wetland*],
       weight: 2,
-      texture: tCrosses
+      // texture: tCrosses
+      textureType: "paths",
+      textureProps: {d: "crosses", thicker: 36, lighter: 24, shapeRendering: "crispEdges"}
       // national, state, provincial, park, monument, etc matches will be disjoint from PA1 group above (matched only one keyword group, not both)
     },
     "PA3": {
       divId: "pa-grp3",
       fullTxt: "Protected Areas - Group 3",  // remaining
       weight: 3,
-      texture: tCircles
+      // texture: tCircles
+      textureType: "circles",
+      textureProps: {complement: true, thicker: 36, lighter: 24}
       // no keywords; CATEGORY === "Protected Area" && DESCRIPTION !== "Inventoried Roadless Area"
     }
   },
@@ -448,8 +437,8 @@
     "water": {
       divId: "pa-water",
       fullTxt: "Water-Related",
-      keywords: ["wetland", "wetlands", "sea", "seashore", "seashores", "lake", "lakeshore", "lakeshores", "beach", "beaches", "coast", "coasts", "coastal", "marine", "estuary", "estuarine", "estuaries", "riparian", "spring", "springs", "water", "waters", "waterway", "waterways", "creek", "creeks", "stream", "streams", "river", "rivers", "confluence", "lake", "lakes", "bog", "bogs", "delta", "deltas", "tributary", "tributaries", "rapid", "rapids", "cove", "coves"].map(d => d.toUpperCase()),
-      // kwSlimmed: [water*, wetland*, sea*, stream*, creek*, bog*, lake*, beach*, coast*, estuar*, spring*, river*, lake*, delta*, tributar*, rapid*, cove*],
+      keywords: ["wetland", "wetlands", "sea", "seashore", "seashores", "lake", "lakeshore", "lakeshores", "beach", "beaches", "coast", "coasts", "coastal", "marine", "estuary", "estuarine", "estuaries", "riparian", "spring", "springs", "water", "waters", "waterway", "waterways", "creek", "creeks", "stream", "streams", "river", "rivers", "confluence", "lake", "lakes", "bog", "bogs", "marsh", "marshes", "delta", "deltas", "tributary", "tributaries", "rapid", "rapids", "cove", "coves", "rio", "río"].map(d => d.toUpperCase()),
+      // kwSlimmed: [water*, wetland*, sea*, stream*, creek*, bog*, lake*, beach*, coast*, estuar*, spring*, river*, lake*, delta*, tributar*, rapid*, marsh*, cove*],
       weight: 3,
       color: groupBlue
     },
@@ -485,12 +474,19 @@
       weight: 7,
       color: yellowPeach
     },
+    "general": {
+      divId: "pa-gen",
+      fullTxt: "Other Primary",
+      keywords: ["national","state","provincial","park"].map(d => d.toUpperCase()),
+      weight: 8,
+      color: groupGreen,
+    },
     "other": {
       divId: "pa-other",
-      fullTxt: "Other Protected Area",  // vaguest
+      fullTxt: "Other - Secondary",  // vaguest
       keywords: ["nature", "natural", "open", "scenic", "historic", "blm", "land", "lands", "area", "areas", "protection", "protected"].map(d => d.toUpperCase()),  // only match if no better fit
       // kwSlimmed: [natur*, land*, area*, protect*],
-      weight: 8,
+      weight: 9,
       color: purple
     }
     // ANYTHING LEFTOVER??
@@ -541,7 +537,7 @@
   }, onError)
 
   // DRAW VECTOR BASE
-  Promise.all([admin0,admin1,hydroBase,urbanBase,railBase,railStns]).then(drawBase, onError);
+  Promise.all([admin0,admin1,land,places,hydroBase,urbanBase,railBase,railStns]).then(drawBase, onError);
 
   function drawBase(data) {
 
@@ -562,9 +558,9 @@
     // MESH SELECT
     let lakeMesh = getMesh(sourceData.hydroUnits,"hydroUnits", (a,b) => { return a.properties.strokeweig === null }),
        urbanMesh = getMesh(sourceData.urbanAreas,"urbanAreas"),
-   continentMesh = getMesh(sourceData.countries,"countries",outerlines()),
-   countriesMesh = getMesh(sourceData.countries,"countries",innerlines()),
-      statesMesh = getMesh(sourceData.states,"states",innerlines());
+   continentMesh = getMesh(sourceData.land,"land"),//,outerlines()),
+   countriesMesh = getMesh(sourceData.countries,"countries"),//,innerlines()),
+      statesMesh = getMesh(sourceData.states,"states") //,innerlines());
 
     // console.log("* base data *",sourceData)
 
@@ -608,7 +604,7 @@
       .attr("stroke","silver")
       .attr("fill","gainsboro")
       .style("stroke-width",0.1)
-      .style("opacity",0.4)
+      .style("opacity",0.6)
 
     // STROKED MESH
     adminBase.append("path")
@@ -646,9 +642,23 @@
         .attr("stroke-width", d => { return (8/(d.properties.scalerank * 4)) }) // 10/(d.properties.scalerank ** 2)
         .attr("stroke","lightslategray")
         .style("fill", "none")
-        .style("opacity",0.95)
+        .style("opacity",1)
 
     // POINT FEATURES
+    urbanBase.selectAll("circle")
+      .data(sourceData.places.gj.features)
+      .enter().append("circle")
+        .attr("r", d => d.properties.scalerank * 0.05)
+        .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
+        .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+        .property("name", d => { return cityState(d.properties); })
+        .property("orig-stroke-opacity",0.8)
+        .style("fill", "none") // "yellowgreen")
+        .style("stroke", "none") // "mediumseagreen")
+        // .style("stroke-width", d => d.properties.scalerank * 0.01)
+        .on("mouseover", onMouseover)
+        .on("mouseout", onMouseout)
+
     railBase.append("g")
       .attr("id", "rail-stations")
       .selectAll("circle")
@@ -658,6 +668,7 @@
         .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
         .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
         .property("name", d => { return cityState(d.properties); })
+        .property("orig-stroke-opacity",0.8)
         .style("fill", "lightsalmon")
         .style("stroke","indianred")
         .style("stroke-width",0.05)
@@ -989,8 +1000,8 @@
       function storeSegmentDetails(segment) {
 
         return {
-            agency: raw.agencies[segment.agencies[0].agency],
-          lineName: segment.agencies[0].lineNames[0],
+            agency: (segment.agencies) ? raw.agencies[segment.agencies[0].agency] : null,
+          lineName: (segment.agencies) ? segment.agencies[0].lineNames[0] : null,
         lineString: polyline.toGeoJSON(segment.path),
           distance: kmToMi(segment.distance),
              stops: segment.stops,
@@ -1019,26 +1030,29 @@
       //  .attr("fill","slateblue")
       //  .attr("stroke","black")
 
-      let likelyEnrich = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
+      let possFeatures = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
 
       // bind all trigger points to the DOM for en route intersection
-      likelyEnrich.then(data => {
+      Promise.all([possFeatures,triggerPts]).then(([idList,pts]) => {
 
-        const withinBuffer = d => {
-          let point = [d.properties.trigger_x,d.properties.trigger_y]
-          return turf.booleanPointInPolygon(point,chosen.bufferedRoute);
+        const onList = d => {
+          return idList.has(d.properties.id)
         }
 
-        let quadPts = data.pts.filter(withinBuffer),
-          quadLines = data.lines.filter(withinBuffer),
-          quadPolys = data.polys.filter(withinBuffer);
+        const withinBuffer = d => {
+          return turf.booleanPointInPolygon(d,chosen.bufferedRoute);
+        }
 
-        let quadData = quadPts.concat(quadLines).concat(quadPolys);
+        // let quadPts = data.pts.filter(withinBuffer),
+        //   quadLines = data.lines.filter(withinBuffer),
+        //   quadPolys = data.polys.filter(withinBuffer);
+
+        let quadData = topojson.feature(pts, pts.objects.triggerPts).features.filter(onList).filter(withinBuffer) //quadPts.concat(quadLines).concat(quadPolys);
 
         let options = {
-          bounding: chosen.bufferedRoute,
-          projectX: d =>  projection([d.properties.trigger_x,d.properties.trigger_y])[0],
-          projectY: d => projection([d.properties.trigger_x,d.properties.trigger_y])[1]
+          bounding: chosen.bufferedRoute
+          // projectX: d =>  projection([d.properties.trigger_x,d.properties.trigger_y])[0],
+          // projectY: d => projection([d.properties.trigger_x,d.properties.trigger_y])[1]
         }
 
         routeQuadtree = makeQuadtree(quadData,options)
@@ -1099,24 +1113,36 @@
 
         console.log("total filtered from pool by quadtree #1:",filteredEnrich.length)
 
-        let possibleFeatures = [...new Set(filteredEnrich.map(d => d.properties.id))];
+        let possibleFeatures = new Set(filteredEnrich.map(d => d.properties.id));
 
-        console.log("unique possibleFeatures by id:",possibleFeatures.length)
+        console.log("unique possibleFeatures by id:",[...possibleFeatures].length)
 
-        let likelyEnrich =
-        Promise.all([enrichPts,enrichLines,enrichPolys]).then(([pts,lines,polys]) => {
+        // readyAndWaiting =
+        // Promise.all([enrichPts,enrichLines,enrichPolys]).then(([pts,lines,polys]) => {
+        //
+        //   let likelyEnrich = {
+        //     pts: topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.has(d.properties.id) }),
+        //     lines: topojson.feature(lines, lines.objects.enrichLines).features.filter(d => { return possibleFeatures.has(d.properties.id) }),
+        //     polys: topojson.feature(polys, polys.objects.enrichPolys).features.filter(d => { return possibleFeatures.has(d.properties.id) })
+        //   };
 
-          let likelyEnrich = {
-            pts: topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
-            lines: topojson.feature(lines, lines.objects.enrichLines).features.filter(d => { return possibleFeatures.includes(d.properties.id) }),
-            polys: topojson.feature(polys, polys.objects.enrichPolys).features.filter(d => { return possibleFeatures.includes(d.properties.id) })
-          };
+        enrichPts.then(pts => {
+          topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.has(d.properties.id) }).forEach(pt => {
+            readyAndWaiting[pt.properties.id] = pt;
+          })
+        })
+        enrichLines.then(lines => {
+          topojson.feature(lines, lines.objects.enrichLines).features.filter(d => { return possibleFeatures.has(d.properties.id) }).forEach(line => {
+            readyAndWaiting[line.properties.id] = line;
+          })
+        })
+        enrichPolys.then(polys => {
+          topojson.feature(polys, polys.objects.enrichPolys).features.filter(d => { return possibleFeatures.has(d.properties.id) }).forEach(poly => {
+            readyAndWaiting[poly.properties.id] = poly;
+          })
+        })
 
-          return likelyEnrich;
-
-        });
-
-        return likelyEnrich;
+        return possibleFeatures;
 
       }
 
@@ -1195,14 +1221,16 @@
         // ROUTE SUMMARY
         // agency names & lines
         let agencies = [...new Set(chosen.segments.map(d => {
-          let lineName = exRedundant(d.lineName,d.agency.name);
-          let fullText = (lineName) ? `'s ${lineName} Line` : '';
-          return `<a target="_blank" href="${d.agency.url}">${d.agency.name}${fullText}</a>`
-        }))]
+          if (d.lineName && d.agency.name) {
+            let lineName = exRedundant(d.lineName,d.agency.name);
+            let fullText = (lineName) ? `'s ${lineName} Line` : '';
+            return `<a target="_blank" href="${d.agency.url}">${d.agency.name}${fullText}</a>`
+          }
+        }))].filter(d => d !== undefined);
 
         function exRedundant(lineName,agencyName){
           let regex = new RegExp(`${agencyName}\\s*`)
-          return lineName.replace(regex,'')
+          return lineName.replace(regex,'').replace('Line','')
         }
 
         let agencyHtml = `<span>via</span><br>`
@@ -1338,9 +1366,12 @@
 
         // NARRATION
         // remove placeholder text from #encounters
-        d3.select("#encounters").selectAll(".placeholder")
+        // d3.select("#encounters").selectAll(".placeholder")
+        d3.selectAll(".placeholder")
           .remove()
-
+        d3.select("#narration-header").select("h5")
+          .text("Currently passing:")
+          console.log(d3.select("#narration-header").select("h5").node())
         // JOURNEY LOG
 
       }
@@ -2506,32 +2537,32 @@
   function encountered() {
 
     let id = this.properties.id,
+        gj = readyAndWaiting[id], // get associated feature
       baseT;
 
-    // let reveal = // get assoc geom/gj
-    // console.log(this)
+    if (!gj) console.log(this) // py508, py12, py51, py315
 
     // get and save logGroup/category and protected area tags
-    let logGroup = getGroup(this),
-           paTag = (logGroup.fullTxt.startsWith("Protected Area")) ? getTag(this) : null;
-    this.properties.logGroup = logGroup,
-      this.properties.paTag = paTag;
+    let logGroup = getGroup(gj),
+          subTag = getTag(gj,logGroup);
+    gj.properties.logGroup = logGroup,
+      gj.properties.subTag = subTag;
 
     if (id.startsWith('pt')) {
 
-      baseT = this.properties.SNAP_DISTANCE;
-      revealPt(this,baseT)
+      baseT = gj.properties.SNAP_DISTANCE;
+      revealPt(gj,baseT)
 
     } else {
 
-      let triggerPt = [this.properties.trigger_x,this.properties.trigger_y],
-        allCoords = turf.coordAll(this.geometry),
+      let triggerPt = this.geometry.coordinates,
+        allCoords = turf.coordAll(gj.geometry),
         i0 = turf.nearestPointOnLine(turf.lineString(allCoords),triggerPt),
         index0 = i0.properties.index,
         gjA,
         gjB;
 
-      if (["River","River (Intermittent)"].includes(this.properties.CATEGORY)) {
+      if (["River","River (Intermittent)"].includes(gj.properties.CATEGORY)) {
 
         // store first and last points of flattened line geometry
         let index1A = 0,
@@ -2542,21 +2573,21 @@
         if (turf.distance(i0,i1A,{units:"miles"}) < 100) {
 
           // call it good, don't break enrichLine down into smaller features
-          baseT = turf.length(this.geometry,{units:"miles"})
-          revealLine(this,baseT)
+          baseT = turf.length(gj.geometry,{units:"miles"})
+          revealLine(gj,baseT)
 
         } else if (turf.distance(i0,i1B,{units:"miles"}) < 100) {
 
           // triggerPt is very close to the end of the line as written; reverse coords so that it animates outward(-ish) from route
           let reversed;
 
-          if (this.geometry.type === "MultiLineString") {
+          if (gj.geometry.type === "MultiLineString") {
 
-            reversed = turf.multiLineString(reverseNested(this.geometry.coordinates), this.properties)
+            reversed = turf.multiLineString(reverseNested(gj.geometry.coordinates), gj.properties)
 
           } else {
 
-            reversed = turf.lineString(this.geometry.coordinates.reverse(), this.properties)
+            reversed = turf.lineString(gj.geometry.coordinates.reverse(), gj.properties)
 
           }
 
@@ -2565,8 +2596,8 @@
 
         } else {
 
-          if (this.geometry.type === "MultiLineString") {
-            let split = splitMultiString(triggerPt,this);
+          if (gj.geometry.type === "MultiLineString") {
+            let split = splitMultiString(triggerPt,gj);
             gjA = turf.multiLineString(split[0]),
             gjB = turf.multiLineString(reverseNested(split[1]));
           } else {
@@ -2583,21 +2614,21 @@
 
         if (id.startsWith("py")) {
 
-          let centroid = turf.centroid(this.geometry)
+          let centroid = turf.centroid(gj.geometry)
 
           // let spine = turf.lineString([i0,i1])
           let spine = turf.lineString([i0,centroid,i1].map(d=>d.geometry.coordinates)),
-               area = turf.convertArea(turf.area(this.geometry),"meters","miles");
+               area = turf.convertArea(turf.area(gj.geometry),"meters","miles");
 
           baseT = turf.round(Math.sqrt(Math.sqrt(area)))
-          revealPolygon(this,spine,baseT)
+          revealPolygon(gj,spine,baseT)
 
         } else {
 
           // shift line geometry to start (and end) at i0
-          if (this.geometry.type === "MultiLineString") {
+          if (gj.geometry.type === "MultiLineString") {
 
-            let split = splitMultiString(triggerPt,this);
+            let split = splitMultiString(triggerPt,gj);
 
             gjA = turf.multiLineString(split[0]),
             gjB = turf.multiLineString(reverseNested(split[1]));
@@ -2629,8 +2660,8 @@
            lengthB = turf.length(gjB, {units:"miles"}),
              baseT = [lengthA,lengthB];
 
-        gjA.properties = {...this.properties}
-        gjB.properties = {...this.properties,...{oid: origId, id: origId + "-2"}}
+        gjA.properties = {...gj.properties}
+        gjB.properties = {...gj.properties,...{oid: origId, id: origId + "-2"}}
 
         if (gjA.geometry.coordinates.length) revealLine(gjA,baseT[0]);
         if (gjB.geometry.coordinates.length) revealLine(gjB,baseT[1]);
@@ -2644,6 +2675,13 @@
       // SWING ONE
       let catMatch;
       if (gj.properties.CATEGORY) {
+        if (gj.properties.CATEGORY === "Ecoregion") {
+          return {
+            divId: `eco-${gj.properties.ECOZONE}`,
+            fullTxt: `Ecozone: ${getEcozone(gj.properties.ECOZONE)}`,
+            color: colorAssignments.ecoregions[gj.properties.ECOZONE].base
+          };
+        } // else
         catMatch = gj.properties.CATEGORY.toUpperCase(),
         catIndex = catKeys.findIndex(startsWith,catMatch);
         if (catIndex >= 0) {
@@ -2652,7 +2690,7 @@
       }
 
       // SWING TWO
-      let descrMatch;
+      let descrMatch = '';
       if (gj.properties.DESCRIPTION) {
         descrMatch = gj.properties.DESCRIPTION.toUpperCase(),
         descrIndex = catKeys.findIndex(startsWith,descrMatch);
@@ -2687,26 +2725,44 @@
 
     }
 
-    function getTag(gj) {
+    function getTag(gj,logGroup) {
 
-      console.log(tagWords)
+      if (gj.properties.CATEGORY === "Ecoregion" &&  (unromanize(gj.properties.LEVEL) > 1)) {
 
-      if (gj.properties.flag === "habitat") return paTags["hab"];
+        return { divId: `eco-${gj.properties.ECOZONE}-${gj.properties.LEVEL}`,
+          fullTxt: `Level ${gj.properties.LEVEL} Ecoregions`,
+          color: getBaseColor(gj.properties.ECOZONE,gj.properties.LEVEL)
+        };
 
-      // else
-      let paDescr = gj.properties.DESCRIPTION,
-         tagIndex = tagWords.findIndex(someMatch,paDescr);
+      } else if (logGroup.fullTxt === "Watersheds") {
 
-      console.log(tagIndex)
-      console.log(paTags[paKeys[tagIndex]])
+        return { divId: `drain-${gj.properties.OCEAN_ID}`,
+          fullTxt: `Draining to the ${getDrain(gj.properties.OCEAN_ID)}`,
+          color: colorAssignments.watersheds[gj.properties.OCEAN_ID].base
+        };
 
-      return paTags[paKeys[tagIndex]];
+      } else if (logGroup.fullTxt && logGroup.fullTxt.startsWith("Protected Area")) {
 
-      function someMatch(arr) {
-        return arr.some(match,this);
+        if (gj.properties.flag === "habitat") return paTags["hab"];
 
-        function match(text) {
-          return this.match(text);
+        // else
+        let paDescr = gj.properties.DESCRIPTION.toUpperCase(),
+           tagIndex = tagWords.findIndex(someMatch,paDescr);
+
+        if (tagIndex < 0) {
+          // try with name
+          let name = gj.properties.NAME.toUpperCase();
+          tagIndex = tagWords.findIndex(someMatch,name);
+          if (tagIndex < 0) /*STILL*/ console.log(gj.properties)
+        }
+
+        return paTags[paKeys[tagIndex]];
+
+        function someMatch(arr) {
+          return arr.some(match,this);
+          function match(text) {
+            return this.match(text);
+          }
         }
 
       }
@@ -2811,13 +2867,13 @@
           .attr("cx", d => projection(d.geometry.coordinates)[0])
           .attr("cy", d => projection(d.geometry.coordinates)[1])
           .attr("id", d => d.properties.id)
-          .property("name", d => d.properties.NAME)
+          .property("name", formatName)
           .property("category", d => d.properties.CATEGORY)
           .property("description", d => d.properties.DESCRIPTION)
           .property("more-info", d => d.properties.MORE_INFO)
           .property("baseT", d => d.properties.SNAP_DISTANCE)
           .property("log-group", d => d.properties.logGroup)
-          .property("pa-tag", d => d.properties.paTag)
+          .property("sub-tag", d => d.properties.subTag)
           .property("orig-opacity", ptOpacity)
           .property("orig-stroke-opacity", ptStrokeOpacity)
           .style("fill", getFill)
@@ -2858,11 +2914,11 @@
                     .classed("enrich-line",true)
                     .attr("d", projPath)
                     .attr("id", d => d.properties.id)
-                    .property("name", d => d.properties.NAME)
+                    .property("name", formatName)
                     .property("category", d => d.properties.CATEGORY)
                     .property("level", d => d.properties.LEVEL)
                     .property("log-group", d => d.properties.logGroup)
-                    .property("pa-tag", d => d.properties.paTag)
+                    .property("sub-tag", d => d.properties.subTag)
                     .property("orig-opacity", lineOpacity)
                     .property("orig-stroke-opacity", lineOpacity)
                     .style("fill", getFill)
@@ -2929,13 +2985,13 @@
           .classed("enrich-polygon", true)
           .attr("d", projPath)
           .attr("id", d => d.properties.id)
-          .property("name", d => d.properties.NAME)
+          .property("name", formatName)
           .property("category", d => d.properties.CATEGORY)
           .property("level", d => d.properties.LEVEL)
           .property("more-info", d => d.properties.MORE_INFO)
           .property("description", d => d.properties.DESCRIPTION)
           .property("log-group", d => d.properties.logGroup)
-          .property("pa-tag", d => d.properties.paTag)
+          .property("sub-tag", d => d.properties.subTag)
           .property("orig-opacity", polyOpacity)
           .property("orig-stroke-opacity", polyStrokeOpacity)
           .style("fill", getFill)
@@ -3018,6 +3074,17 @@
   //   }
   // }
 
+  function formatName(d) {
+
+    if (!d.properties.NAME) return;
+
+    // else
+    let pre = (["River","Ecoregion","Watershed","Grassland"].includes(d.properties.CATEGORY) && (d.properties.flag !== "noThe")) ? `The ` : ``;
+
+    return pre + d.properties.NAME;
+
+  }
+
 //// OUTPUT AND ALERT incl DASHBOARD
 
   function output(encountered) {
@@ -3027,26 +3094,31 @@
 
     if (encountered.property("name")) {
 
-      allEncounters.unshift(encountered) // array of selections
+      // get A, B, or C
+      let col = assocCols[encountered.property("id").slice(0,2)];
 
-      updateOutput(allEncounters.slice(0,maxOutput))
+      allEncounters[col].unshift(encountered) // array of selections
+
+      // updateOutput(allEncounters.slice(0,maxOutput))
+
+      updateOutput(allEncounters[col].slice(),col)
 
       // flashLabel(encountered) // pausing on this for now
 
       log(encountered)
 
-      function updateOutput(allEncounters) {
+      function updateOutput(encounters,col) { // allEncounters) {
 
         // https://observablehq.com/@d3/selection-join
 
         const t = d3.transition().duration(750);
 
         // HOW TO SMOOTH OUT SCROLL?
-        d3.select("#encounters").selectAll(".encounter")
-          .data(allEncounters, d => d.property("id"))
+        d3.select(`#encounters-${col}`).selectAll(".encounter")
+          .data(encounters, d => d.property("id"))
           .join(
             enter => enter.append("div")
-              .classed("flex-child flex-child--no-shrink encounter txt-compact mx3 my3 px3 py3", true)
+              .classed("flex-child encounter txt-compact mx3 my3 px3 py3", true)
               .html(getHtml)
               .style("opacity", 1),
               // .call(enter => enter.transition(t)),
@@ -3161,13 +3233,12 @@
       function log(encountered) {
 
         let group = encountered.property("log-group"),
-              tag = encountered.property("pa-tag");
+              tag = encountered.property("sub-tag");
 
         logGroups.has(group.divId) ? addToCount(group.divId) : addNewGroup(encountered,group);
 
         if (tag) {
-          console.log("here") // tags not updating
-          paTypes.has(tag.divId) ? addToCount(tag.divId) : addNewGroup(encountered,tag,paTypes,group.divId,6);
+          tagTypes.has(tag.divId) ? addToCount(tag.divId) : addNewGroup(encountered,tag,false,tagTypes,group.divId,6);
         }
 
         function addToCount(id) {
@@ -3181,88 +3252,143 @@
 
         }
 
-        function addNewGroup(encountered,group,parentSet = logGroups, parentDivId = "legend-log-content",padLeft = 0) {
+        function addNewGroup(encountered,group,isParent = true,parentSet = logGroups,parentDivId = "legend-log-content",padLeft = 0) {
 
           parentSet.add(group.divId);
 
           let symbol = styleToSymbol(encountered,group);
 
-          symbolIds.push(symbol.id)
-          console.log(symbolIds) // use this list to style!
+          symbolSet.add(symbol.id)
 
           let newItem = d3.select(`#${parentDivId}`).append("div")
-            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm border-b border--dash legend-log-item",true)
-            .html(getLogHtml(group,symbol.id))
+            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm border-t border--dash legend-log-item relative",true)
+            .html(getLogHtml(group,symbol.id,isParent))
             .style("opacity", 0)  // initially
 
-      // use css or d3 to style symbol spans?
-          console.log(newItem.select(`#${symbol.id}`).node())
-      // don't forget to specify 'px'
-
-          console.log(symbol)
-          console.log(newItem.select(`#${symbol.id}`).style("fill"))
-          console.log(newItem.select(`#${symbol.id}`).style("stroke"))
-          console.log(newItem.select(`#${symbol.id}`).style("stroke-width"))
-          console.log(newItem.select(`#${symbol.id}`).style("opacity"))
-
-          // add fill to new HTML element within newItem
-          newItem.select(`#${symbol.id}`)
-            .style("fill",symbol.fill)
-            .style("stroke",symbol.stroke)
-            .style("stroke-width",symbol.strokeWidth)
-            .style("stroke-dasharray",symbol.strokeDashArray)
-            .style("stroke-opacity",symbol.strokeOpacity)
-            .style("opacity",symbol.opacity)
-            .attr("transform",symbol.transform)
+          // when child element, ensure caret-toggle of parent group is visible
+          if (!isParent) d3.select(`#${parentDivId}`).classed("hide-triangle",false).classed("show-triangle",true)
 
           // transition whole line into full opacity
           newItem.transition().duration(300)
             .style("opacity", 1)
 
-          function getLogHtml(group,fillId) {
+          // add fill to new HTML element within newItem // COMBAK NOT WORKING
+          let patch = d3.select("#legend-log-content").select(`#${group.divId}`).select("span.log-symbol");
+          // AKA newItem.select(`#${symbol.id}`)
+
+          // // works for simple colors
+          // patch.style("background",symbol.fill)
+          // // works always
+          // patch.classed("bg-red",true)
+          // // NEVER works
+          // patch.style("fill",symbol.fill)
+          // // doesn't help anything
+          // let formattedFill = (symbol.fill.startsWith("rgb")) ? chroma(symbol.fill).hex() : symbol.fill.replace(/"/g,'').replace(/`/g,'').replace(/'/g,'').replace(/' '/g,'')
+
+          newItem.select(`#${symbol.id}`)
+            // .style("fill", symbol.fill) // formattedFill)
+            .style("background", symbol.fill) // formattedFill)
+            .style("background-image", symbol.fill) // formattedFill)
+            // .style("stroke",symbol.stroke)
+            // .style("stroke-width",symbol.strokeWidth)
+            // .style("stroke-dasharray",symbol.strokeDashArray)
+            // .style("stroke-opacity",1)
+            // .style("opacity",1)
+
+          function getLogHtml(group,fillId,isParent) {
+
             let initCount = 1,
-              html = `
-                <div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross pl${padLeft}">
-                  <span id="${fillId}" class="flex-child flex-child--no-shrink h24 w24 log-symbol"></span>
-                  <label class="flex-child flex-child--grow log-name">${group.fullTxt}</label>
-                  <span class="flex-child flex-child--no-shrink h24 w24 log-count">${initCount}</span>
-                </div>
-              `
+              s = (padLeft > 0) ? 18 : 24;
+              // toggleHtml = (isParent) ? `<span id="${group.divId}-children-toggle" class="flex-child none">
+              //   <button class="btn px0 py0 absolute top left bg-transparent color-darken25 color-darken50-on-hover color-darken75-on-active collapse-trigger" aria-expanded="false" aria-controls="${group.divId}-children">
+              //     <svg class='icon h24 w24'><use xlink:href='#icon-caret-right'/></svg>
+              //   </button>
+              // </span>` : ``;
+
+            let html,
+              innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol"></span>
+              <label class="flex-child flex-child--grow log-name">${group.fullTxt}</label>
+              <span class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
+
+            // let html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross pl${padLeft} relative">
+            //   ${toggleHtml}
+            //   <span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol"></span>
+            //   <label class="flex-child flex-child--grow log-name">${group.fullTxt}</label>
+            //   <span class="flex-child flex-child--no-shrink h24 w24 log-count">${initCount}</span>
+            // </div>`
+
+            // if (isParent) html += `<div id="${group.divId}-children" class="flex-parent flex-parent--column border-l collapsible" aria-hidden="true"></div>`
+// pt1010
+            // SAME ID used on two elements
+            if (isParent) {
+              html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle">
+                <summary id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
+                  ${innerHtml}
+                </summary>
+              </details>`
+            } else {
+              html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-l py3">
+                ${innerHtml}
+              </div>`
+            }
+
             return html;
+
           }
 
           function styleToSymbol(encountered,group) {
 
             // element will already be styled appropriately at this point; turn style to symbol
-            let divId = (encountered.property("pa-tag")) ? encountered.property("pa-tag").divId : encountered.property("log-group").divId;
+            let divId = (encountered.property("sub-tag")) ? encountered.property("sub-tag").divId : encountered.property("log-group").divId;
 
-            // h24, w24 square:
-            let symbol = {
-              id: divId + "-sym",
-              fill: encountered.style("fill"),
-              stroke: encountered.style("stroke"),
-              strokeWidth: encountered.style("stroke-width"),
-              strokeDashArray: encountered.style("stroke-dasharray"),
-              strokeOpacity: encountered.style("orig-stroke-opacity"),
-              opacity: encountered.style("orig-opacity"),
-              get transform() { if (!this.fill) return "rotate(45)" }
+            let tFill, s = 24;
+            if (encountered.property("category") === "Watershed") {
+
+              let arr = encountered.style("stroke-dasharray").split(', ').slice(0,4).map(d => d*10);
+
+              s = arr.slice().reduce((a,b) => a+b);
+
+              tFill = textures.paths()
+                .d(s => `
+                    M 0, ${s}
+                    l ${(arr[0] / s)},${(-arr[0] / s)}
+                    M ${(arr[0] + 1) / s},${(-arr[0] - 1) / s}
+                    l ${(arr[1] / s)},${(-arr[1] / s)}
+                    M ${(arr[1] + 1) / s},${(-arr[1] - 1) / s}
+                    l ${(arr[2] / s)},${(-arr[2] / s)}
+                    M ${(arr[2] + 1) / s},${(-arr[2] - 1) / s}
+                    l ${(arr[3] / s)},${(-arr[3] / s)}
+                    M ${(arr[3] + 1) / s},${(-arr[3] - 1) / s}
+                    l ${s}, 0
+                  `)
+                .size(s)
+                .stroke(encountered.style("stroke"))
+                // .strokeWidth(1) // encountered.style("stroke-width"))
+                .shapeRendering("crispEdges")
+
+              svg.call(tFill);
+
+            } else if (encountered.property("category").startsWith("River")) {
+
+              tFill = textures.paths()
+                .d(s => `M 0, ${s} l ${s},0`)
+                .size(s)
+                .stroke(encountered.style("stroke"))
+                .strokeWidth(encountered.style("stroke-width"))
+                .shapeRendering("crispEdges")
+
+              svg.call(tFill);
+
             }
 
-            // legend outright:
-              // circle size calculation
-              // line dash array / watershed colors
-              // ecozone color bases
-
-            // pts:
-              // circle
-              // size? color?
-            // lines:
-              // diagonal line across sq
-              // dash-array, color
-            // polygons:
-              // square patch
-
-            // "Note there may be some overlap among categories (and their visual representation), e.g., a portion of the _ National Wild & Scenic River counting toward rivers and protected areas"
+            let symbol = {
+              id: divId + "-sym",
+              fill: (tFill) ? tFill.url() : encountered.style("fill"),
+              stroke: encountered.style("stroke"),
+              strokeWidth: encountered.style("stroke-width")
+              // strokeOpacity: encountered.style("orig-stroke-opacity"),
+              // opacity: encountered.style("orig-opacity")
+            }
 
             return symbol;
 
@@ -3544,83 +3670,114 @@
   //   return zIndex;
   // }
 
-  function getColor(type,parentId,level) {
+  function getBaseColor(ecozone,level) {
 
-    // currently receives ecoregions only
-    // if (type === "Ecoregion") {
+    if (!colorAssignments.ecoregions[ecozone][level]) {
 
-    let arabicLevel = unromanize(level);
-
-    if (!colorAssignments.ecoregions[parentId][level]) {
-
-      // use arabicLevel to derive similarColor as base for current ecozone+level combination
-      colorAssignments.ecoregions[parentId][level] = {
-        base: similarColor(chroma(colorAssignments.ecoregions[parentId].base).rgb(),arabicLevel)
-      }
-
-      // previously:
-      // use arabicLevel to derive ecozone@level base color as more saturated (brighter? darker? more opaque?) version of parent color assignment
-        // base: chroma(colorAssignments.ecoregions[parentId].base).saturate(arabicLevel/4).rgb()
-
-    }
-
-    // else if (colorAssignments.ecoregions[parentId][level].mostRecent) {
-    //
-    //   // derive similar color and store within colorAssignments object as mostRecent before returning
-    //   let similarRGB = similarColor(colorAssignments.ecoregions[parentId][level].mostRecent,arabicLevel)
-    //
-    //   colorAssignments.ecoregions[parentId][level].mostRecent = similarRGB;
-    //
-    //   return chroma(similarRGB); // .brighten(arabicLevel);
-    //
-    // }  // else, the first time this ecozone+level combination is called
-
-    // derive similar color
-    let similarRGB = similarColor(chroma(colorAssignments.ecoregions[parentId][level].base).rgb(),arabicLevel)
-
-    // // from here in, similar color derived in succession from most recently derived
-    // colorAssignments.ecoregions[parentId][level].mostRecent = similarRGB;
-
-    return chroma(similarRGB); // .brighten(arabicLevel);
-
-    function similarColor([r,g,b],level) {
-
-      // OPTIMIZE: are all the below values calculated each time function called? postpone until chosen/necessary
-      let adjust1 = [[adjusted(r),g,b],
-                     [r,adjusted(g),b],
-                     [r,g,adjusted(b)]],
-          adjust2 = [[adjusted(r),adjusted(g),b],
-                     [r,adjusted(g),adjusted(b)],
-                     [adjusted(r),g,adjusted(b)]],
-          adjust3 = [adjusted(r),adjusted(g),adjusted(b)];
-
-      let options = {
-        1: [r,g,b],
-        2: adjust1[random(2)],
-        3: adjust2[random(2)],
-        4: adjust2[random(2)],
-        5: adjust3
-      }
-
-      return options[level];
-
-      function adjusted(c) {
-
-        // lower levels vary more drastically, though all should be distinct
-        let factor = 1/level,
-          i = random(factor * 120, factor * 60)  // upper,lower
-
-        // ensure return value is between 0 and 255
-        return Math.max(0,Math.min(255,(c + (Math.random() < 0.5 ? -i : i))))
-
+      // derive getSimilarColor as base for this ecozone+level combination
+      colorAssignments.ecoregions[ecozone][level] = {
+        base: getSimilarColor(chroma(colorAssignments.ecoregions[ecozone].base).rgb(),unromanize(level))
       }
 
     }
 
-    // } else {
-    //   return paletteScale(random());
-    // }
+    return colorAssignments.ecoregions[ecozone][level].base;
 
+  }
+
+  // function getColor(type,parentId,level) {
+  //
+  //   // currently receives ecoregions only
+  //   // if (type === "Ecoregion") {
+  //
+  //   // let arabicLevel = unromanize(level);
+  //
+  //   // if (!colorAssignments.ecoregions[parentId][level]) {
+  //   //
+  //   //   // use arabicLevel to derive getSimilarColor as base for current ecozone+level combination
+  //   //   colorAssignments.ecoregions[parentId][level] = {
+  //   //     base: getSimilarColor(chroma(colorAssignments.ecoregions[parentId].base).rgb(),arabicLevel)
+  //   //   }
+  //
+  //         // previously:
+  //         // use arabicLevel to derive ecozone@level base color as more saturated (brighter? darker? more opaque?) version of parent color assignment
+  //           // base: chroma(colorAssignments.ecoregions[parentId].base).saturate(arabicLevel/4).rgb()
+  //
+  //   // }
+  //
+  //   // else if (colorAssignments.ecoregions[parentId][level].mostRecent) {
+  //   //
+  //   //   // derive similar color and store within colorAssignments object as mostRecent before returning
+  //   //   let similarRGB = getSimilarColor(colorAssignments.ecoregions[parentId][level].mostRecent,arabicLevel)
+  //   //
+  //   //   colorAssignments.ecoregions[parentId][level].mostRecent = similarRGB;
+  //   //
+  //   //   return chroma(similarRGB); // .brighten(arabicLevel);
+  //   //
+  //   // }  // else, the first time this ecozone+level combination is called
+  //
+  //   console.log(colorAssignments.ecoregions[parentId])
+  //   console.log(level)
+  //   console.log(colorAssignments.ecoregions[parentId][level])
+  //
+  //   console.log(colorAssignments)
+  //   console.log(getBaseColor(gj.properties.ECOZONE,gj.properties.LEVEL))
+  //   console.log(colorAssignments)
+  //   // derive similar color
+  //   return getSimilarColor(chroma(colorAssignments.ecoregions[parentId][level].base).rgb(),unromanize(level))
+  //
+  //   // // from here in, similar color derived in succession from most recently derived
+  //   // colorAssignments.ecoregions[parentId][level].mostRecent = similarRGB;
+  //
+  //   // return chroma(similarRGB); // .brighten(arabicLevel);
+  //
+  //   // } else {
+  //   //   return paletteScale(random());
+  //   // }
+  //
+  // }
+
+  function getSimilarColor([r,g,b],level) {
+
+    // OPTIMIZE: are all the below values calculated each time function called? postpone until chosen/necessary
+    let adjust1 = [[adjusted(r),g,b],
+                   [r,adjusted(g),b],
+                   [r,g,adjusted(b)]],
+        adjust2 = [[adjusted(r),adjusted(g),b],
+                   [r,adjusted(g),adjusted(b)],
+                   [adjusted(r),g,adjusted(b)]],
+        adjust3 = [adjusted(r),adjusted(g),adjusted(b)];
+
+    let options = {
+      1: [r,g,b],
+      2: adjust1[random(2)],
+      3: adjust2[random(2)],
+      4: adjust2[random(2)],
+      5: adjust3
+    }
+
+    return chroma(options[level]).hex();
+
+    function adjusted(c) {
+
+      // lower levels vary more drastically, though all should be distinct
+      let factor = 1/level,
+        i = random(factor * 90, factor * 60)  // upper,lower
+
+      // ensure return value is between 0 and 255
+      return Math.max(0,Math.min(255,(c + (Math.random() < 0.5 ? -i : i))))
+
+    }
+
+  }
+
+  function getTexture(type,props) {
+    let textured = textures[type]()
+    Object.keys(props).forEach(d => {
+      textured[d](props[d])
+    })
+    svg.call(textured);
+    return textured;
   }
 
   function getStroke(d) {
@@ -3635,39 +3792,54 @@
       return riverBlue;
     } else if (props.CATEGORY.startsWith("Lake")) {
       return lakeBlue;
-    } else if (props.paTag && props.paTag.color) {
-      return props.paTag.color
-    } else {  // hover effects on textured (non-ecoregion) polygons
-      console.log("???") // currently, protected areas
-      console.log(d)
+    } else if (props.subTag && props.subTag.color) {
+      return props.subTag.color;
+    } else if (props.CATEGORY.startsWith("Grass")) {
+      return yellowGold;
+    } else {
+      console.log("???:",d.properties.NAME,d.properties.DESCRIPTION)
       return paletteScale(random());
     }
   }
 
   function getFill(d) {
-    let props = d.properties; // shorthand
-    let texture = props.logGroup.texture;
-    if (props.logGroup.texture) {
-      if (props.paTag && props.paTag.color) {
-        let stroked = props.logGroup.texture.stroke(props.paTag.color);
-        svg.call(stroked);
-        return stroked.url();
+    let props = d.properties, // shorthand
+     geomType = props.id.slice(0,2);
+    if (props.logGroup[props.subTag] && props.logGroup[props.subTag][geomType]) {
+      return props.logGroup[props.subTag][geomType].texture.url();
+    } else if (props.logGroup[geomType]) {
+      return props.logGroup[geomType].texture.url();
+    } else if (props.logGroup.textureType) {
+      let textured;
+      if (props.subTag && props.subTag.color) {
+        if (geomType === "pt") {
+          let textureOpts = {...props.logGroup.textureProps, ...{background: props.subTag.color, stroke: "whitesmoke"}};
+          textured = getTexture(props.logGroup.textureType,textureOpts)
+        } else {
+          let textureOpts = {...props.logGroup.textureProps, ...{fill: "transparent", stroke: props.subTag.color}};
+          textured = getTexture(props.logGroup.textureType,textureOpts)
+        }
+        props.logGroup[props.subTag] = { [geomType]: { texture: textured } }
       } else {
-        return props.logGroup.texture.url();
+        textured = getTexture(props.logGroup.textureType,props.logGroup.textureProps);
+        props.logGroup[geomType] = { texture: textured }
       }
+      // svg.call(texture);
+      return textured.url();
     } else if (props.CATEGORY === "Ecoregion") {
-      return getColor("Ecoregion",props.ECOZONE,props.LEVEL)
+      if (props.LEVEL === "I") {
+        return colorAssignments.ecoregions[props.ECOZONE].base;
+      } else {
+        return getSimilarColor(chroma(colorAssignments.ecoregions[props.ECOZONE][props.LEVEL].base).rgb(),unromanize(props.LEVEL))
+      }
       // RADIAL GRADIENT, PIXEL->PIXEL FLOODING ETC COMING SOON
     } else if (props.id.startsWith("ln")) {  // only lake lines filled
       return "none";
-    } else if (props.paTag && props.paTag.color) {
-      return props.paTag.color;
+    } else if (props.subTag && props.subTag.color) {
+      return props.subTag.color;
     } else {
-      console.log("???")
-      console.log(d)
-      let chosen = textureOpts[random(textureOpts.length-1)].stroke(paletteScale(random()));
-      svg.call(chosen)
-      return chosen.url();
+      console.log("???:",d.properties.NAME,"/",d.properties.DESCRIPTION,"/",props.logGroup,"/",props.subTag)
+      return paletteScale(random());
     }
   }
 
@@ -3735,11 +3907,9 @@
 
   function getName(d) {
 
-    let pre = (["River","Ecoregion","Watershed","Grassland"].includes(d.property("category"))) ? `The ` : ``;
-
-    let name = pre + `${d.property("name")}`
+    let name = `${d.property("name")}`
     if (d.property("category") === "Lake") {
-      // type = "Lake"
+      // do nothing; name already includes type "Lake"
     } else if (d.property("id").startsWith("ln")) {
       name += ` ${d.property("category")}`
     } else if (d.property("description")) {
@@ -3752,9 +3922,9 @@
 
   function onMouseout(d) {
 
-    // reset visual affordances
+    // reset visual affordances; note opposite defaults
     let resetStrokeOpacity = d3.select(this).property("orig-stroke-opacity") || 0,
-      resetOpacity = d3.select(this).property("orig-opacity") || 0;
+      resetOpacity = d3.select(this).property("orig-opacity") || 1;
 
     d3.select(this) // .classed("hover", false) // .lower();
       .transition().duration(750)
@@ -3806,6 +3976,38 @@
       "V": 5
     };
     return unromanized[romanNum];
+  }
+
+  function getDrain(oceanId) {
+    let drainsTo = {
+      10: "Arctic Ocean",
+      20: "Atlantic Ocean",
+      30: "Gulf of Mexico",
+      40: "Hudson Bay",
+      50: "Pacific Ocean"
+    };
+    return drainsTo[oceanId];
+  }
+
+  function getEcozone(zoneId) {
+    let ecozones = {
+       1: "The Arctic Cordillera",
+       2: "The Tundra",
+       3: "The Taiga",
+       4: "The Hudson Plain",
+       5: "The Northern Forests",
+       6: "The Northwestern Forested Mountains",
+       7: "The Marine West Coast Forest",
+       8: "The Eastern Temperate Forests",
+       9: "The Great Plains",
+      10: "The North American Deserts",
+      11: "Mediterranean California",
+      12: "The Southern Semi-Arid Highlands",
+      13: "The Temperate Sierras",
+      14: "The Tropical Dry Forests",
+      15: "The Tropical Wet Forests"
+    };
+    return ecozones[zoneId];
   }
 
   function kmToMi(km) {
@@ -3957,11 +4159,6 @@
 //// INCOMPLETE TODO ////
 
 // ASAP
-  // use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
-  // dashboard and log output!!
-    // set up journey log structure / start to populate
-    // narration txt -> 3 columns? scroll up/down vs left/right
-    // data clumping / prepare for log out
   // about this map
     // sources.md -> links
     // writing real words
@@ -3979,8 +4176,6 @@
   // const miles = {units:"miles"}
   // distinguish between stations and enrich pts (station icons simplest for now)
   // mouseover for stations
-  // ecozone 10 yellow --> more subtle base
-  // east green ecozone --> more subtle base
   // no point in having polygons or pts without names (nameless river/lake segments at least visually illuminating)
 
 // LITTLE BUT STUMPING ME RIGHT NOW
@@ -3988,7 +4183,6 @@
   // keeping zindexes in line on very small screen sizes
 
 // MEDIUM
-  // add level I ecozones again
   // add exclusive pass rail lines
   // avoid repeating content elements in HTML doc (widgets @ two screen sizes, about modal + aside)
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
@@ -3996,6 +4190,9 @@
     // NPS svg
     //  maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
     // assembly #icon-mountain icon -- mount, mountain, mt, mtn
+  // automatically order legend log categories
+  // make dash adjustable? hmax 120 too small depending on length of route / to-from text
+  // ecozones, protected areas their own group? or combine all PAs
 
 // MAJOR!! *** = NEED HELP!
   // *** performance improvement! (see ideas below) ***
@@ -4082,7 +4279,7 @@
 // DATA CLEAN!
 
   // PROBLEM CITIES
-    // FIX
+    // FIX? (R2R issue)
       // Sault Ste Marie, ON
       // Charleston, SC
       // Cincinnatti, OH
@@ -4095,9 +4292,32 @@
 
 // BACKBURNER ISSUES
   // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
-  // columbia river disconnect around watershed mid WA
-  // Northern Thompson Upland falsely triggered (?)
+  // legend - circle size? (representative of orig area for those polygons i collapsed into points)
+  // citystate should account for null values
+  // initial jump from centered North America to zoom0 just before zooming to route bounds
+
 
 ////////
 
 // DONE:
+  // accommodate R2R segments without agency information
+  // add ecozone level 1
+  // resume use of triggerPts disconnected from geometry (vs adding all geom to second quadtree)
+  // fix columbia river disconnect, northern thompson upland double
+  // ecozone 10 yellow --> more subtle base
+  // east green ecozone --> more subtle base
+    // use relational db / crosswalk to slim polygon file; then increase appropriate possible trigger points across the board
+  // data clumping / prepare for log ou
+  // details triangle centered over parent sym
+  // max height on dash
+  // all level V->IV?
+  // undo geom improvements?
+  // the null river!
+  // set up journey log structure / start to populate
+  // narration txt -> 3 columns? scroll up/down vs left/right
+
+
+// NEED HELP:
+// resolve texture output (issue with .style("fill") on newly created symbol span -- see log() function)
+// suggestions on clearing things upon 'select new route' or otherwise?
+// what else accounts for freeze following submit click?
