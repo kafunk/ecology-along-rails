@@ -452,9 +452,30 @@
     .on("arrive.train", arrived)
     .on("force.tick", updateLabelPositions)
 
+// MAKE DASHBOARD RESIZABLE from http://jsfiddle.net/meetamit/e38bLdjk/1/
+
+  var childResizer = d3.select('.child-resizer'),
+    siblingResizer = d3.select(".sibling-resizer");
+
+  var childResize = d3.drag()
+    .on('drag', childDrag);
+  var siblingResize = d3.drag()
+    .on('drag', siblingDrag);
+
+  childResizer.call(childResize)
+  siblingResizer.call(siblingResize)
+
+  // for childResizer, ensure no event listener conflict with nearby dash expand/collapse btns
+  d3.select("#dash-expand-btn")
+    .on("touchstart", nozoom)
+    .on("touchmove", nozoom)
+  d3.select("#dash-collapse-btn")
+    .on("touchstart", nozoom)
+    .on("touchmove", nozoom)
+
 // OTHER WORTHWHILE
 
-  const miles = { units: "miles" }
+  const miles = { units: "miles" }  // used repeatedly within turf.js method calls
 
 /////////////////////////////
 ////// ACTION! FINALLY //////
@@ -1947,6 +1968,61 @@
 
   }
 
+  function nozoom() {
+    d3.event.preventDefault();
+  }
+
+//// DRAG BEHAVIOR
+
+  function childDrag() {
+
+    // Determine resizer position relative to resizable parent
+    let y = this.parentNode.getBoundingClientRect().height - d3.event.y
+
+    // Ensure calculated height within bounds of grandparent SVG (plus padding) and, optionally, greater than minimum height
+    y = Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
+
+    // apply new sizing to relative parent (#resizable) of absolute content (.resizer)
+    d3.select(this.parentNode).style('height', y + 'px');
+
+  }
+
+  function siblingDrag() {
+
+    console.log(d3.event.y)
+
+    let prevSibHeight = this.previousElementSibling.getBoundingClientRect().height,
+        nextSibHeight = this.nextElementSibling.getBoundingClientRect().height;
+
+    console.log(prevSibHeight)
+    console.log(nextSibHeight)
+    console.log(d3.select(this.previousElementSibling).style('height'))
+    console.log(d3.select(this.nextElementSibling).style('height'))
+
+    // make sure sibling elements have initial height explicitly styled
+    d3.select(this.previousElementSibling).style('height', prevSibHeight + 'px');
+    d3.select(this.nextElementSibling).style('height', nextSibHeight + 'px');
+
+    // get new prevSibling height, within bounds
+    let prevY = prevSibHeight - d3.event.y;
+    // prevY = min/max
+    // Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
+
+    // get new nextSibling height, within bounds
+    let nextY = nextSibHeight + d3.event.y;
+    // nextY = min/max
+    // Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
+
+    console.log("prevY",prevY)
+    console.log("nextY",nextY)
+    // style prev sibling
+    d3.select(this.previousElementSibling).style('height', prevY + 'px');
+
+    // style next sibling
+    d3.select(this.nextElementSibling).style('height', nextY + 'px');
+
+  }
+
 //// QUADTREE / DATA / INTERSECT QUERIES
 
   function makeQuadtree(data,options) {
@@ -2993,7 +3069,7 @@
 
             let html,
               innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol"></span>
-              <label class="flex-child flex-child--grow log-name">${group.fullTxt}</label>
+              <label class="flex-child flex-child--grow log-name px3">${group.fullTxt}</label>
               <span class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
 
             // COMBAK same ID used on two elements
@@ -3149,6 +3225,9 @@
 
   function expand(elementStr,direction = ["up"]) {
 
+    console.log(d3.event)
+    if (d3.event && d3.event.defaultPrevented) return; // dragged
+
     // if window too short to reasonably fit more content, expand modal instead
     if (window.innerHeight < 500) {
 
@@ -3196,6 +3275,8 @@
   }
 
   function collapse(elementStr, direction = "down") {
+
+    if (d3.event && d3.event.defaultPrevented) return; // dragged
 
     d3.select(`#${elementStr}`).classed(`disappear-${direction}`, true);
     d3.select(`#${elementStr}-expand`).classed("none", false);
@@ -3487,14 +3568,14 @@
 
     if (d.property("category") === "Ecoregion") {
       mainOut += `<br />
-      <span class="name-ii txt-em txt-xs txt-s-mxl ">Level ${d.property("level")} Ecoregion</span >
+      <span class="name-ii txt-compact txt-em txt-xs txt-s-mxl ">Level ${d.property("level")} Ecoregion</span >
       `
     }
 
     if (d.property("more-info")) {
       mainOut += `
       <br />
-      <span class="more-info txt-xs txt-s-mxl">${d.property("more-info")}</span>
+      <span class="more-info txt-compact txt-xs txt-s-mxl">${d.property("more-info")}</span>
       `
     }
 
@@ -3772,22 +3853,21 @@
   // change projection to equidistant (instead of equal area)
   // distinguish between stations and enrich pts (station icons simplest for now)
   // mouseover for stations
+  // remove transition on mouseover (just makes it seem slow(er))
+  // some other summarizing info to right of agency/line summary; then reduce text within widgets (eg '102 of 3207 miles elapsed' => '102 miles elapsed')
 
 // LITTLE BUT STUMPING ME RIGHT NOW
   // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin) (*)
-  // keeping zindexes in line on very small screen sizes
 
 // MEDIUM
-  // add exclusive pass rail lines
-  // avoid repeating content elements in HTML doc (widgets @ two screen sizes, about modal + aside)
+  // automatically order legend log categories
+  // make dash adjustable? hmax 120 too small depending on length of route / to-from text (*)
+  // ecozones, protected areas their own group? or combine all PAs
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
   // more interesting icon for point data?
     // NPS svg
     //  maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
     // assembly #icon-mountain icon -- mount, mountain, mt, mtn
-  // automatically order legend log categories
-  // make dash adjustable? hmax 120 too small depending on length of route / to-from text
-  // ecozones, protected areas their own group? or combine all PAs
 
 // MAJOR!! *** = NEED HELP!
   // *** performance improvement! (see ideas below) ***
@@ -3889,22 +3969,25 @@
   // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
   // add circle size reference to legend? (radius as representative of orig area for all polygons (under a certain threshold) I collapsed into their centroids)
   // cityState should account for null values
-  // slight jump from initially centered North America to zoom0 just before zooming to route bounds
+  // slight jump from initially centered North America to zoom0 just before transitioning zoom to route bounds
   // label mess (currently commented out)
-
+  // keeping zindexes in line on very small screen sizes
 
 ////////
 
 
 // NEED HELP:
-// resolve texture output (issue with .style("fill") on newly created symbol span -- see addNewGroup() within log() function)
+// resolving textured symbol output (apparent issue with .style("fill") on newly created symbol span -- see addNewGroup() within log() function)
 // clearing everything necessary/possible upon 'select new route'
-// determining what else accounts for freeze following submit click / where i should focus my optimizing energies
-// determining if/how I should go about converting visualization from SVG => 2d Canvas or even webGL
-// anything else possible to improve performance (see notes above, github issue#1)
+// determining what else accounts for freeze following submit click / where I should focus my optimizing energies
+// determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
+// implementing anything else possible to improve performance (see notes above, github issue#1)
 // making height of dashboard user-adjustable
 // other (*)s if time
 
 
-
- // py508, py12, py51, py315, pt1010
+// OTHER NOTES FOR RICH:
+// would very much recommend starting with all functions toggled close for outline overview / reduced overwhelm
+// I have left in a few commented-out visualizations of my process in case it helps you understand how the script is working
+// would appreciate general impressions, feedback, what works, what doesn't, the little things I am no longer seeing after all these months
+// as well as specific help:
