@@ -36,14 +36,14 @@
 
   var arcSteps = 500  // how fine tuned SVG path animation
     headlightRadius = 6,
-    tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower)
+    tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower) // WANT THIS USER ADJUSTABLE BUT tFULL uses it to set animation length at very begin, so not sure I can make this dynamic given current structure
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
-    zoomFollowScale = 14,  // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
     zoomDuration = tPause *2,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
-    zoomAlongOptions = {padBottom: 1 + zoomFollowScale/10},
+    zoomFollowInit = 15, // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
+    zoomAlongOptions = {padBottom: 1 + zoomFollowInit/10},
     relativeDim = 0.4;  // dimBackground level
 
 //// READY MAP
@@ -111,6 +111,163 @@
 
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
+
+// SLIDERS & OTHER USER CONTROLS
+
+  // VIEW SCALES
+  let zoomTransforms = {
+    fullContinent: {
+      k: scale0,
+      x: 0, //translate0[0],
+      y: 0  //translate0[1]
+    },
+    fullRoute: {  // initial, default, for now
+      k: scale0 * 4,
+      x: 0,
+      y: 0
+    },
+    zoomFollowMin: { k: zoomFollowInit - 3 },
+    zoomFollowMid: { k: zoomFollowInit },
+    zoomFollowMax: { k: zoomFollowInit + 3 },
+    trainFocus: { k: 22 }
+  }
+
+  // ZOOM CONTROL (VIEWS)
+  let zoomValues, zoomViews;
+
+  updateZoomViews()  // set up
+
+  d3.selectAll("button.zoom-btn").on('click', zoomClick);
+
+  function updateZoomViews() {
+
+    zoomValues = [...new Set(Object.values(zoomTransforms))]
+
+    zoomViews = d3.scaleOrdinal()
+      .domain(d3.range(zoomValues.length))
+      .range(zoomValues.sort((a,b) => a.k - b.k))
+
+    let min = Math.min(...zoomViews.domain()),
+        max = Math.max(...zoomViews.domain());
+
+    d3.select("button#zoomIn")
+      .attr("min", min)
+      .attr("max", max)
+    d3.select("button#zoomOut")
+      .attr("min", min)
+      .attr("max", max)
+
+  }
+
+  // +MAPS++++++MUSIC+
+  // THE EMOTIONAL WEB
+    // function getBeat(keystroke) {}
+
+  function zoomClick() {
+
+    // let direction = (this.id === 'zoomIn') ? 1 : -1;
+
+    // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons
+    // each btn defines its own step, including direction
+
+    let oValue = +d3.select(this.parentNode).attr("value"),
+      newValue = oValue + +d3.select(this).attr("step"); // * direction;
+
+    if (newValue <= d3.select(this).attr("max") && newValue >= d3.select(this).attr("min")) {
+
+      d3.select(this.parentNode).attr("value", newValue);
+
+      let view = zoomViews(newValue),
+         zoom1 = getZoom(view);
+
+      // make zoom timing somewhat responsive to zoom amount
+      let t = Math.abs((view.k - zoomViews(oValue).k) * 100);
+
+      svg.transition().duration(t).ease(zoomEase)
+         .call(zoom.transform, zoom1)
+         .on("end", () => {
+           g.attr("transform", zoom1.toString())
+         })
+
+    } else {
+      console.log(oValue)
+      console.log(newValue)
+      // offer visual affordance (little shake) that zoom limit reached
+      d3.select(this).classed("limit-reached",true)
+      d3.timeout(() => {
+        d3.select(this).classed("limit-reached",false);
+      }, 300);
+    }
+
+    function getZoom(view) {
+      let currentCenter;
+      if (view.x && view.y) {
+        currentCenter = [view.x,view.y]
+      } else if (g.select("#train-point").node()) {
+        currentCenter = currentTrainLocation(g.select("#train-point"));
+      } else {
+        currentCenter = [0,0] // default, backup
+      }
+      console.log(currentCenter)
+      return getIdentity(centerTransform(currentCenter,view.k))
+    }
+
+  }
+
+  // var sliderBox = d3.select("div#zoom-slider").append("svg")
+  //   .attr("id", "slider-box")
+  //   // .attr("width", 100)
+  //   // .attr("height", 400)
+  //   .attr("class", "slider")
+  //   .append('g')
+  //     .attr('transform', 'translate(60,30)');
+  //
+  // var zoomSlider = d3.sliderLeft()
+  //   .min(zoomViews.range()[0])
+  //   .max(zoomViews.range()[zoomViews.range().length - 1])
+  //   .width(300)
+  //   .tickFormat(d3.format('.2%'))
+  //   .ticks(zoomValues.length)
+  //   .step(1)
+  //   // .default(0.015)
+  //   .handle(
+  //     d3.symbol()
+  //       .type(d3.symbolCircle)
+  //       .size(200)()
+  //   )
+  //   .on('onchange', d => {
+  //
+  //     // d3.select('p#value-step').text(d3.format('.2%')(d));
+  //
+  //     let currentCenter = g.select("#train-point").node() ? currentTrainLocation(g.select("#train-point")) : translate0;
+  //
+  //     console.log(currentCenter)
+  //     console.log(d3.event.x)
+  //     // console.log(zoomViews(d3.event.x))
+  //
+  //     let zoom1 = getIdentity(centerTransform(currentCenter,d3.event.x))
+  //
+  //     console.log(zoom1)
+  //     console.log(d3.zoomIdentity.translate(zoom1.x,zoom1.y).scale(zoom1.k))
+  //
+  //     g.attr("transform",zoom1.toString())
+  //     svg.call(zoom.transform, zoom1)
+  //
+  //   });
+
+  // zoomSlider.insert("g", ".track-overlay")
+  //     .attr("class", "ticks")
+  //     .attr("transform", "translate(" + 18 + ",0)")
+  //   .selectAll("text")
+  //   .data(zoomViews.ticks(zoomValues.length))
+  //   .enter().append("text")
+  //     .attr("x", zoomViews)
+  //     .attr("text-anchor", "middle")
+  //     .text(d => d)
+
+  // sliderBox.call(zoomSlider);
+
+  // d3.select('p#zoom-value').text(d3.format('.2%')(zoomSlider.value()));
 
 //// COLORS
 
@@ -465,7 +622,7 @@
   childResizer.call(childResize)
   siblingResizer.call(siblingResize)
 
-  // for childResizer, ensure no event listener conflict with nearby dash expand/collapse btns
+  // for childResizer, ensure no event listener conflict with nearby dash expand/collapse btns (https://bl.ocks.org/mbostock/a84aeb78fea81e1ad806)
   d3.select("#dash-expand-btn")
     .on("touchstart", nozoom)
     .on("touchmove", nozoom)
@@ -1097,14 +1254,17 @@
       boundsTransform = getTransform(bounds),  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
       routeBoundsIdentity;
 
-    if (boundsTransform.k <= zoomFollowScale) {
+    if (boundsTransform.k <= zoomTransforms.zoomFollowMid.k) {
       // preferred
       routeBoundsIdentity = getIdentity(boundsTransform);
     } else {
-      // backup, avoids severe transform bug on tiny routes where calculated transform would overzoom default zoomFollowScale
-      let centroidTransform = centerTransform(path.centroid(chosen.lineString),zoomFollowScale);
+      // backup, avoids severe transform bug on tiny routes where calculated transform would overzoom default zoomTransforms.zoomFollowMid.k
+      let centroidTransform = centerTransform(path.centroid(chosen.lineString),zoomTransforms.zoomFollowMid.k);
       routeBoundsIdentity = getIdentity(centroidTransform);
     }
+
+    zoomTransforms.fullRoute = routeBoundsIdentity;
+    updateZoomViews()
 
     // either way, transform north to make space for dash
     let halfDash = d3.select("#dash").node().clientHeight/2;
@@ -1114,9 +1274,11 @@
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, routeBoundsIdentity)
       .on("start", () => {
-        prepEnvironment();  // now includes collapse("#about") & drawRoute()
+        prepEnvironment();  // includes collapse("#about") & drawRoute()
       })
       .on("end", () => {
+        // keep zoomClick btns in line
+        d3.select("label#zoom").attr("value",zoomViews.range().indexOf(zoomTransforms.zoomFollowMid))
         // confirm g transform where it should be
         g.attr("transform", routeBoundsIdentity.toString())
         // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
@@ -1455,7 +1617,7 @@
         necessary: true, // default
         focus: viewFocusInt,
         limit: viewFocusInt * 2,
-        scale: zoomFollowScale,
+        scale: zoomTransforms.zoomFollowMid.k,
         arc: [],
         firstThree: [],
         lastThree: [],
@@ -1938,7 +2100,7 @@
 
   function getIdentity(atTransform,k) {
     let identity = d3.zoomIdentity
-      .translate(atTransform.x,atTransform.y)
+      .translate(atTransform.x || atTransform[0], atTransform.y || atTransform[1])
       .scale(k || atTransform.k)
     return identity;
   }
@@ -1980,7 +2142,7 @@
     let y = this.parentNode.getBoundingClientRect().height - d3.event.y
 
     // Ensure calculated height within bounds of grandparent SVG (plus padding) and, optionally, greater than minimum height
-    y = Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
+    y = Math.min(svg.node().clientHeight - 96 ,Math.max(72, y));
 
     // apply new sizing to relative parent (#resizable) of absolute content (.resizer)
     d3.select(this.parentNode).style('height', y + 'px');
@@ -1989,32 +2151,19 @@
 
   function siblingDrag() {
 
-    console.log(d3.event.y)
-
-    let prevSibHeight = this.previousElementSibling.getBoundingClientRect().height,
+    let prevSibHeight = this.previousElementSibling.getBoundingClientRect().height;
         nextSibHeight = this.nextElementSibling.getBoundingClientRect().height;
 
-    console.log(prevSibHeight)
-    console.log(nextSibHeight)
-    console.log(d3.select(this.previousElementSibling).style('height'))
-    console.log(d3.select(this.nextElementSibling).style('height'))
-
-    // make sure sibling elements have initial height explicitly styled
-    d3.select(this.previousElementSibling).style('height', prevSibHeight + 'px');
-    d3.select(this.nextElementSibling).style('height', nextSibHeight + 'px');
-
     // get new prevSibling height, within bounds
-    let prevY = prevSibHeight - d3.event.y;
+    let prevY = prevSibHeight + d3.event.y;
     // prevY = min/max
     // Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
 
     // get new nextSibling height, within bounds
-    let nextY = nextSibHeight + d3.event.y;
+    let nextY = nextSibHeight - d3.event.y;
     // nextY = min/max
     // Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
 
-    console.log("prevY",prevY)
-    console.log("nextY",nextY)
     // style prev sibling
     d3.select(this.previousElementSibling).style('height', prevY + 'px');
 
@@ -2171,10 +2320,9 @@
 
   function trainMoved() { // called by animate() following dispatch
 
-    let trainTransform = this.node().transform.animVal[0].matrix,
-            headlights = g.select("#headlights"),
-       currentLocation = [trainTransform.e, trainTransform.f],
-         currentRotate = headlights.node().transform.animVal[1].angle,
+    let headlights = g.select("#headlights"),
+      currentRotate = headlights.node().transform.animVal[1].angle,
+      currentLocation = currentTrainLocation(this),
       currentTransform = "translate(" + currentLocation[0] + "," + currentLocation[1] + ") rotate(" + currentRotate + ")";
 
     if (!searchExtent) {  // first time only
@@ -2317,6 +2465,11 @@
 
   }
 
+  function currentTrainLocation(selection) {
+    let trainTransform = selection.node().transform.animVal[0].matrix;
+    return [trainTransform.e, trainTransform.f];
+  }
+
   function departed() {
     console.log("train departing @ " + performance.now())
     d3.timerFlush() // necessary?
@@ -2344,7 +2497,7 @@
   }
 
   // TRANSLATE ONLY
-  function zoomAlong(path,k = zoomFollowScale) {
+  function zoomAlong(path,k = zoomTransforms.zoomFollowMid.k) {
     var l = path.node().getTotalLength();
     return function(d, i, a) {
       return function(t) {
