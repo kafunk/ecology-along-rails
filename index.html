@@ -62,11 +62,12 @@
                   </div>
 
                   <!-- top right // About/Info icon on small screens -->
-                  <div id="info" class="absolute top right mx-neg6 mt-neg1 py3 py6-mm px3 px6-mm z4 none-ml">
-                    <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round mt-neg3-mm mr-neg3-mm' onclick="toggleModal('modal-about')">
+                  <div id="info" class="absolute top right mr-neg6 z4 none-ml">
+                    <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round' onclick="toggleModal('modal-about')">
                       <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
                     </button>
                   </div>
+                   <!-- px0 py0 mt-neg3-mm mr-neg3-mm x-neg6 mt-neg1 -->
 
                   <!-- bottom right // Basic/Expected Map Elements -->
                   <!-- <div id="attribution" class='absolute bottom right mt-neg18 color-lighten50 bg-darken50 px6 round-tl round-bl px12-mm px18-mxl mr-neg3-mm mr-neg6-mxl txt-xs txt-s-mxl txt-shadow-lighten10 z1> -->
@@ -76,15 +77,15 @@
                     <span>Routing via to Rome2Rio</span>
                   </div> -->
 
-                  <!-- bottom left // Zoom buttons, maybe, eventually -->
-                  <!-- <div id="zoom" class="absolute bottom right h18 h24-mm flex-parent-inline mx6 mb24 z2">
-                    <button disabled class="btn btn--disabled btn--pill btn--pill-hl bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round px3 px6-mm py0">
-                      <svg class='icon link color-darken50'><use xlink:href='#icon-plus'></use></svg>
+                  <!-- also top right: zoom buttons -->
+                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column z4 mr6 mr12-ml mt36 mt6-ml pt6-mm pr1-mm pr0-ml w24 w30-mm" value="0">
+                    <button id="zoomIn" class="btn btn--pill btn--pill-vt bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm" step="1">
+                      <svg class='icon w18 h18 w24-ml link color-darken50 px0'><use xlink:href='#icon-plus'></use></svg>
                     </button>
-                    <button disabled class="btn btn--disabled btn--pill btn--pill-hr bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round px3 px6-mm py0 py3-mm mr3">
-                      <svg class='icon link color-darken50'><use xlink:href='#icon-minus'></use></svg>
+                    <button id="zoomOut" class="btn btn--pill btn--pill-vb bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm" step="-1">
+                      <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-minus'></use></svg>
                     </button>
-                  </div> -->
+                  </label>
 
                 </div> <!-- end of ui-overlay-group -->
 
@@ -153,7 +154,7 @@
                         <div id="resizable" class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-mxl round-bl-mm round-br-mm">
 
                           <!-- resizer -->
-                          <div class="flex-child resizer child-resizer absolute top mt24 h6 w-full opacity50 z5"></div>
+                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full ml-neg12-mm opacity50 bg-yellow-light-on-hover z5"></div>
 
                           <!-- main content inner wrapper -->
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid'>
@@ -171,7 +172,7 @@
                                   </div>
 
                                   <!-- to-from insert -->
-                                  <div id="from-to" class="flex-child bg-lighten25 scroll-auto h120">
+                                  <div id="from-to" class="flex-child bg-lighten25 scroll-auto">
                                     <div class="flex-parent flex-parent--center-cross flex-parent--center-main h-full py3 px3">
                                       <div id="from" class="flex-child txt-xs pl12 pr3 flex-parent flex-parent--column"><!--if centering: w36 w60-mm--><!--alt: ml6 mt6--><!--or start-cross-->
                                         <svg class='icon flex-child h18 w18 h24-mm w24-mm'><use xlink:href='#icon-depart'></use></svg><!--if centering: fl mb3--><!--alt: fr-->
@@ -184,7 +185,7 @@
                                   </div>
 
                                   <!-- sibling resizer -->
-                                  <div class="flex-child resizer sibling-resizer h6 w-full bg-orange opacity50 z5"></div>
+                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z5"></div><!-- bg-orange -->
 
                                   <!-- main content / dynamically populated legend items  -->
                                   <div id="log-content-wrapper" class="flex-child flex-child--grow align-center h-full w-full bg-lighten75 px12 py6 scroll-auto">
@@ -212,22 +213,22 @@
                                   <div class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
 
                                   <!-- content -->
-                                  <div class="flex-child flex-child--grow bg-lighten75 px6 py6">
-                                    <div id="widgets" class="flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid round-full bg-darken50">
+                                  <div class="flex-child flex-child--grow bg-lighten75 px6 py6 scroll-auto">
+                                    <div id="widgets" class="flex-parent flex-parent--stretch-cross flex-parent--space-between-main h-full grid round-full bg-darken50">
                                       <div id="row1" class="col col--12 grid">
-                                        <div id="elevation-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pb3">
-                                          <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
+                                        <div id="elevation-wrapper" class="flex-child col col--6 px3 pb3">
+                                          <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
-                                        <div id="odometer-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pb3">
-                                          <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
+                                        <div id="odometer-wrapper" class="flex-child col col--6 px3 pb3">
+                                          <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
                                       </div>
                                       <div id="row" class="col col--12 grid">
-                                        <div id="compass-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pt3">
-                                          <div id="compass" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
+                                        <div id="compass-wrapper" class="flex-child col col--6 px3 pt3">
+                                          <div id="compass" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
-                                        <div id="speed-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pt3">
-                                          <div id="speedometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center"></div>
+                                        <div id="speed-wrapper" class="flex-child col col--6 px3 pt3">
+                                          <div id="speedometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
                                       </div>
                                     </div>
@@ -255,7 +256,7 @@
                                   </div>
 
                                   <div id="narration-txt" class="flex-child flex-child--grow bg-lighten75 px3 py3 grid">
-                                    <div id="encounters-A" class="h-full col col--4 flex-parent flex-parent--column scroll-auto">
+                                    <div id="encounters-A" class="h-full col col--4 flex-parent flex-parent--column-reverse scroll-auto">
                                       <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
                                         <span>Traversing special places</span>
                                       </div>
@@ -266,7 +267,7 @@
                                         <span>Beholding the world made fresh again</span>
                                       </div>
                                     </div>
-                                    <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column align-center scroll-auto">
+                                    <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column-reverse align-center scroll-auto">
                                       <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
                                         <span>Encountering incredible things</span>
                                       </div>
@@ -277,7 +278,7 @@
                                         <span>Traversing special places</span>
                                       </div>
                                     </div>
-                                    <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column align-r scroll-auto">
+                                    <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column-reverse align-r scroll-auto">
                                       <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
                                         <span>Beholding the world made fresh again</span>
                                       </div>
@@ -327,16 +328,16 @@
               <div class="flex-child flex-parent flex-parent--center-cross flex-parent--center-main bg-transparent bg-lighten75 z5"> <!--relative-->
 
                 <!-- modal content options -->
-                <div id="modal" class="flex-child flex-child--grow mx36 my36 round">
+                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative h-full">
 
                   <!-- inner modal wrapper -->
-                  <div class='flex-parent flex-parent--center-cross grid wmax600 mx-auto round relative'><!--flex-parent--stretch-cross flex-parent--space-between-main -->
+                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round h-full'><!--flex-parent--stretch-cross flex-parent--space-between-main -->
 
                     <!-- featured content // Modal About -->
-                    <div id="modal-about" class='flex-child flex-child--grow col col--12 shadow-darken75 round px12 py12 mx-auto bg-modal none'>
+                    <div id="modal-about" class='flex-child flex-child--grow col col--12 shadow-darken75 round px12 mx-auto py12 bg-modal none wmax360 wmax600-mm hmax360 h-full'>
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main'>
+                      <div class='flex-parent flex-parent--column flex-parent--center-main h-full'>
 
                         <!-- About--Header -->
                         <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 pt6 pb3 flex-parent flex-parent--center-cross flex-parent--center-main">
@@ -344,7 +345,7 @@
                         </div>
 
                         <!-- About--Main -->
-                        <div class="flex-child flex-child--grow bg-lighten75 txt-m round-bl round-br scroll-auto">
+                        <div class="flex-child flex-child--grow bg-lighten75 txt-m round-bl round-br hmax300 scroll-auto">
                           <!-- inner content wrapper -->
                           <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross grid px24 py18 px36-mm py24-mm">
                             <!-- main about text, orientation, etc -->
@@ -415,7 +416,7 @@
                             </datalist>
                           </fieldset>
                           <!-- Get End -->
-                          <fieldset class="py6">
+                          <fieldset class="pt12 pb6">
                             <!-- default input (search box with matching) wrapper -->
                             <div class='absolute flex-parent flex-parent--center-cross w36 h36 pl3'>
                               <!-- <svg class='icon'><use xlink:href='#icon-caret-right'></use></svg> -->
@@ -448,7 +449,7 @@
 
                     <!-- modal close button -->
                     <label id="modal-close">
-                      <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active px0 py0 mt-neg12 mr-neg12 mt-neg18-mm mr-neg18-mm z5' onclick="toggleModal()">
+                      <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active round-full px3 py3 mt6 mr6 mt3-mm mr3-mm z5' onclick="toggleModal()">
                         <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-close'/></svg>
                       </button>
                     </label>
@@ -655,6 +656,7 @@
   <script src="https://unpkg.com/topojson@3"></script>
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+  <script src="https://unpkg.com/d3-simple-slider"></script>
 
   <!-- load Chroma.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.2/chroma.min.js"></script>
