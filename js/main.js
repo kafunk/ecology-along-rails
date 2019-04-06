@@ -32,6 +32,12 @@
     quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       triggerPts = d3.json("data/final/enrich_trigger_pts.json");
 
+//// CURRENT STATE MANAGEMENT (NOT IDEAL)
+
+  let experience = { initiated: false, animating: false }
+  let togglesOff = { info: false, select: false }
+  let panned = { flag: false, i: 0 } //, x: 0, y: 0 }
+
 //// KEEP ADJUSTABLE VARIABLES ACCESSIBLE: eventually some of these could be user-controlled via sliders and such
 
   var arcSteps = 500  // how fine tuned SVG path animation
@@ -43,7 +49,7 @@
     zoomDuration = tPause *2,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     zoomFollowInit = 15, // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
-    zoomAlongOptions = {padBottom: 0.8 + zoomFollowInit/10},
+    zoomAlongOptions = {padBottom: 1 + zoomFollowInit/10},
     relativeDim = 0.4;  // dimBackground level
 
 //// READY MAP
@@ -155,7 +161,7 @@
       d3.select(this.parentNode).attr("value", newValue);
 
       let view = zoomViews(newValue),
-         zoom1 = getZoom(view);
+         zoom1 = getZoomIdentity(view);
 
       svg.transition().duration(400).ease(zoomEase)
          .call(zoom.transform, zoom1)
@@ -173,27 +179,34 @@
 
     }
 
-    function getZoom(view) {
+    function getZoomIdentity(view) {
       // get current transform
-      let tx, ty, k0;
-      if (view.x && view.y) {
-        tx = view.x,
-        ty = view.y,
-        k0 = view.k;
-      } else {
-        let transform = g.node().transform.animVal; // [0].matrix; // g.attr("transform");
-        tx = transform[0].matrix.e, // transform.match(/(?<=translate\(|translate\s\()\S*(?=,)/)[0],
-        ty = transform[0].matrix.f, // transform.match(/(?<=,|,\s)\S*(?=\))/)[0];
-        k0 = transform[1].matrix.a;
-      }
-      // get current center by working backwards through centerTransform() from current transform
-      let pt0 = (tx - translate0[0]) / -k0,
-          pt1 = (ty - translate0[1]) / -k0;
-      let currentCenter = [pt0,pt1];
+      let currentTransform = (view.x && view.y) ? view : getCurrentTransform(g);
+      // get current center pt by working backwards through centerTransform() from current transform
+      let centerPt = getCenterFromTransform(currentTransform)
       // apply and return new transform at new zoom level
-      return getIdentity(centerTransform(currentCenter,view.k));
+      return getIdentity(centerTransform(centerPt,view.k));
     }
 
+  }
+
+  function getCurrentTransform(selection) {
+    // let transform = g.attr("transform"),
+    //   tx = transform.match(/(?<=translate\(|translate\s\()\S*(?=,)/)[0],
+    //   ty = transform.match(/(?<=,|,\s)\S*(?=\))/)[0];
+    let transform = selection.node().transform.animVal;
+    return {
+      x: transform[0].matrix.e,
+      y: transform[0].matrix.f,
+      k: transform[1].matrix.a
+    };
+  }
+
+  function getCenterFromTransform(transform) {
+    // get current center by working backwards through centerTransform() from current transform
+    let pt0 = (transform.x - translate0[0]) / -transform.k,
+        pt1 = (transform.y - translate0[1]) / -transform.k;
+    return [pt0,pt1];
   }
 
 // PAN/ZOOM BEHAVIOR
@@ -206,6 +219,9 @@
     // .translateExtent(extent0)  // things eventually get wonky trying to combine these limits with responsive SVG
     // .scaleExtent([scale0*0.5, scale0*64])
     .on("zoom", zoomed)
+
+  // var panOnly = d3.zoom()  // used during animation
+  //   .on("zoom", panOnly)
 
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
@@ -299,14 +315,6 @@
   let quadtreeDefaultOpts = {
     projectX: d => projection(d.geometry.coordinates)[0],
     projectY: d => projection(d.geometry.coordinates)[1]
-  }
-
-// CURRENT STATE (NOT IDEAL)
-
-  let experience = { initiated: false, animating: false };
-  let togglesOff = {
-    info: false,
-    select: false
   }
 
 // MORE DATA, CATEGORY ASSIGNMENT, ETC
@@ -1192,8 +1200,7 @@
     experience.initiated = true;
 
     let bounds = path.bounds(chosen.lineString),
-      boundsTransform = getTransform(bounds),  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
-      routeBoundsIdentity;
+      boundsTransform = getTransform(bounds);  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
 
     if (boundsTransform.k <= zoomTransforms.zoomFollowMid.k) {
       // preferred
@@ -1205,8 +1212,8 @@
     }
 
     // either way, transform north to make space for dash
-    let halfDash = d3.select("#dash").node().clientHeight/2;
-    routeBoundsIdentity.y -= halfDash;
+    let quarterDash = d3.select("#dash").node().clientHeight/4;
+    routeBoundsIdentity.y -= quarterDash;
 
     zoomTransforms.fullRoute = routeBoundsIdentity;
     updateZoomViews()
@@ -1657,8 +1664,12 @@
         headlights.transition().delay(t/2).duration(t/2).style("opacity",0.6)
         // expand dash automatically
         expand("dash","up")
-        // disable free zooming
-        svg.on('.zoom',null)
+        // disable wheel-/mouse-related zooming while retaining manual pan ability
+        svg.on("wheel.zoom",null)
+        svg.on("scroll.zoom",null)
+        // g.on("mousedown",panOnly)  // svg.on?
+        // svg.call(panOnly.transform, firstIdentity) // keep this line first
+        // svg.call(panOnly)
       })
       .on("end", () => {
         // keep zoom buttons up to date
@@ -1673,9 +1684,9 @@
 
       // let toDim = [d3.select("#admin-base"),d3.select("#hydro-base"),d3.select("#urban-base"),d3.select("#rail-base")];
 
-      let dimMore = [d3.select("#continent-mesh"),d3.select("#rail-stations"),d3.select("#rivers"),d3.select("#lake-mesh"),d3.select("#urban-areas")]
+      let dimMore = [d3.select("#continent-mesh"),d3.select("#rail-stations"),d3.select("#rivers"),d3.select("#lake-mesh"),d3.select("#urban-areas"),d3.select("#country-borders")]
 
-      let dimLess = [d3.select("#state-borders"),d3.select("#country-borders")];
+      let dimLess = [d3.select("#state-borders")];
 
       dimMore.forEach(selection => {
         let currentOpacity = selection.style("opacity")
@@ -1722,7 +1733,9 @@
             .on("end", () => {
               // confirm g transform in alignment
               g.attr("transform",lastIdentity.toString())
-              // reenable free zooming
+              // reenable integrated free zooming and panning
+              // svg.on("wheel.zoom",zoomed)
+              // g.on("mousedown",null)
               svg.call(zoom)
             })
         });
@@ -2014,7 +2027,90 @@
     // keep zoom buttons up to date
     d3.select("label#zoom").attr("value",zoomIndex(k))
 
+    if (d3.event.sourceEvent && experience.animating) {
+      // d3.event.sourceEvent.stopPropagation();
+      panned.flag = true,
+      // panned.x = tx; // d3.event.sourceEvent.x; // client? layer? offset?
+      // panned.y = ty; // d3.event.sourceEvent.y; // client? layer? offset?
+      // panned.k = k;
+      panned.transform = transform;
+      ++panned.i;
+
+      // if (d3.event.sourceEvent.type === "mousemove") {
+      //
+      //   // store temporary adjust (pre-mouseup)
+      //   panned.tx = panned.x + tx;
+      //   panned.ty = panned.y + ty;
+      //   ++panned.i0;
+      //
+      // } else if (d3.sourceEvent.type === "mouseup") {
+      //
+      //   // final values cumulative with other pan events (counted separately)
+      //   panned.x += tx;
+      //   panned.y += ty;
+      //   ++panned.i1;
+      //
+      // }
+
+    }
+
   }
+
+  // function panOnly() {
+  //
+  //   if (d3.event.sourceEvent) d3.event.sourceEvent.stopPropagation();
+  //
+  //   var transform = d3.zoomTransform(this);
+  //
+  //   console.log(transform)
+  //   console.log(d3.event)
+  //   let tx = transform.x,
+  //       ty = transform.y;
+  //
+  //   panned.flag = true;
+  //   panned.x += tx;
+  //   panned.y += ty;
+  //   ++panned.i;
+  //
+  //   g.attr("transform", "translate(" + tx + "," + ty + ")");
+  //
+  // }
+
+  // function panOnly() {
+  //
+  //   // store mousedown location
+  //   let pt0 = d3.event.clientX, // layer? offset?
+  //       pt1 = d3.event.clientY;
+  //
+  //   // await move events
+  //   g.on("mousemove",function() {
+  //
+  //     // store temporary adjust (pre-mouseup)
+  //     let tx = d3.event.clientX - pt0,
+  //         ty = d3.event.clientY - pt1;
+  //     panned.flag = true;
+  //     panned.tx = panned.x + tx;
+  //     panned.ty = panned.y + ty;
+  //     ++panned.i0;
+  //
+  //     // await mouseup
+  //     g.on("mouseup", function() {
+  //
+  //       // cancel mousemove listener (until retriggered by new mousedown event)
+  //       g.on("mousemove",null)
+  //
+  //       // final values cumulative with other pan events (counted separately)
+  //       let tx = d3.event.clientX - pt0,
+  //           ty = d3.event.clientY - pt1;
+  //       panned.x += tx;
+  //       panned.y += ty;
+  //       ++panned.i1;
+  //
+  //     })
+  //
+  //   })
+  //
+  // }
 
   function zoomIndex(k) {
     let allKs = zoomViews.range().slice().map(d => d.k);
@@ -2464,12 +2560,34 @@
 
   // TRANSLATE ONLY
   function zoomAlong(path) {
+    let centerAdjust, i = 0; // i0 = 0, i1 = 0;
     var l = path.node().getTotalLength();
     return function(d, i, a) {
       return function(t) {
         // KEEP NODE P IN CENTER OF FRAME @ CURRENT ZOOM LEVEL K
         var p = path.node().getPointAtLength(t * l),
             k = zoomViews(d3.select("label#zoom").attr("value")).k;
+        // if user has manually zoomed (without wheel) or panned svg since animation start, offset zoomAlong center by translate values
+        if (panned.flag) {
+          // adjust zoomAlong center by x,y coords
+          // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
+          // if (panned.i1 > i1) {  // use x,y (cumulative)
+          //   centerAdjust = getCenterFromTransform(panned)
+          //   ++i1;
+          //   console.log(centerAdjust)
+          // } else if (panned.i0 > i0) {  // use tx,ty
+          //   centerAdjust = getCenterFromTransform({x:panned.tx,y:panned.ty,k:panned.k})
+          //   ++i0;
+          //   console.log(centerAdjust)
+          // }
+          if (panned.i > i) {
+            let currentCenter = getCenterFromTransform(panned.transform);
+            centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
+            ++i;
+          }
+          p.x += centerAdjust[0],
+          p.y += centerAdjust[1];
+        }
         // calculate translate necessary to center data within extent
         let centered = centerTransform([p.x,p.y],k,zoomAlongOptions)
         svg.call(zoom.transform, getIdentity(centered))
@@ -3346,7 +3464,6 @@
 
   function expand(elementStr,direction = ["up"]) {
 
-    console.log(d3.event)
     if (d3.event && d3.event.defaultPrevented) return; // dragged
 
     // if window too short to reasonably fit more content, expand modal instead
@@ -3968,7 +4085,6 @@
 // // while experience.animating, center forward?
 
 // LITTLE THINGS
-  // dim state outlines and railroad less
   // make timing of split lines the same again; no fun / disorienting for one to wait for the other
   // less padding around about map on mm
   // line-dash ease slower at end
