@@ -624,7 +624,7 @@
         .style("fill", "yellowgreen")
         .style("stroke", "mediumseagreen")
         // .style("stroke-width", d => d.properties.scalerank * 0.01)
-        .on("mouseover", onMouseover)
+        .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
     railBase.append("g")
@@ -640,7 +640,7 @@
         .style("fill", "lightsalmon")
         .style("stroke","indianred")
         .style("stroke-width",0.05)
-        .on("mouseover", onMouseover)
+        .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
     // // sort stations by city name
@@ -2175,7 +2175,7 @@
         // .property("category", d => { return d.properties.CATEGORY; })
         .style("fill","none")  // COMMENT THIS OUT TO VISUALIZE
         .style("stroke","none")  // COMMENT THIS OUT TO VISUALIZE
-        // .on("mouseover", onMouseover)
+        // .on("mouseenter", onMouseenter)
         // .on("mouseout", onMouseout)
 
     if (triggerPtFlag) {
@@ -2811,7 +2811,7 @@
             .style("opacity", ptOpacity)  // make more subtle
             .style("stroke-opacity", ptStrokeOpacity)
             .on("end", () =>
-              update.on("mouseover", onMouseover)
+              update.on("mouseenter", onMouseenter)
                     .on("mouseout", onMouseout)
             )
           )
@@ -2845,7 +2845,7 @@
                     .style("stroke-dasharray", "none")
                     .style("stroke-linecap", "round")
                     .style("opacity", lineOpacity)
-                    .on("mouseover", onMouseover)
+                    .on("mouseenter", onMouseenter)
                     .on("mouseout", onMouseout)
 
     if (newLine.property("category") === "Watershed") {
@@ -2922,7 +2922,7 @@
               .style("opacity", polyOpacity)
             output(enter)
           })
-          .on("mouseover", onMouseover)
+          .on("mouseenter", onMouseenter)
           .on("mouseout", onMouseout)
         // update => update,
         // exit => exit.call(exit =>
@@ -3620,7 +3620,7 @@
 
 //// TOOLTIPS
 
-  function onMouseover(d) {
+  function onMouseenter(d) {
 
     // visual affordance for element itself
     d3.select(this) // .classed("hover", true) //.raise();
@@ -3939,19 +3939,10 @@
     // sources.md -> links
     // writing real words
 
-// ZOOM
-// // big jump to routebounds; keep steps even incl zoom click?
-// // allow pan without zoom??
-// // while experience.animating, center forward?
-
 // LITTLE THINGS
   // make timing of split lines the same again; no fun / disorienting for one to wait for the other
-  // less padding around about map on mm
   // line-dash ease slower at end
-  // improve visual affordances on hover for lines (and make more sensitive to mouseover?)
-  // mouseover --> mouseenter to avoid tooltips popping up automatically where mouse paused following submit button click
   // new color for modal
-  // new font for SELECT ROUTE prompt
   // change projection to equidistant (instead of equal area)
   // distinguish between stations and enrich pts (station icons simplest for now)
   // mouseover for stations
@@ -3989,15 +3980,15 @@
   // add underlying MapboxGL vector tiles / custom MapboxStudio basemap?
   // add underlying shaded relief raster layer? (*)
     // http://www.shadedrelief.com/birds_eye/gallery.html?
-  // instead of free-zooming, zoom to certain views: whole continent, all routes, selected route, current train position, X miles (*)
-    // keep enabled even during animation
-  // keep improving responsivity/layout
-    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
-    // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
+
   // mousing over log/narration elements highlights all within map (*)
-  // use x/y to transition-collapse down from tooltip/element itself into dash/log
+
   // more data-driven styling
   // elevation grid/visual tracker from number data (*)
+
+// GIVING UP:
+  // use x/y to transition-collapse down from tooltip/element itself into dash/log
+  // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
 
 // MAAAAYBE
   // new train icon that rotates along with headlights
