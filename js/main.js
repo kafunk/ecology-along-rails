@@ -36,14 +36,14 @@
 
   var arcSteps = 500  // how fine tuned SVG path animation
     headlightRadius = 6,
-    tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower) // WANT THIS USER ADJUSTABLE BUT tFULL uses it to set animation length at very begin, so not sure I can make this dynamic given current structure
+    tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower) *** I WANT THIS USER ADJUSTABLE BUT tFULL uses it to set animation length at very begin, so not sure I can make this dynamic given current structure
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
     zoomDuration = tPause *2,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     zoomFollowInit = 15, // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
-    zoomAlongOptions = {padBottom: 1 + zoomFollowInit/10},
+    zoomAlongOptions = {padBottom: 0.8 + zoomFollowInit/10},
     relativeDim = 0.4;  // dimBackground level
 
 //// READY MAP
@@ -98,44 +98,28 @@
 
   var line = d3.line().curve(d3.curveCardinal.tension(0));
 
-// PAN/ZOOM BEHAVIOR
-
-  var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0)
-
-  var active = d3.select(null);
-
-  var zoom = d3.zoom()
-    // .translateExtent(extent0)  // things eventually get wonky trying to combine these limits with responsive SVG
-    // .scaleExtent([scale0*0.5, scale0*64])
-    .on("zoom", zoomed)
-
-  svg.call(zoom.transform, zoom0) // keep this line first
-     .call(zoom)
-
 // SLIDERS & OTHER USER CONTROLS
 
   // VIEW SCALES
   let zoomTransforms = {
     fullContinent: {
       k: scale0,
-      x: 0, //translate0[0],
-      y: 0  //translate0[1]
-    },
-    fullRoute: {  // initial, default, for now
-      k: scale0 * 4,
       x: 0,
       y: 0
     },
-    zoomFollowMin: { k: zoomFollowInit - 3 },
+    fullRoute: { k: scale0 * 4 },  // initial, default, for now
+    zoomFollowMin: { k: zoomFollowInit - 6 },
+    zoomFollowMid0: { k: zoomFollowInit - 3 },
     zoomFollowMid: { k: zoomFollowInit },
-    zoomFollowMax: { k: zoomFollowInit + 3 },
-    trainFocus: { k: 22 }
+    zoomFollowMid1: { k: zoomFollowInit + 3 },
+    zoomFollowMax: { k: zoomFollowInit + 6 },
+    trainFocus: { k: 48 }
   }
 
   // ZOOM CONTROL (VIEWS)
   let zoomValues, zoomViews;
 
-  updateZoomViews()  // set up
+  updateZoomViews()  // initial set up
 
   d3.selectAll("button.zoom-btn").on('click', zoomClick);
 
@@ -159,19 +143,12 @@
 
   }
 
-  // +MAPS++++++MUSIC+
-  // THE EMOTIONAL WEB
-    // function getBeat(keystroke) {}
-
   function zoomClick() {
 
-    // let direction = (this.id === 'zoomIn') ? 1 : -1;
-
-    // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons
-    // each btn defines its own step, including direction
+    // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons; each btn defines its own step, including direction
 
     let oValue = +d3.select(this.parentNode).attr("value"),
-      newValue = oValue + +d3.select(this).attr("step"); // * direction;
+      newValue = oValue + +d3.select(this).attr("step");
 
     if (newValue <= d3.select(this).attr("max") && newValue >= d3.select(this).attr("min")) {
 
@@ -180,94 +157,58 @@
       let view = zoomViews(newValue),
          zoom1 = getZoom(view);
 
-      // make zoom timing somewhat responsive to zoom amount
-      let t = Math.abs((view.k - zoomViews(oValue).k) * 100);
-
-      svg.transition().duration(t).ease(zoomEase)
+      svg.transition().duration(400).ease(zoomEase)
          .call(zoom.transform, zoom1)
          .on("end", () => {
            g.attr("transform", zoom1.toString())
          })
 
     } else {
-      console.log(oValue)
-      console.log(newValue)
+
       // offer visual affordance (little shake) that zoom limit reached
       d3.select(this).classed("limit-reached",true)
       d3.timeout(() => {
         d3.select(this).classed("limit-reached",false);
       }, 300);
+
     }
 
     function getZoom(view) {
-      let currentCenter;
+      // get current transform
+      let tx, ty, k0;
       if (view.x && view.y) {
-        currentCenter = [view.x,view.y]
-      } else if (g.select("#train-point").node()) {
-        currentCenter = currentTrainLocation(g.select("#train-point"));
+        tx = view.x,
+        ty = view.y,
+        k0 = view.k;
       } else {
-        currentCenter = [0,0] // default, backup
+        let transform = g.node().transform.animVal; // [0].matrix; // g.attr("transform");
+        tx = transform[0].matrix.e, // transform.match(/(?<=translate\(|translate\s\()\S*(?=,)/)[0],
+        ty = transform[0].matrix.f, // transform.match(/(?<=,|,\s)\S*(?=\))/)[0];
+        k0 = transform[1].matrix.a;
       }
-      console.log(currentCenter)
-      return getIdentity(centerTransform(currentCenter,view.k))
+      // get current center by working backwards through centerTransform() from current transform
+      let pt0 = (tx - translate0[0]) / -k0,
+          pt1 = (ty - translate0[1]) / -k0;
+      let currentCenter = [pt0,pt1];
+      // apply and return new transform at new zoom level
+      return getIdentity(centerTransform(currentCenter,view.k));
     }
 
   }
 
-  // var sliderBox = d3.select("div#zoom-slider").append("svg")
-  //   .attr("id", "slider-box")
-  //   // .attr("width", 100)
-  //   // .attr("height", 400)
-  //   .attr("class", "slider")
-  //   .append('g')
-  //     .attr('transform', 'translate(60,30)');
-  //
-  // var zoomSlider = d3.sliderLeft()
-  //   .min(zoomViews.range()[0])
-  //   .max(zoomViews.range()[zoomViews.range().length - 1])
-  //   .width(300)
-  //   .tickFormat(d3.format('.2%'))
-  //   .ticks(zoomValues.length)
-  //   .step(1)
-  //   // .default(0.015)
-  //   .handle(
-  //     d3.symbol()
-  //       .type(d3.symbolCircle)
-  //       .size(200)()
-  //   )
-  //   .on('onchange', d => {
-  //
-  //     // d3.select('p#value-step').text(d3.format('.2%')(d));
-  //
-  //     let currentCenter = g.select("#train-point").node() ? currentTrainLocation(g.select("#train-point")) : translate0;
-  //
-  //     console.log(currentCenter)
-  //     console.log(d3.event.x)
-  //     // console.log(zoomViews(d3.event.x))
-  //
-  //     let zoom1 = getIdentity(centerTransform(currentCenter,d3.event.x))
-  //
-  //     console.log(zoom1)
-  //     console.log(d3.zoomIdentity.translate(zoom1.x,zoom1.y).scale(zoom1.k))
-  //
-  //     g.attr("transform",zoom1.toString())
-  //     svg.call(zoom.transform, zoom1)
-  //
-  //   });
+// PAN/ZOOM BEHAVIOR
 
-  // zoomSlider.insert("g", ".track-overlay")
-  //     .attr("class", "ticks")
-  //     .attr("transform", "translate(" + 18 + ",0)")
-  //   .selectAll("text")
-  //   .data(zoomViews.ticks(zoomValues.length))
-  //   .enter().append("text")
-  //     .attr("x", zoomViews)
-  //     .attr("text-anchor", "middle")
-  //     .text(d => d)
+  var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0)
 
-  // sliderBox.call(zoomSlider);
+  var active = d3.select(null);
 
-  // d3.select('p#zoom-value').text(d3.format('.2%')(zoomSlider.value()));
+  var zoom = d3.zoom()
+    // .translateExtent(extent0)  // things eventually get wonky trying to combine these limits with responsive SVG
+    // .scaleExtent([scale0*0.5, scale0*64])
+    .on("zoom", zoomed)
+
+  svg.call(zoom.transform, zoom0) // keep this line first
+     .call(zoom)
 
 //// COLORS
 
@@ -1263,12 +1204,12 @@
       routeBoundsIdentity = getIdentity(centroidTransform);
     }
 
-    zoomTransforms.fullRoute = routeBoundsIdentity;
-    updateZoomViews()
-
     // either way, transform north to make space for dash
     let halfDash = d3.select("#dash").node().clientHeight/2;
     routeBoundsIdentity.y -= halfDash;
+
+    zoomTransforms.fullRoute = routeBoundsIdentity;
+    updateZoomViews()
 
     // control timing with transition start/end events
     svg.transition().duration(zoomDuration).ease(zoomEase)
@@ -1617,7 +1558,6 @@
         necessary: true, // default
         focus: viewFocusInt,
         limit: viewFocusInt * 2,
-        scale: zoomTransforms.zoomFollowMid.k,
         arc: [],
         firstThree: [],
         lastThree: [],
@@ -1691,11 +1631,11 @@
           fullPath = g.select("#full-route"),
           azimuth0 = headlights.property("azimuth0");
 
-    if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame
+    if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
 
-      firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),zoomFollow.scale,zoomAlongOptions))
+      firstIdentity = getIdentity(centerTransform(projection(zoomFollow.firstThree[1]),zoomFollowInit,zoomAlongOptions))
 
-      lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),zoomFollow.scale,zoomAlongOptions))
+      lastIdentity = getIdentity(centerTransform(projection(zoomFollow.lastThree[1]),zoomFollowInit,zoomAlongOptions))
 
       // TESTING USING TPSM INSTEAD
       // tDelay = tpm * zoomFollow.focus,  // delay zoomFollow until train hits mm <zoomFollow.focus>
@@ -1721,25 +1661,37 @@
         svg.on('.zoom',null)
       })
       .on("end", () => {
+        // keep zoom buttons up to date
+        d3.select("label#zoom").attr("value",zoomIndex(firstIdentity.k))
         // confirm g exactly in alignment for next transition
         g.attr("transform",firstIdentity.toString())
         // call initial point transition, passing simplified path
-        goOnNow(zoomArc,zoomFollow.scale,lastIdentity)
+        goOnNow(zoomArc,lastIdentity)
       })
 
     function dimBackground(t) {
 
-      let toDim = [d3.select("#admin-base"),d3.select("#hydro-base"),d3.select("#urban-base"),d3.select("#rail-base")];
+      // let toDim = [d3.select("#admin-base"),d3.select("#hydro-base"),d3.select("#urban-base"),d3.select("#rail-base")];
 
-      toDim.forEach(selection => {
+      let dimMore = [d3.select("#continent-mesh"),d3.select("#rail-stations"),d3.select("#rivers"),d3.select("#lake-mesh"),d3.select("#urban-areas")]
+
+      let dimLess = [d3.select("#state-borders"),d3.select("#country-borders")];
+
+      dimMore.forEach(selection => {
         let currentOpacity = selection.style("opacity")
         selection.transition().duration(t)
-          .style("opacity", currentOpacity * relativeDim)
+          .style("opacity", currentOpacity * relativeDim / 2)
+        });
+
+      dimLess.forEach(selection => {
+        let currentOpacity = selection.style("opacity")
+        selection.transition().duration(t)
+          .style("opacity", currentOpacity * relativeDim * 2)
         });
 
     }
 
-    function goOnNow(simpPath,scale,lastIdentity) {
+    function goOnNow(simpPath,lastIdentity) {
       dispatch.call("depart", this)
       // transition train along entire route
     	point.transition().delay(tPause).duration(tFull).ease(d3.easeSinInOut)
@@ -1758,18 +1710,21 @@
           // zoomFollow if necessary
           if (simpPath) { // (firstThree[1] !== lastThree[1]) {
             g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
-              .attrTween("transform", zoomAlong(simpPath,scale))
+              .attrTween("transform", zoomAlong(simpPath))
           }
         })
         .on("end", () => {
-          // ensure final alignment
-          g.attr("transform",lastIdentity.toString())
           // dispatch custom "arrive" event
           dispatch.call("arrive", this)
-          // inform d3 zoom behavior of final transform value
-          svg.call(zoom.transform, lastIdentity)
-          // reenable free zooming
-          svg.call(zoom)
+          // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
+          svg.transition().duration(zoomDuration).ease(zoomEase)
+            .call(zoom.transform, lastIdentity)
+            .on("end", () => {
+              // confirm g transform in alignment
+              g.attr("transform",lastIdentity.toString())
+              // reenable free zooming
+              svg.call(zoom)
+            })
         });
     }
 
@@ -2056,6 +2011,16 @@
 
     g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + k + ")");
 
+    // keep zoom buttons up to date
+    d3.select("label#zoom").attr("value",zoomIndex(k))
+
+  }
+
+  function zoomIndex(k) {
+    let allKs = zoomViews.range().slice().map(d => d.k);
+    allKs.push(k);
+    let sorted = [...new Set(allKs.sort((a,b) => a-b))];
+    return Math.max(0,sorted.indexOf(k));
   }
 
   function getTransform(bounds, options) {
@@ -2113,8 +2078,8 @@
     pt[0] = pt[0] + options.padRight - options.padLeft
     pt[1] = pt[1] + options.padBottom - options.padTop
 
-    let tx = -scale * pt[0] + initial.width/2,
-        ty = -scale * pt[1] + initial.height/2;
+    let tx = -scale * pt[0] + translate0[0], // initial.width/2,
+        ty = -scale * pt[1] + translate0[1]  // initial.height/2;
 
     return {x: tx, y: ty, k: scale};
 
@@ -2478,6 +2443,7 @@
   function arrived() {
     console.log("train arrived @ " + performance.now())
     timer.stop()
+    experience.animating = false;
     d3.select("#current-miles").text(totalMiles)
     console.log("unique encounters",uniqueEncounters.size)
   }
@@ -2497,14 +2463,16 @@
   }
 
   // TRANSLATE ONLY
-  function zoomAlong(path,k = zoomTransforms.zoomFollowMid.k) {
+  function zoomAlong(path) {
     var l = path.node().getTotalLength();
     return function(d, i, a) {
       return function(t) {
-        // KEEP NODE P IN CENTER OF FRAME
-        var p = path.node().getPointAtLength(t * l);
+        // KEEP NODE P IN CENTER OF FRAME @ CURRENT ZOOM LEVEL K
+        var p = path.node().getPointAtLength(t * l),
+            k = zoomViews(d3.select("label#zoom").attr("value")).k;
         // calculate translate necessary to center data within extent
         let centered = centerTransform([p.x,p.y],k,zoomAlongOptions)
+        svg.call(zoom.transform, getIdentity(centered))
         return "translate(" + centered.x + "," + centered.y + ") scale(" + centered.k + ")";
       }
     }
@@ -3994,6 +3962,11 @@
     // sources.md -> links
     // writing real words
 
+// ZOOM
+// // big jump to routebounds; keep steps even incl zoom click?
+// // allow pan without zoom??
+// // while experience.animating, center forward?
+
 // LITTLE THINGS
   // dim state outlines and railroad less
   // make timing of split lines the same again; no fun / disorienting for one to wait for the other
@@ -4014,7 +3987,6 @@
 
 // MEDIUM
   // automatically order legend log categories
-  // make dash adjustable? hmax 120 too small depending on length of route / to-from text (*)
   // ecozones, protected areas their own group? or combine all PAs
   // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
   // more interesting icon for point data?
@@ -4107,7 +4079,7 @@
 // DATA CLEAN!
 
   // PROBLEM CITIES
-    // FIX? (R2R issue)
+    // FIX?? (R2R issue)
       // Sault Ste Marie, ON
       // Charleston, SC
       // Cincinnatti, OH
@@ -4128,19 +4100,14 @@
 
 ////////
 
-
-// NEED HELP:
-// resolving textured symbol output (apparent issue with .style("fill") on newly created symbol span -- see addNewGroup() within log() function)
-// clearing everything necessary/possible upon 'select new route'
-// determining what else accounts for freeze following submit click / where I should focus my optimizing energies
-// determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
-// implementing anything else possible to improve performance (see notes above, github issue#1)
-// making height of dashboard user-adjustable
-// other (*)s if time
-
-
-// OTHER NOTES FOR RICH:
-// would very much recommend starting with all functions toggled close for outline overview / reduced overwhelm
+// NOTES FOR RICH:
+// would very much recommend starting with all functions toggled close for program outline overview / reduced overwhelm
 // I have left in a few commented-out visualizations of my process in case it helps you understand how the script is working
 // would appreciate general impressions, feedback, what works, what doesn't, the little things I am no longer seeing after all these months
 // as well as specific help:
+  // resolving textured symbol output (apparent issue with .style("fill") on newly created symbol span -- see addNewGroup() within log() function)
+  // clearing everything necessary/possible upon 'select new route'
+  // determining what else accounts for freeze following submit click / where I should focus my optimizing energies
+  // determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
+  // implementing anything else possible to improve performance (see notes above, github issue#1)
+  // other (*)s if time
