@@ -36,7 +36,7 @@
 
   let experience = { initiated: false, animating: false }
   let togglesOff = { info: false, select: false }
-  let panned = { flag: false, i: 0 } //, x: 0, y: 0 }
+  let panned = { flag: false, i: 0 }
 
 //// KEEP ADJUSTABLE VARIABLES ACCESSIBLE: eventually some of these could be user-controlled via sliders and such
 
@@ -129,86 +129,6 @@
 
   d3.selectAll("button.zoom-btn").on('click', zoomClick);
 
-  function updateZoomViews() {
-
-    zoomValues = [...new Set(Object.values(zoomTransforms))]
-
-    zoomViews = d3.scaleOrdinal()
-      .domain(d3.range(zoomValues.length))
-      .range(zoomValues.sort((a,b) => a.k - b.k))
-
-    let min = Math.min(...zoomViews.domain()),
-        max = Math.max(...zoomViews.domain());
-
-    d3.select("button#zoomIn")
-      .attr("min", min)
-      .attr("max", max)
-    d3.select("button#zoomOut")
-      .attr("min", min)
-      .attr("max", max)
-
-  }
-
-  function zoomClick() {
-
-    // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons; each btn defines its own step, including direction
-
-    let oValue = +d3.select(this.parentNode).attr("value"),
-      newValue = oValue + +d3.select(this).attr("step");
-
-    if (newValue <= d3.select(this).attr("max") && newValue >= d3.select(this).attr("min")) {
-
-      d3.select(this.parentNode).attr("value", newValue);
-
-      let view = zoomViews(newValue),
-         zoom1 = getZoomIdentity(view);
-
-      svg.transition().duration(400).ease(zoomEase)
-         .call(zoom.transform, zoom1)
-         .on("end", () => {
-           g.attr("transform", zoom1.toString())
-         })
-
-    } else {
-
-      // offer visual affordance (little shake) that zoom limit reached
-      d3.select(this).classed("limit-reached",true)
-      d3.timeout(() => {
-        d3.select(this).classed("limit-reached",false);
-      }, 300);
-
-    }
-
-    function getZoomIdentity(view) {
-      // get current transform
-      let currentTransform = (view.x && view.y) ? view : getCurrentTransform(g);
-      // get current center pt by working backwards through centerTransform() from current transform
-      let centerPt = getCenterFromTransform(currentTransform)
-      // apply and return new transform at new zoom level
-      return getIdentity(centerTransform(centerPt,view.k));
-    }
-
-  }
-
-  function getCurrentTransform(selection) {
-    // let transform = g.attr("transform"),
-    //   tx = transform.match(/(?<=translate\(|translate\s\()\S*(?=,)/)[0],
-    //   ty = transform.match(/(?<=,|,\s)\S*(?=\))/)[0];
-    let transform = selection.node().transform.animVal;
-    return {
-      x: transform[0].matrix.e,
-      y: transform[0].matrix.f,
-      k: transform[1].matrix.a
-    };
-  }
-
-  function getCenterFromTransform(transform) {
-    // get current center by working backwards through centerTransform() from current transform
-    let pt0 = (transform.x - translate0[0]) / -transform.k,
-        pt1 = (transform.y - translate0[1]) / -transform.k;
-    return [pt0,pt1];
-  }
-
 // PAN/ZOOM BEHAVIOR
 
   var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0)
@@ -219,9 +139,6 @@
     // .translateExtent(extent0)  // things eventually get wonky trying to combine these limits with responsive SVG
     // .scaleExtent([scale0*0.5, scale0*64])
     .on("zoom", zoomed)
-
-  // var panOnly = d3.zoom()  // used during animation
-  //   .on("zoom", panOnly)
 
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
@@ -1667,9 +1584,6 @@
         // disable wheel-/mouse-related zooming while retaining manual pan ability
         svg.on("wheel.zoom",null)
         svg.on("scroll.zoom",null)
-        // g.on("mousedown",panOnly)  // svg.on?
-        // svg.call(panOnly.transform, firstIdentity) // keep this line first
-        // svg.call(panOnly)
       })
       .on("end", () => {
         // keep zoom buttons up to date
@@ -1734,8 +1648,6 @@
               // confirm g transform in alignment
               g.attr("transform",lastIdentity.toString())
               // reenable integrated free zooming and panning
-              // svg.on("wheel.zoom",zoomed)
-              // g.on("mousedown",null)
               svg.call(zoom)
             })
         });
@@ -2028,89 +1940,90 @@
     d3.select("label#zoom").attr("value",zoomIndex(k))
 
     if (d3.event.sourceEvent && experience.animating) {
-      // d3.event.sourceEvent.stopPropagation();
+      // panning only
       panned.flag = true,
-      // panned.x = tx; // d3.event.sourceEvent.x; // client? layer? offset?
-      // panned.y = ty; // d3.event.sourceEvent.y; // client? layer? offset?
-      // panned.k = k;
       panned.transform = transform;
       ++panned.i;
-
-      // if (d3.event.sourceEvent.type === "mousemove") {
-      //
-      //   // store temporary adjust (pre-mouseup)
-      //   panned.tx = panned.x + tx;
-      //   panned.ty = panned.y + ty;
-      //   ++panned.i0;
-      //
-      // } else if (d3.sourceEvent.type === "mouseup") {
-      //
-      //   // final values cumulative with other pan events (counted separately)
-      //   panned.x += tx;
-      //   panned.y += ty;
-      //   ++panned.i1;
-      //
-      // }
-
     }
 
   }
 
-  // function panOnly() {
-  //
-  //   if (d3.event.sourceEvent) d3.event.sourceEvent.stopPropagation();
-  //
-  //   var transform = d3.zoomTransform(this);
-  //
-  //   console.log(transform)
-  //   console.log(d3.event)
-  //   let tx = transform.x,
-  //       ty = transform.y;
-  //
-  //   panned.flag = true;
-  //   panned.x += tx;
-  //   panned.y += ty;
-  //   ++panned.i;
-  //
-  //   g.attr("transform", "translate(" + tx + "," + ty + ")");
-  //
-  // }
+  function updateZoomViews() {
 
-  // function panOnly() {
-  //
-  //   // store mousedown location
-  //   let pt0 = d3.event.clientX, // layer? offset?
-  //       pt1 = d3.event.clientY;
-  //
-  //   // await move events
-  //   g.on("mousemove",function() {
-  //
-  //     // store temporary adjust (pre-mouseup)
-  //     let tx = d3.event.clientX - pt0,
-  //         ty = d3.event.clientY - pt1;
-  //     panned.flag = true;
-  //     panned.tx = panned.x + tx;
-  //     panned.ty = panned.y + ty;
-  //     ++panned.i0;
-  //
-  //     // await mouseup
-  //     g.on("mouseup", function() {
-  //
-  //       // cancel mousemove listener (until retriggered by new mousedown event)
-  //       g.on("mousemove",null)
-  //
-  //       // final values cumulative with other pan events (counted separately)
-  //       let tx = d3.event.clientX - pt0,
-  //           ty = d3.event.clientY - pt1;
-  //       panned.x += tx;
-  //       panned.y += ty;
-  //       ++panned.i1;
-  //
-  //     })
-  //
-  //   })
-  //
-  // }
+    zoomValues = [...new Set(Object.values(zoomTransforms))]
+
+    zoomViews = d3.scaleOrdinal()
+      .domain(d3.range(zoomValues.length))
+      .range(zoomValues.sort((a,b) => a.k - b.k))
+
+    let min = Math.min(...zoomViews.domain()),
+        max = Math.max(...zoomViews.domain());
+
+    d3.select("button#zoomIn")
+      .attr("min", min)
+      .attr("max", max)
+    d3.select("button#zoomOut")
+      .attr("min", min)
+      .attr("max", max)
+
+  }
+
+  function zoomClick() {
+
+    // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons; each btn defines its own step, including direction
+
+    let oValue = +d3.select(this.parentNode).attr("value"),
+      newValue = oValue + +d3.select(this).attr("step");
+
+    if (newValue <= d3.select(this).attr("max") && newValue >= d3.select(this).attr("min")) {
+
+      d3.select(this.parentNode).attr("value", newValue);
+
+      let view = zoomViews(newValue),
+         zoom1 = getZoomIdentity(view);
+
+      svg.transition().duration(400).ease(zoomEase)
+         .call(zoom.transform, zoom1)
+         .on("end", () => {
+           g.attr("transform", zoom1.toString())
+         })
+
+    } else {
+
+      // offer visual affordance (little shake) that zoom limit reached
+      d3.select(this).classed("limit-reached",true)
+      d3.timeout(() => {
+        d3.select(this).classed("limit-reached",false);
+      }, 300);
+
+    }
+
+    function getZoomIdentity(view) {
+      // get current transform
+      let currentTransform = (view.x && view.y) ? view : getCurrentTransform(g);
+      // get current center pt by working backwards through centerTransform() from current transform
+      let centerPt = getCenterFromTransform(currentTransform)
+      // apply and return new transform at new zoom level
+      return getIdentity(centerTransform(centerPt,view.k));
+    }
+
+  }
+
+  function getCurrentTransform(selection) {
+    let transform = selection.node().transform.animVal;
+    return {
+      x: transform[0].matrix.e,
+      y: transform[0].matrix.f,
+      k: transform[1].matrix.a
+    };
+  }
+
+  function getCenterFromTransform(transform) {
+    // get current center by working backwards through centerTransform() from current transform
+    let pt0 = (transform.x - translate0[0]) / -transform.k,
+        pt1 = (transform.y - translate0[1]) / -transform.k;
+    return [pt0,pt1];
+  }
 
   function zoomIndex(k) {
     let allKs = zoomViews.range().slice().map(d => d.k);
@@ -2560,7 +2473,7 @@
 
   // TRANSLATE ONLY
   function zoomAlong(path) {
-    let centerAdjust, i = 0; // i0 = 0, i1 = 0;
+    let centerAdjust, i = 0;
     var l = path.node().getTotalLength();
     return function(d, i, a) {
       return function(t) {
@@ -2569,17 +2482,7 @@
             k = zoomViews(d3.select("label#zoom").attr("value")).k;
         // if user has manually zoomed (without wheel) or panned svg since animation start, offset zoomAlong center by translate values
         if (panned.flag) {
-          // adjust zoomAlong center by x,y coords
           // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
-          // if (panned.i1 > i1) {  // use x,y (cumulative)
-          //   centerAdjust = getCenterFromTransform(panned)
-          //   ++i1;
-          //   console.log(centerAdjust)
-          // } else if (panned.i0 > i0) {  // use tx,ty
-          //   centerAdjust = getCenterFromTransform({x:panned.tx,y:panned.ty,k:panned.k})
-          //   ++i0;
-          //   console.log(centerAdjust)
-          // }
           if (panned.i > i) {
             let currentCenter = getCenterFromTransform(panned.transform);
             centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
