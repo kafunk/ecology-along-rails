@@ -106,27 +106,20 @@
 
 // SLIDERS & OTHER USER CONTROLS
 
-  // VIEW SCALES
-  let zoomTransforms = {
-    fullContinent: {
-      k: scale0,
-      x: 0,
-      y: 0
-    },
-    fullRoute: { k: scale0 * 4 },  // initial, default, for now
-    zoomFollowMin: { k: zoomFollowInit - 6 },
-    zoomFollowMid0: { k: zoomFollowInit - 3 },
-    zoomFollowMid: { k: zoomFollowInit },
-    zoomFollowMid1: { k: zoomFollowInit + 3 },
-    zoomFollowMax: { k: zoomFollowInit + 6 },
-    trainFocus: { k: 48 }
-  }
+  // SET UP ZOOM BUTTON CONTROL
+  let scaleExtent = [0,49], step = 6,
+    zoomValues = d3.range(scaleExtent[0],scaleExtent[1],step);
 
-  // ZOOM CONTROL (VIEWS)
-  let zoomValues, zoomViews;
+  let min = Math.min(...zoomValues),
+      max = Math.max(...zoomValues);
+  d3.select("button#zoomIn")
+    .attr("min", min)
+    .attr("max", max)
+  d3.select("button#zoomOut")
+    .attr("min", min)
+    .attr("max", max)
 
-  updateZoomViews()  // initial set up
-
+  d3.select("label#zoom").attr("value",scale0)
   d3.selectAll("button.zoom-btn").on('click', zoomClick);
 
 // PAN/ZOOM BEHAVIOR
@@ -1119,21 +1112,18 @@
     let bounds = path.bounds(chosen.lineString),
       boundsTransform = getTransform(bounds);  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
 
-    if (boundsTransform.k <= zoomTransforms.zoomFollowMid.k) {
+    if (boundsTransform.k <= zoomFollowInit) {
       // preferred
       routeBoundsIdentity = getIdentity(boundsTransform);
     } else {
-      // backup, avoids severe transform bug on tiny routes where calculated transform would overzoom default zoomTransforms.zoomFollowMid.k
-      let centroidTransform = centerTransform(path.centroid(chosen.lineString),zoomTransforms.zoomFollowMid.k);
+      // backup, avoids severe transform bug on tiny routes where calculated transform would overzoom default zoomFollowInit
+      let centroidTransform = centerTransform(path.centroid(chosen.lineString),zoomFollowInit);
       routeBoundsIdentity = getIdentity(centroidTransform);
     }
 
     // either way, transform north to make space for dash
     let quarterDash = d3.select("#dash").node().clientHeight/4;
     routeBoundsIdentity.y -= quarterDash;
-
-    zoomTransforms.fullRoute = routeBoundsIdentity;
-    updateZoomViews()
 
     // control timing with transition start/end events
     svg.transition().duration(zoomDuration).ease(zoomEase)
@@ -1143,7 +1133,7 @@
       })
       .on("end", () => {
         // keep zoomClick btns in line
-        d3.select("label#zoom").attr("value",zoomViews.range().indexOf(zoomTransforms.zoomFollowMid))
+        d3.select("label#zoom").attr("value",zoomFollowInit)
         // confirm g transform where it should be
         g.attr("transform", routeBoundsIdentity.toString())
         // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
@@ -1587,7 +1577,7 @@
       })
       .on("end", () => {
         // keep zoom buttons up to date
-        d3.select("label#zoom").attr("value",zoomIndex(firstIdentity.k))
+        d3.select("label#zoom").attr("value",firstIdentity.k)
         // confirm g exactly in alignment for next transition
         g.attr("transform",firstIdentity.toString())
         // call initial point transition, passing simplified path
@@ -1937,7 +1927,7 @@
     g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + k + ")");
 
     // keep zoom buttons up to date
-    d3.select("label#zoom").attr("value",zoomIndex(k))
+    d3.select("label#zoom").attr("value",k)
 
     if (d3.event.sourceEvent && experience.animating) {
       // panning only
@@ -1948,39 +1938,24 @@
 
   }
 
-  function updateZoomViews() {
-
-    zoomValues = [...new Set(Object.values(zoomTransforms))]
-
-    zoomViews = d3.scaleOrdinal()
-      .domain(d3.range(zoomValues.length))
-      .range(zoomValues.sort((a,b) => a.k - b.k))
-
-    let min = Math.min(...zoomViews.domain()),
-        max = Math.max(...zoomViews.domain());
-
-    d3.select("button#zoomIn")
-      .attr("min", min)
-      .attr("max", max)
-    d3.select("button#zoomOut")
-      .attr("min", min)
-      .attr("max", max)
-
-  }
-
   function zoomClick() {
 
-    // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons; each btn defines its own step, including direction
+    // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons
+    let direction = (this.id === "zoomIn") ? 1 : -1;
 
     let oValue = +d3.select(this.parentNode).attr("value"),
-      newValue = oValue + +d3.select(this).attr("step");
+      newValue = oValue + step * direction;
 
     if (newValue <= d3.select(this).attr("max") && newValue >= d3.select(this).attr("min")) {
 
       d3.select(this.parentNode).attr("value", newValue);
 
-      let view = zoomViews(newValue),
-         zoom1 = getZoomIdentity(view);
+      // get current transform
+      let currentTransform = getCurrentTransform(g);
+      // get current center pt by working backwards through centerTransform() from current transform
+      let centerPt = getCenterFromTransform(currentTransform);
+      // get identity of centered transform at new zoom level
+      let zoom1 = getIdentity(centerTransform(centerPt,newValue));
 
       svg.transition().duration(400).ease(zoomEase)
          .call(zoom.transform, zoom1)
@@ -1989,22 +1964,11 @@
          })
 
     } else {
-
       // offer visual affordance (little shake) that zoom limit reached
       d3.select(this).classed("limit-reached",true)
       d3.timeout(() => {
         d3.select(this).classed("limit-reached",false);
       }, 300);
-
-    }
-
-    function getZoomIdentity(view) {
-      // get current transform
-      let currentTransform = (view.x && view.y) ? view : getCurrentTransform(g);
-      // get current center pt by working backwards through centerTransform() from current transform
-      let centerPt = getCenterFromTransform(currentTransform)
-      // apply and return new transform at new zoom level
-      return getIdentity(centerTransform(centerPt,view.k));
     }
 
   }
@@ -2023,13 +1987,6 @@
     let pt0 = (transform.x - translate0[0]) / -transform.k,
         pt1 = (transform.y - translate0[1]) / -transform.k;
     return [pt0,pt1];
-  }
-
-  function zoomIndex(k) {
-    let allKs = zoomViews.range().slice().map(d => d.k);
-    allKs.push(k);
-    let sorted = [...new Set(allKs.sort((a,b) => a-b))];
-    return Math.max(0,sorted.indexOf(k));
   }
 
   function getTransform(bounds, options) {
@@ -2479,7 +2436,7 @@
       return function(t) {
         // KEEP NODE P IN CENTER OF FRAME @ CURRENT ZOOM LEVEL K
         var p = path.node().getPointAtLength(t * l),
-            k = zoomViews(d3.select("label#zoom").attr("value")).k;
+            k = d3.select("label#zoom").attr("value");
         // if user has manually zoomed (without wheel) or panned svg since animation start, offset zoomAlong center by translate values
         if (panned.flag) {
           // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
