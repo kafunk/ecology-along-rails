@@ -77,7 +77,7 @@
                   </div> -->
 
                   <!-- also top right: zoom buttons -->
-                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column z4 mr6 mr12-ml mt36 mt6-ml pt6-mm pr1-mm pr0-ml w24 w30-mm">
+                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column z4 mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
                     <button id="zoomIn" class="btn btn--pill btn--pill-vt bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm">
                       <svg class='icon w18 h18 w24-ml link color-darken50 px0'><use xlink:href='#icon-plus'></use></svg>
                     </button>
@@ -123,9 +123,9 @@
                     </label>
 
                     <div id="attribution" class='absolute right color-lighten50 bg-darken50 round-tl round-bl px6 px12-mm px24-mxl mt-neg18 mt-neg24-mxl txt-xs txt-s-mxl txt-shadow-lighten10 z1'>
-                      <span>Visualized with D3.js</span>
+                      <span>Visualized with <a target="_blank" href="https://d3js.org">D3.js</a></span>
                       <span class="px3-mm">||</span>
-                      <span>Routing via to Rome2Rio</span>
+                      <span>Routing via <a target="_blank" href="https://www.rome2rio.com">Rome2Rio</a></span>
                     </div>
 
                   </div>
@@ -350,8 +350,27 @@
                             <!-- main about text, orientation, etc -->
                             <div class='flex-child col col--offl2 col--10 align-r py3'>
                               <h4 class="txt-h4 txt-bold py3">Some words</h4>
-                              <p class="py3">This map visualizes ~~~~~~.</p>
-                              <p class="py3">Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam.</p>
+                              <!-- ::: BASICS -->
+                              <p class="py6">
+                                In this map, I offer the user a virtual experience of traversing North America’s passenger rail routes through a dynamically unfolding milieu of terrain, ecology, waterways, and habitat. Color, texture, geometry suggest the many layers and lives abounding around us; unfolding, echoing paths celebrate and illuminate the surprising shapes of worlds. As a symbolic train navigates the chosen route, a variety of boundaries and point data that come within a 0.5 degree or so of the train’s path unfold on the screen as they are intersected. Watersheds, protected areas, rivers and lakes, and four levels of ecoregions are variously highlighted with a dynamically varying color, texture, size, and symbology. Naturally, the intersected data appears more dense within the approximate 0.5 degree buffer, but a user may also appreciate seeing the sweeping forms and unexpected connections between distant places that share broader lower level ecozones. A togglable and height-adjustable dashboard at the base of the screen offers the user a dynamically populating legend/log of the categories encountered, lists the names of all encountered features in scrollable columns, and tracks traversed elevation, bearing, distance, time, and speed.
+                              </p>
+                              <!-- ::: ON PROCESS, LEARNING, BEAUTY, FAILURE  -->
+                              <p class="py6">
+                                This map is a map. It is also an experiment and a failure, a celebration, a journey, an offering, and the product of a lonely winter. It both represents the kind of content I long for in web mapping / data visualization realms — illuminating, orienting, emotional, and augmentative of human connection to and respect for a world beyond screens — and also elucidates the many, many challenges [I, we, maps] face[d] in elegantly and thoroughly translating those ideas to reality.
+                              </p>
+                              <p class="py6">
+                                In committing to the idea for this project, I wanted to create a surprising, clean, multilayered, atypical web map that would appeal to travelers, potential travelers, and vicarious travelers, train enthusiasts, journey seekers, and the geo and eco curious. I was drawn to train routes as a grounding, weighted infrastructure that would necessarily contain and locate my inquiry while also offering a grand glimpse into the many layers of reality making up the here and now. Weighted infrastructure or not, to say this project got away from me would be a sore understatement. It ballooned and wandered and tangled back on itself many times over, consuming the bulk of my focus and time for more months than was reasonable, beyond anyone’s expectation or requirement. As I force myself to come to a stopping point, I struggle to find the words to encapsulate both the profundity of my learning as well as my disappointment in the final product. Ultimately, this map epitomizes both the grand potential I see in web maps as a grounding, connective, illuminating force as well as the difficulty of — and my particular failure at — manifesting such a product. This map navigates, quite literally, the ecotones and borderlands of what it means to fail, to succeed, and to learn. There remain countless barriers and discontinuities between my ideas and their satisfactory implementation.  There are a million things wrong with this program. Giving up on it—for now—hurts a little. It is also the right, and only, thing to do.
+                              </p>
+                              <p class="py6">
+                                On the brighter side, these trains I have spent months animating became the vehicle of some profound learning and meaningful skill, the bulk of which will be easily will be translatable into many other development and data visualization contexts. I have repeatedly surprised myself with my own persistence, and can only hope that a mere fraction of the immense work and learning behind this project is evident to the trained viewer. I problem solved like hell at just about every turn, honed my capacity for sieving through masses of information the web was always happy to offer me, and experienced from the ground up the truth of <a target="_blank" href="https://eloquentjavascript.net/00_intro.html">Marijn Haverbeke’s assertion</a> (in <i>Eloquent JavaScript</i>) that “[t]he art of programming is the skill of controlling complexity.” Although I know the <del>final code</del> current iteration is by no means the most artful possible version of this program, spanning as it does some 3500 lines, the iterative process of writing and refining it has embedded in me a much deeper understanding of what I am to be striving for, and helped me build muscle and stamina for seeking and working toward moments of artful clarity again, and again, and again.
+                              </p>
+                              <!-- ::: TECHNOLOGY STACK  -->
+                              <p class="py6">
+                                This map represents my final project of my final class of UKY's <a target="_blank" href="https://newmapsplus.as.uky.edu/">NMP Graduate Certificate in Digital Mapping</a>. As a final project, it was meant to serve as a cumulation and showcase of my newfound mapping and coding skills. Never one to choose the easy route, I challenged myself hugely by foregoing pre-scaffolded mapping libraries such as Leaflet and Mapbox, instead opting to build this work from a more fundamental ground using D3.js, <a target="_blank" href="https://github.com/topojson/topojson/wiki">TopoJSON</a>, and plenty of vanilla JavaScript as the knife edge of my code. By way of learning D3, I dove ankle deep into a more fundamental learning about modern web standards including SVG, Canvas, REST & HTTP, CSS & HTML. I did rely on Mapbox’s <a target="_blank" href="https://labs.mapbox.com/assembly/">Assembly</a> CSS framework in building the page layout, and happily used their <a target="_blank" href="http://turfjs.org/">Turf.js</a> library for on-the-fly geoprocessing. <a target="_blank" href="https://www.rome2rio.com/documentation/1-4/search/">Rome2Rio’s Search API</a> and <a target="_blank" href="https://elevation-api.io/">Elevation-API.io</a> serve the data that allows a user to customize their experience from thousands of possible to-from combinations. A call to Mapbox's <a target="_blank" href="https://github.com/mapbox/polyline">Polyline.js</a> allows for easy conversion of R2R’s returned path string from encoded polyline to GeoJSON. Finally, <a target="_blank" href="https://vis4.net/chromajs/">Chroma.js</a> and <a target="_blank" href="https://riccardoscalco.it/textures/">Textures.js</a> helped with dynamic styling and differentiating the unveiled geometries. This technology stack provided me with a solid taste of the ecosystem of roles and functions while still leaving me with maximal room for creative freedom and control over even the tiniest elements.
+                              </p>
+                              <p class="py6">
+                                Before all of this, of course, came the data wrangling itself, which was in many ways a more challenging and overwhelming venture for my recent GIS-newbie self. My familiarity with tools and software including QGIS, PostGIS SQL, and the <a target="_blank" href="https://github.com/mbloch/mapshaper/wiki/Introduction-to-the-Command-Line-Tool">Mapshaper</a> CLI grew enormously as I persisted though countless moments of frustration and confusion, regularly frozen screens, and ferociously humming CPU fans that still failed to keep my fingers from literally burning with the sharp heat emitted through the borders of my laptop keys. Slowed but not stopped, I experimented with GRASS and GDAL scripts, memorized the differences between various kind of SQL joins, internalized workflows of querying / extracting / intersecting / dissolving / clipping / simplifying, and ultimately moved toward refining a handful of multi-layered workflow of sequenced geospatial data processing algorithms. I am proud of the resulting data layers, which balance needs for both simplicity and detail, and I still can’t get over my renewed love for geometry and amazement at the shapes of this earth.
+                              </p>
                             </div>
                             <div class='flex-child col col--12 px6 py18 relative'>
                               <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
@@ -518,7 +537,7 @@
 
                 </div>
 
-                <div id="about" class="flex-child wmax300-mxl"><!-- relative -->
+                <div id="about" class="flex-child wmax360-mxl"><!-- relative -->
 
                   <!-- about inner wrapper --> <!-- rm fp-center-main?-->
                   <div id="about-wrapper" class='flex-parent flex-parent--column-mxl flex-parent--stretch-cross flex-parent--center-main py12-mxl px12-mxl'><!--my3-mxl-->
@@ -538,36 +557,82 @@
                         <div class="flex-child hmax120 hmax-none-mxl h-full-mxl bg-lighten50 txt-s txt-m-ml round-bl round-br scroll-auto">
 
                           <!-- inner content wrapper -->
-                          <div class="flex-child flex-parent flex-parent--column flex-parent--row-mm flex-parent--column-mxl flex-parent--space-between-main flex-parent--stretch-cross grid px12 py6 py12-mm px24-mxl py18-mxl mx6 my6 mx0-mm my0-mm mx12-mxl my12-mxl">
-                            <!-- main about text, orientation, etc -->
-                            <div class='flex-child col col--offl2 col--10 col--offl1-mm col--4-mm col--11-mxl align-r py3 pt0-mxl'>
-                              <h4 class="txt-h5 txt-h4-ml txt-bold py3">Some words</h4>
-                              <p class="py3">This map visualizes ~~~~~~.</p>
-                              <p class="py3">Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam.</p>
+                          <div class="flex-parent flex-parent--column flex-parent--row-mm flex-parent--column-mxl flex-parent--space-between-main flex-parent--stretch-cross grid px12 py6 py12-mm px18-mxl py18-mxl mx6 my6 mx0-mm my0-mm mx12-mxl my6-mxl">
+                            <div class="col col--12 col--5-mm col--12-mxl">
+                              <!-- ::: MAIN ABOUT TEXT / BASICS -->
+                              <div class='flex-child flex1 align-r pl24 py3 pt0-mxl'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">Some orienting words</h4>
+                                <p class="py6">
+                                  In this map, I offer the user a virtual experience of traversing North America’s passenger rail routes through a dynamically unfolding milieu of terrain, ecology, waterways, and habitat. Color, texture, geometry suggest the many layers and lives abounding around us; unfolding, echoing paths celebrate and illuminate the surprising shapes of worlds. As a symbolic train navigates the chosen route, a variety of boundaries and point data that come within a 0.5 degree or so of the train’s path unfold on the screen as they are intersected. Watersheds, protected areas, rivers and lakes, and four levels of ecoregions are variously highlighted with a dynamically varying color, texture, size, and symbology. Naturally, the intersected data appears more dense within the approximate 0.5 degree buffer, but a user may also appreciate seeing the sweeping forms and unexpected connections between distant places that share broader lower level ecozones. A togglable and height-adjustable dashboard at the base of the screen offers the user a dynamically populating legend/log of the categories encountered, lists the names of all encountered features in scrollable columns, and tracks traversed elevation, bearing, distance, time, and speed.
+                                </p>
+                              </div>
+                              <!-- DIVIDER -->
+                              <div class='flex-child flex2 px6 py18 my12-mxl relative'>
+                                <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
+                                  <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
+                                  <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
+                                </div>
+                              </div>
+                              <!-- ::: TECHNOLOGY STACK -->
+                              <div class='flex-child flex4 flex3-mm-ml flex4-mxl align-r-mm align-l-mxl pr24 pr0-mm pl24-mm pl0-mxl pr24-mxl py3 pt0-mxl'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">Technologies used</h4>
+                                <p class="py6">
+                                  This map represents my final project of my final class of UKY's <a target="_blank" href="https://newmapsplus.as.uky.edu/">NMP Graduate Certificate in Digital Mapping</a>. As a final project, it was meant to serve as a cumulation and showcase of my newfound mapping and coding skills. Never one to choose the easy route, I challenged myself hugely by foregoing pre-scaffolded mapping libraries such as Leaflet and Mapbox, instead opting to build this work from a more fundamental ground using D3.js, <a target="_blank" href="https://github.com/topojson/topojson/wiki">TopoJSON</a>, and plenty of vanilla JavaScript as the knife edge of my code. By way of learning D3, I dove ankle deep into a more fundamental learning about modern web standards including SVG, Canvas, REST & HTTP, CSS & HTML. I did rely on Mapbox’s <a target="_blank" href="https://labs.mapbox.com/assembly/">Assembly</a> CSS framework in building the page layout, and happily used their <a target="_blank" href="http://turfjs.org/">Turf.js</a> library for on-the-fly geoprocessing. <a target="_blank" href="https://www.rome2rio.com/documentation/1-4/search/">Rome2Rio’s Search API</a> and <a target="_blank" href="https://elevation-api.io/">Elevation-API.io</a> serve the data that allows a user to customize their experience from thousands of possible to-from combinations. A call to Mapbox's <a target="_blank" href="https://github.com/mapbox/polyline">Polyline.js</a> allows for easy conversion of R2R’s returned path string from encoded polyline to GeoJSON. Finally, <a target="_blank" href="https://vis4.net/chromajs/">Chroma.js</a> and <a target="_blank" href="https://riccardoscalco.it/textures/">Textures.js</a> helped with dynamic styling and differentiating the unveiled geometries. This technology stack provided me with a solid taste of the ecosystem of roles and functions while still leaving me with maximal room for creative freedom and control over even the tiniest elements.
+                                </p>
+                                <p class="py6">
+                                  Before all of this, of course, came the data wrangling itself, which was in many ways a more challenging and overwhelming venture for my recent GIS-newbie self. My familiarity with tools and software including QGIS, PostGIS SQL, and the <a target="_blank" href="https://github.com/mbloch/mapshaper/wiki/Introduction-to-the-Command-Line-Tool">Mapshaper</a> CLI grew enormously as I persisted though countless moments of frustration and confusion, regularly frozen screens, and ferociously humming CPU fans that still failed to keep my fingers from literally burning with the sharp heat emitted through the borders of my laptop keys. Slowed but not stopped, I experimented with GRASS and GDAL scripts, memorized the differences between various kind of SQL joins, internalized workflows of querying / extracting / intersecting / dissolving / clipping / simplifying, and ultimately moved toward refining a handful of multi-layered workflow of sequenced geospatial data processing algorithms. I am proud of the resulting data layers, which balance needs for both simplicity and detail, and I still can’t get over my renewed love for geometry and amazement at the shapes of this earth.
+                                </p>
+                              </div>
                             </div>
-                            <div class='flex-child col col--12 col--2-mm col--12-mxl px6 py18 my30-mxl relative'>
+                            <!-- DIVIDER -->
+                            <div class='col col--12 col--2-mm col--12-mxl px6 py18 my12-mxl relative'>
                               <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
                                 <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
                                 <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
                               </div>
                             </div>
-                            <!-- data sources, sub-about, furthermore -->
-                            <div class='flex-child col col--offr2 col--10 col--offr1-mm col--4-mm col--11-mxl py3 pb0-mxl'>
-                              <h4 class="txt-h5 txt-h4-ml txt-bold py3">Data sources</h4>
-                              <ul class="py3">
-                                <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2 mb-neg1-mxl"></div>
-                                  <a target='_blank' href='#'>this is how i go</a>
-                                </li>
-                                <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2 mb-neg1-mxl"></div>
-                                  <a target='_blank' href='#'>when i go</a>
-                                </li>
-                                <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2 mb-neg1-mxl"></div>
-                                  <a target='_blank' href='#'>like this</a>
-                                </li>
-                              </ul>
+                            <div class="col col--12 col--5-mm col--12-mxl">
+                              <!-- ::: DATA SOURCES -->
+                              <div class='flex-child flex3 flex4-mm-ml flex3-mxl align-r align-l-mm align-r-mxl pl24 pl0-mm pr24-mm pl24-mxl pr0-mxl py3 pb0-mxl'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">Data sources</h4>
+                                <ul class="py6">
+                                  <li class="txt-li">
+                                    <div class="triangle triangle--r color-symbol none inline-block-mm none-mxl mb-neg2"></div>
+                                    <a target='_blank' href='#'>this is how i go</a>
+                                    <div class="triangle triangle--l color-symbol inline-block none-mm inline-block-mxl mb-neg2"></div>
+                                  </li>
+                                  <li class="txt-li">
+                                    <div class="triangle triangle--r color-symbol none inline-block-mm none-mxl mb-neg2"></div>
+                                    <a target='_blank' href='#'>when i go</a>
+                                    <div class="triangle triangle--l color-symbol inline-block none-mm inline-block-mxl mb-neg2"></div>
+                                  </li>
+                                  <li class="txt-li">
+                                    <div class="triangle triangle--r color-symbol none inline-block-mm none-mxl mb-neg2"></div>
+                                    <a target='_blank' href='#'>like this</a>
+                                    <div class="triangle triangle--l color-symbol inline-block none-mm inline-block-mxl mb-neg2"></div>
+                                  </li>
+                                </ul>
+                              </div>
+                              <!-- DIVIDER -->
+                              <div class='flex-child flex5 px6 py18 my12-mxl relative'>
+                                <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
+                                  <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
+                                  <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
+                                </div>
+                              </div>
+                              <!-- ::: REFLECTIONS -->
+                              <div class='flex-child flex6 pr24 py3 pb0-mxl'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">On process, learning, beauty, & failure</h4>
+                                <p class="py6">
+                                  This map is a map. It is also an experiment and a failure, a celebration, a journey, an offering, and the product of a lonely winter. In committing to an idea for my final NMP project, I wanted to create a surprising, clean, multilayered, atypical web map that would appeal to travelers, potential travelers, and vicarious travelers, train enthusiasts, journey seekers, and the geo- and eco-curious. I was drawn to train routes as a grounding, weighted infrastructure that would necessarily contain and locate my inquiry while also offering a grand glimpse into the many layers of reality making up the here and now. Weighted infrastructure or not, to say this project got away from me would be a sore understatement. It ballooned and wandered and tangled back on itself many times over, consuming the bulk of my focus and time for more months than was reasonable, beyond anyone’s expectation or requirement.
+                                </p>
+                                <p class="py6">
+                                  As I force myself to come to a stopping point, I struggle to find words to encapsulate both the profundity of my learning as well as my disappointment in the final product. Ultimately, this map epitomizes both the grand potential I see in web maps as a grounding, connective, illuminating force, as well as the difficulty of&mdash;and my particular failure at&mdash;manifesting any such product. It both represents the kind of content I long for in web mapping / data visualization realms&mdash;orienting, emotional, and augmentative of human connection to and respect for a world beyond screens&mdash;and also elucidates the many challenges [I, we, maps] face[d] in elegantly and thoroughly translating such lofty ideas into reality. This map navigates, then&mdash;almost literally&mdash;the ecotones and borderlands of what it means to fail, to succeed, and to learn. There remain countless barriers and discontinuities between my ideas and their satisfactory implementation. There are a million things wrong with this program. Giving up on it (for now) hurts a little. It is also the right, and only, thing to do.
+                                </p>
+                                <p class="py6">
+                                  On the brighter side, these symbolic trains I spent months animating became the very real vehicle of some deep learning and meaningful skill, the bulk of which will be easily translatable into other web development and data visualization contexts. I have repeatedly surprised myself with my own persistence, and would be happy if a mere fraction of the immense work and learning behind this project is evident to the trained viewer. I problem solved like hell at just about every turn, honed my capacity for sieving through masses of information the web was always happy to offer me, and experienced from the ground up the truth of <a target="_blank" href="https://eloquentjavascript.net/00_intro.html">Marijn Haverbeke’s assertion</a> (in <i>Eloquent JavaScript</i>) that “[t]he art of programming is the skill of controlling complexity.” Although I know the final code is by no means the most artful possible version of this program&mdash;the JavaScript spanning, as it does, some 3500 lines&mdash;the iterative process of writing and refining it all has embedded in me a much deeper understanding of what I am to be striving for, and helped me build muscle and stamina for seeking and working toward moments of artful clarity again, and again, and again.
+                                </p>
+                              </div>
                             </div>
                           </div>
 
@@ -655,7 +720,7 @@
   <script src="https://unpkg.com/topojson@3"></script>
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
-  <script src="https://unpkg.com/d3-simple-slider"></script>
+  <!-- <script src="https://unpkg.com/d3-simple-slider"></script> -->
 
   <!-- load Chroma.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.2/chroma.min.js"></script>

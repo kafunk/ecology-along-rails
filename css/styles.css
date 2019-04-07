@@ -64,39 +64,18 @@ details .legend-log-item label {  /*log-name*/
   border-radius: 50px 5px;
   background: #dbd99f;
 }
-#elevation,#odometer {
-  border-top: 1px double dimgray;
-}
-#odometer,#speedometer {
-  border-right: 1px double dimgray;
-}
-#compass,#speedometer {
-  border-bottom: 1px double dimgray;
-}
-#elevation,#compass {
-  border-left: 1px double dimgray;
-}
+#elevation,#odometer { border-top: 1px double dimgray; }
+#odometer,#speedometer { border-right: 1px double dimgray; }
+#compass,#speedometer { border-bottom: 1px double dimgray; }
+#elevation,#compass { border-left: 1px double dimgray; }
 #footer a {
   color: darksalmon;
   /* font-weight: 700; */
 }
-#dash {
-  overflow-y:hidden;
-}
-#from-to {
-  height: 120px;
-  /* flex-grow: 1; */
-}
-/* #log-content-wrapper {
-  flex-grow: 2;
-} */
-#resizable {
-  height: 120px;
-}
+#dash { overflow-y:hidden; }
+#from-to { height: 120px; }
+#resizable { height: 120px; }
 
-/* #from-to {
-  flex-shrink: 5;
-} */
 #dash .resizer {
  cursor: ns-resize;
  pointer-events: all;
@@ -124,7 +103,7 @@ details .legend-log-item label {  /*log-name*/
 .bg-dark1 { background: var(--bg-dark1); }
 .bg-dark2 { background: var(--bg-dark2); }
 .txt-fancy { font-family: 'Fredericka the Great', cursive; }
-.txt-fancy2 { font-family: 'Sirin Stencil', cursive; } /* Sirin Stencil, Croissant One */
+.txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
 
 .disappear-up {
@@ -154,25 +133,24 @@ details .legend-log-item label {  /*log-name*/
   background: honeydew;
   border: 2px;
 }
-.legend-item { }
+/* .legend-item { }
 .legend-symbol { }
-.legend-text { }
+.legend-text { } */
 .hover { stroke-opacity: 1; opacity: 1 }
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
 .txt-xxs { font-size: 0.5em; }
-
 .txt-compact { line-height: 0.8em; }
+
 .flex1 { order: 1; }
 .flex2 { order: 2; }
 .flex3 { order: 3; }
+.flex4 { order: 4; }
+.flex5 { order: 5; }
+.flex6 { order: 6; }
 
-.already-open {
-  animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
-}
-.limit-reached {
-  animation: shake2 1s cubic-bezier(.36,.07,.19,.97) both;
-}
+.already-open { animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both; }
+.limit-reached { animation: shake2 1s cubic-bezier(.36,.07,.19,.97) both; }
 .already-open, .limit-reached {
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
@@ -210,21 +188,27 @@ details .legend-log-item label {  /*log-name*/
 /* MEDIA QUERIES */
 /* @media screen and (min-width: 400px) { } */
 @media screen and (min-width: 640px) {
-  #resizable {
-    height: 180px;
-  }
+  #resizable { height: 180px; }
   .widget {
     border: 4px solid #6B7063;
     border-radius: 5px;
     box-shadow: 1px 1px 1px 1px #2A4C48;
   }
+  /* missing from Assembly */
+  .align-l-mm { text-align: left !important; }
+  .align-r-mm { text-align: right !important; }
 }
-@media screen and (min-width: 800px) {
-  .flex1-ml { order: 1; }
-  .flex2-ml { order: 2; }
-  .flex3-ml { order: 3; }
+@media screen and (min-width: 640px) and (max-width: 1199px) {
+  .flex3-mm-ml { order: 3; }
+  .flex4-mm-ml { order: 4; }
 }
-/* @media screen and (min-width: 1200px) { } */
+@media screen and (min-width: 1200px) {
+  .flex3-mxl { order: 3; }
+  .flex4-mxl { order: 4; }
+  /* missing from Assembly */
+  .align-l-mxl { text-align: left !important; }
+  .align-r-mxl { text-align: right !important; }
+}
 
 /* ANIMATION */
 @keyframes shake {
