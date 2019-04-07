@@ -212,6 +212,16 @@
   const outline1 = "rgba(76, 83, 91, .6)",  // could also be url(#pattern)s
         outline2 = "rgba(76, 83, 91, .3)"
 
+// IMPORTED ICONS
+
+  let test = defs.append("svg:image")
+    .attr("id", "station-icon")
+    .attr("href","../assets/station.svg")
+    .attr("width", 3.2)
+    .attr("height", 4)
+    .attr("x",-1.8)
+    .attr("y",-2)
+
 // DEFAULT OPTIONS
 
   let defaultOptions = {
@@ -554,6 +564,7 @@
       .attr("d", path(continentMesh))
       .style("stroke","darkslategray")
       .style("stroke-width",0.2)
+      .style("opacity",1)
       .style("stroke-opacity",0.8)
       .style("fill","dimgray")
 
@@ -629,17 +640,17 @@
 
     railBase.append("g")
       .attr("id", "rail-stations")
-      .selectAll("circle")
+      .selectAll("use")
       .data(sourceData.stations.gj.features)
-      .enter().append("circle")
-        .attr("r", 0.4)
-        .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-        .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+      .enter().append("use")
+        .attr("href", "#station-icon")
+        .classed("icon w18 h18",true)
+        .attr("width",48)
+        .attr("height",48)
+        .attr("x", d => { return projection(d.geometry.coordinates)[0]; })
+        .attr("y", d => { return projection(d.geometry.coordinates)[1]; })
         .property("name", d => { return cityState(d.properties); })
         .property("orig-stroke-opacity",0.8)
-        .style("fill", "lightsalmon")
-        .style("stroke","indianred")
-        .style("stroke-width",0.05)
         .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
