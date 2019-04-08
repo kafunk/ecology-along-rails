@@ -8,21 +8,21 @@
 }
 
 body { margin:0; padding:0; }
-h1 { font-family: 'Mirza', cursive;} /* note that different fonts will require different margin adjustments */
+h1 { font-family: 'Mirza', cursive;}  /* note that different fonts will require different margin adjustments */
 h2,h3,h4,h5,h6 { font-family: 'Buda', cursive; }
 p, span, a, li {
-  font-family: 'Quattrocento Sans', sans-serif;   /* Thasadith? */
+  font-family: 'Quattrocento Sans', sans-serif;
   font-weight: 400;
   line-height: 150%;
 }
 a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
-svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-rendering: optimizeSpeed; } */
+svg path { stroke-linejoin: round; pointer-events: visiblePainted; }
+  /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
 ul.show-bullets li { list-style: outside; }
 ul.show-bullets--square li { list-style: square; }
-/* ul.show-bullets--inside li { list-style: inside; } */
 
 /* details triangle marker position is absolute to legend-log-item (in chrome, anyway)*/
 #legend-log details > summary::-webkit-details-marker {
@@ -50,7 +50,7 @@ details.color-symbol > summary::-webkit-details-marker {
   color: #2A4C48;
 }
 /* but not summary text */
-details > summary > h6 {
+details > summary > span {
   color: rgba(0,0,0,0.75);
 }
 
@@ -87,10 +87,8 @@ details > summary > h6 {
 #elevation,#compass { border-left: 1px double dimgray; }
 #footer a { color: darksalmon; /* font-weight: 700; */ }
 #dash { overflow-y:hidden; }
-/* #from-to { height: 120px; } */
 #resizable { height: 120px; }
 
-/* #aside-resizer { cursor: ns-resize; pointer-events: all; } */
 #dash .resizer { cursor: ns-resize; pointer-events: all; }
 
 /* reverse triangle position and direction on data source details elements  */
@@ -207,7 +205,6 @@ details > summary > h6 {
   .flex4-mm-ml { order: 4; }
 }
 @media screen and (min-width: 1200px) {
-  /* #aside-resizer { cursor: ew-resize; pointer-events: all; } */
   .reverse-order-mxl { direction: rtl; }
   .reverse-order-mxl li a,
   .reverse-order-mxl li .nevermind-reverse {
