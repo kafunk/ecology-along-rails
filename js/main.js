@@ -216,14 +216,14 @@
 
   defs.append("image")
     .attr("id", "station-icon")
-    .attr("xlink:href","../assets/station.svg")
+    .attr("xlink:href","./assets/station.svg")
     .attr("width", 3.2)
     .attr("height", 4)
     .attr("x",-1.6)
     .attr("y",-2)
   defs.append("image")
     .attr("id", "station-icon-sm")
-    .attr("xlink:href","../assets/station.svg")
+    .attr("xlink:href","./assets/station.svg")
     .attr("width", 1.6)
     .attr("height", 2)
     .attr("x",-0.8)
@@ -3972,12 +3972,6 @@ console.log(zoom1)
   }
 
 // })
-
-// DONE:
-// speedometer -> clock
-// about text edits
-// add quadrant to bearing tracker
-// organize/edit notes
 
 //// INCOMPLETE TASKS AND NOTES ////
 
