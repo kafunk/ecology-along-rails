@@ -458,7 +458,7 @@
 
   let mm = 0, accumReset = 0, geoMM;
 
-  let totalMiles;
+  let totalMiles, totalTime, minPerMile;
 
   let timer, routeQuadtree; // observer
 
@@ -1205,13 +1205,10 @@
         // WIDGETS
         initElevation()
         initOdometer()
-        initSpeedometer()
+        initClock()
         initCompass()
 
-        // chosen.totalTime
         // chosen.overallBearing
-        // stopping in [...new Set(chosen.allStops.map(d=>d.shortName))] where name is not from/to
-        // travelTime
 
         // NARRATION
         // remove placeholder text from #encounters and change header text (for now)
@@ -1256,29 +1253,39 @@
 
         }
 
-        function initSpeedometer() {
+        function initClock() {
 
-          d3.select("#speedometer").append("span")
-            .attr("id","current-pace")
+          totalTime = Math.round(chosen.totalTime),  // in minutes
+         minPerMile = totalTime / totalMiles;
+
+          d3.select("#clock").append("span")
+            .attr("id","current-time")
             .classed("flex-child txt-s txt-m-mxl txt-mono",true)
-            .text(getPace())
+            .text("0")
 
-          d3.select("#speedometer").append("span")
-            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
-            .html(`milliseconds<br> per mile`)
+          d3.select("#clock").append("span")
+            .classed("flex-child txt-compact txt-xs txt-s-mxl ml6 mr-neg3",true)
+            .html(`of ${totalTime}<br> transit minutes<br> elapsed`)
 
         }
 
         function initCompass() {
 
+          let azimuth0 = getAzimuth(0);
+
           d3.select("#compass").append("span")
             .attr("id","current-bearing")
             .classed("flex-child txt-s txt-m-mxl txt-mono",true)
-            .text(getAzimuth(0))
+            .text(azimuth0)
 
           d3.select("#compass").append("span")
             .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
             .text("degrees")
+
+          d3.select("#compass").append("span")
+            .attr("id","current-quadrant")
+            .classed("flex-child txt-xs txt-s-mxl mt-neg1",true)
+            .text(getQuadrant(azimuth0))
 
         }
 
@@ -1455,7 +1462,6 @@
 
     // final user prompt/countdown??
     // if (confirm("Ready?")) {
-      experience.animating = true;  // global flag that experience == in process
       goTrain(zoomFollow,zoomArc,routeBoundsIdentity); // initiate movement!
     // }
 
@@ -1822,6 +1828,7 @@
 //// TURF/GEO ON-THE-FLY
 
   function getRotate(p0,p1,isInitial = false) {
+    // TODO refactor/cleanup
     let slope, y0, y1;
     // adjust slope calculation to account for reflectedY!
     if (p0.x) {   // assume two svg pts
@@ -2075,59 +2082,12 @@ console.log(zoom1)
 
   }
 
-  let bottomAsideHeightMin = 240;
-  function siblingDrag() {  // default adjusts height only
-
-  // <!-- invisible when #about closed -->
-  // on move to smaller screens, reset aside height?
-  // adjust div margins
+  function siblingDrag() {  // as is, adjusts height only
 
     let prevHeight = this.previousElementSibling.getBoundingClientRect().height,
         nextHeight = this.nextElementSibling.getBoundingClientRect().height;
 
     let prevMin = 0, prevMax = Infinity, nextMin = 0, nextMax = Infinity;
-
-    // if (this.nextElementSibling.id === "aside") {
-    //
-    //   if (window.clientHeight > 1199) {
-    //
-    //     // adjust width, not height! then get outta here
-    //     widthAdjust(this);
-    //     return;
-    //
-    //     function widthAdjust(node) {
-    //
-    //       let prevWidth = node.previousElementSibling.getBoundingClientRect().width,
-    //           nextWidth = node.nextElementSibling.getBoundingClientRect().width;
-    //
-    //       // min width built in with css classes
-    //       nextMax = window.innerWidth;
-    //
-    //       // get new prevSibling width, within bounds
-    //       let prevX = prevWidth + d3.event.dx;
-    //       prevX = Math.min(prevMax,Math.max(prevMin, prevX));
-    //
-    //       // get new nextSibling width, within bounds
-    //       let nextX = nextWidth - d3.event.dx;
-    //       nextX = Math.min(nextMax,Math.max(nextMin, nextX));
-    //
-    //       // style prev sibling
-    //       d3.select(node.previousElementSibling).style('width', prevX + 'px');
-    //
-    //       // style next sibling
-    //       d3.select(node.nextElementSibling).style('width', nextX + 'px');
-    //
-    //     }
-    //
-    //   }
-    //
-    //   nextMin = bottomAsideHeightMin;
-    //   mainHeight = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight;  //  - marginY*2,
-    //
-    //   nextMax = mainHeight;
-    //   prevMax = mainHeight - nextMin;
-    //
-    // }
 
     // get new prevSibling height, within bounds
     let prevY = prevHeight + d3.event.dy;
@@ -2443,15 +2403,22 @@ console.log(zoom1)
   }
 
   function departed() {
-    d3.timerFlush() // necessary?
-    console.log("train departing @ " + performance.now())
+    let departed = performance.now();
+    d3.timerFlush()
+    experience.animating = true;
+    // output elsewhere?
+    console.log("train departing @ " + departed)
   }
 
   function arrived() {
-    console.log("train arrived @ " + performance.now())
+    let arrived = performance.now();
     timer.stop()
     experience.animating = false;
+    // avoid slight tracker disconnects at end
     d3.select("#current-miles").text(totalMiles)
+    d3.select("#current-time").text(totalTime)
+    // output elsewhere?
+    console.log("train arrived @ " + arrived)
     console.log("unique encounters",uniqueEncounters.size)
   }
 
@@ -2630,7 +2597,7 @@ console.log(zoom1)
           let spine = turf.lineString([i0,centroid,i1].map(d=>d.geometry.coordinates)),
                area = turf.convertArea(turf.area(gj.geometry),"meters","miles");
 
-          baseT = turf.round(Math.sqrt(Math.sqrt(area)))
+          baseT = Math.round(Math.sqrt(Math.sqrt(area)))
           revealPolygon(gj,spine,baseT)
 
         } else {
@@ -3179,6 +3146,7 @@ console.log(zoom1)
           newItem.transition().duration(300)
             .style("opacity", 1)
 
+          // ** FIXME! **
           // add fill to new HTML element within newItem // COMBAK NOT WORKING
           let patch = d3.select("#legend-log-content").select(`#${group.divId}`).select("span.log-symbol");
           // AKA newItem.select(`#${symbol.id}`)
@@ -3299,7 +3267,8 @@ console.log(zoom1)
 
     let coordsNow = geoMM[i],
             miles = i + 1,
-             pace = getPace();
+             // pace = getPace();
+             time = Math.round(miles * minPerMile);
 
     if (coordsNow) {  // avoids error at end
 
@@ -3307,12 +3276,14 @@ console.log(zoom1)
         d3.select("#current-feet").text(elevation)
       });
 
-      d3.select("#current-bearing").text(getAzimuth(i))
+      let azimuth = getAzimuth(i);
+      d3.select("#current-bearing").text(azimuth)
+      d3.select("#current-quadrant").text(getQuadrant(azimuth))
 
     }
 
     d3.select("#current-miles").text(miles)
-    d3.select("#current-pace").text(pace)
+    d3.select("#current-time").text(time)
 
   }
 
@@ -3343,7 +3314,7 @@ console.log(zoom1)
     return elevation;
 
     function metersToFeet(m) {
-      return turf.round(m * 3.281);
+      return Math.round(m * 3.281);
     }
 
   }
@@ -3355,6 +3326,20 @@ console.log(zoom1)
 
     return Math.round(turf.bearingToAzimuth(turf.bearing(prevPt,nextPt)));
 
+  }
+
+  function getQuadrant(bearing) {
+    var quadrants = {
+      // quadrant: range (array cannot be key?)
+      "NE": [0,90],
+      "SE": [90,180],
+      "SW": [180,270],
+      "NW": [270,360]
+    }
+    let sought = Object.values(quadrants).find(d => {
+      return (bearing < Math.max(...d) && bearing >= Math.min(...d));
+    });
+    return Object.keys(quadrants).find(key => quadrants[key] === sought);
   }
 
 //// HTML/CSS VISIBILITY MANAGEMENT
@@ -3988,20 +3973,19 @@ console.log(zoom1)
 
 // })
 
+// DONE:
+// speedometer -> clock
+// about text edits
+// add quadrant to bearing tracker
+// organize/edit notes
 
-//// INCOMPLETE TODO ////
-
-// ASAP
-  // about this map
-    // sources.md -> links
-    // writing real words
+//// INCOMPLETE TASKS AND NOTES ////
 
 // LITTLE THINGS
   // make timing of split lines the same again; no fun / disorienting for one to wait for the other
   // line-dash ease slower at end
   // new color for modal
   // change projection to equidistant (instead of equal area)
-  // remove transition on mouseover (just makes it seem slow(er))
   // some other summarizing info to right of agency/line summary; then reduce text within widgets (eg '102 of 3207 miles elapsed' => '102 miles elapsed')
 
 // LITTLE BUT STUMPING ME RIGHT NOW
@@ -4010,8 +3994,7 @@ console.log(zoom1)
 // MEDIUM
   // automatically order legend log categories
   // ecozones, protected areas their own group? or combine all PAs
-  // remaining open github issues (form focus issue: use focus-within?); several more interspersed COMBAKs, FIXMEs, TODOs
-  // more interesting icon for point data?
+  // more interesting icons for point data?
     // NPS svg
     //  maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
     // assembly #icon-mountain icon -- mount, mountain, mt, mtn
@@ -4022,28 +4005,25 @@ console.log(zoom1)
 // WISHLIST/FUN (*) == highlights
   // polygon radial animation / so fancy (see styling notes below; must first make a determination re: transitioning to canvas) (*)
   // add autocomplete/suggestions to R2R search
-  // add features:
-    // ability to "select random" in prompt route
-    // ability to select route visually, by clicking on city/rail stn locations from map (*)
-    // ability to control pace of train (and other variables?) via slider(s) (*!)
-    // ability to replay, PAUSE, CANCEL, ff?, rewind??? (dash/animate back)
-      // would need so much help with state management stuff: animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData) ***
-    // ability to takeSnapshot()=> save inner screenshot in log?
+  // add underlying shaded relief terrain layer (*)
+    // http://www.shadedrelief.com/birds_eye/gallery.html?
+  // more data-driven styling (what though?)
+  // visualizing all number data within dash:
+    // elevation grid/tracker
+    // compass needle
+    // better clock/odometer visual approximations
+  // ability to control pace of train (WOULD HAVE TO BE ADJUSTED BEFORE ANIMATION BEGINS SINCE TIMING OF TRANSITIONS PREDETERMINED)
   // orig options matches sorted by distance
   // add more enrich data (mostly pts): tunnels, bridges, iNaturalist, glaciers, species-specific polygons (habitat/range, https://www.worldwildlife.org/publications/wildfinder-database)
   // animate rivers in direction of flow: http://www.hydrosheds.org/download
-  // add underlying MapboxGL vector tiles / custom MapboxStudio basemap?
-  // add underlying shaded relief raster layer? (*)
-    // http://www.shadedrelief.com/birds_eye/gallery.html?
 
-  // mousing over log/narration elements highlights all within map (*)
-
-  // more data-driven styling
-  // elevation grid/visual tracker from number data (*)
-
-// GIVING UP:
+// GIVING UP ON:
   // use x/y to transition-collapse down from tooltip/element itself into dash/log
   // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
+  // ability to replay, ff?, rewind??? (dash/animate back)
+    // would need so much help with state management stuff: animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData) ***
+  // ability to takeSnapshot()=> save inner screenshot in log
+  // ability to "select random" in prompt route
 
 // MAAAAYBE
   // new train icon that rotates along with headlights
@@ -4057,7 +4037,7 @@ console.log(zoom1)
 ////
 
 // PERFORMANCE IMPROVEMENT IDEAS
-  // removing unneeded elements from DOM as animation progresses
+  // removing unneeded elements from DOM as animation progresses (not sure what this would be)
   // removing everything from DOM at end of experience (WHY DOES MY COMPUTER HUM FOR 5 MINUTES POST EVERY ANIMATION)
   // use path.measure() or path.area() instead of turf.length() calculations to determine animation variables? how would pixel units translate to time?
   // taken from github issue notes:
@@ -4065,8 +4045,10 @@ console.log(zoom1)
     // appropriately truncate coordinates and other values wherever possible
     // slim library imports / take only what I need
   // search/filter dynamically on backend? is this possible? goal: avoid bringing all of north america's enrichData into the browser every time
-  // allow R2R request / data prep to happen more asynchronously to avoid long lag following submit click??
   // dynamically simplify map geometries?
+  // is any of this invalidation stuff application, or relevant only within the context of Observable?
+    // https://beta.observablehq.com/@mbostock/disposing-content
+    // invalidation.then(() => cancelAnimationFrame(request));
   // use Canvas! even WebGL?
     // stardust.js? https://www.cs.ucsb.edu/~holl/pubs/Ren-2017-EuroVis.pdf
     // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
@@ -4097,10 +4079,12 @@ console.log(zoom1)
   // be super consistent and clear including '' vs "", use of var/const/let, spacing, semicolons, etc
   // refactor, optimize, condense, DRY, improve structure
 
-// DATA CLEAN!
-
-  // PROBLEM CITIES
-    // FIX?? (R2R issue)
+// ISSUES
+  // keeping zindexes in line on small screen sizes (modal vs attribution, toggle buttons)
+  // remaining open github issues (form focus issue: use focus-within?)
+  // several more interspersed COMBAKs, FIXMEs, TODOs
+  // PROBLEM CITIES (R2R issue)
+    // FIX?? they are important ones:
       // Sault Ste Marie, ON
       // Charleston, SC
       // Cincinnatti, OH
@@ -4114,25 +4098,22 @@ console.log(zoom1)
 // BACKBURNER ISSUES
   // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
   // add circle size reference to legend? (radius as representative of orig area for all polygons (under a certain threshold) I collapsed into their centroids)
-  // cityState should account for null values
-  // slight jump from initially centered North America to zoom0 just before transitioning zoom to route bounds
   // label mess (currently commented out)
-  // keeping zindexes in line on very small screen sizes
+
 
 ////////
 
 // NOTES FOR RICH:
-// would very much recommend starting with all functions toggled close for program outline overview / reduced overwhelm
+// I would recommend starting with all functions toggled close for program outline overview / reduced overwhelm
 // I have left in a few commented-out visualizations of my process in case it helps you understand how the script is working
-// would appreciate general impressions, feedback, what works, what doesn't, the little things I am no longer seeing after all these months
-// as well as specific help:
-  // resolving textured symbol output (apparent issue with .style("fill") on newly created symbol span -- see addNewGroup() within log() function)
+// Would appreciate general impressions, feedback, what works, what doesn't, the little things I am no longer seeing after all these months
+// Would also appreciate any tips you have re: priority features I still hope to add, including:
+  // a pause button
+  // ability to select route visually, by clicking on city/rail stn locations from map
+  // visualizing all number data tracker within dashboard (compass, elevation grid)
+  // mousing over log/narration elements highlights all within map
+// Most importantly, I still need specific help with certain issues including, in order of current importance:
+  // resolving textured symbol output (apparent issue with .style("fill") on newly created symbol span -- see FIXME note within addNewGroup() function)
   // clearing everything necessary/possible upon 'select new route'
-  // determining what else accounts for freeze following submit click / where I should focus my optimizing energies
   // determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
-  // implementing anything else possible to improve performance (see notes above, github issue#1)
-  // other (*)s if time
-
-// is any of this invalidation stuff application, or relevant only within the context of Observable?
-  // https://beta.observablehq.com/@mbostock/disposing-content
-  // invalidation.then(() => cancelAnimationFrame(request));
+  // implementing anything else possible to improve performance (see old notes above, github issue#1)
