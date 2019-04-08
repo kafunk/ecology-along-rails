@@ -7,21 +7,56 @@
   --bg-accent2: #5d7876;
 }
 
-
-body { margin:0; padding:0; } /* background-color:#fafafa; } */
-/* h1 { font-family: 'Stardos Stencil', cursive; } */
-h1 { font-family: 'Mirza', cursive;} /* note that different fonts will require different margin adjustments */
+body { margin:0; padding:0; }
+h1 { font-family: 'Mirza', cursive;}  /* note that different fonts will require different margin adjustments */
 h2,h3,h4,h5,h6 { font-family: 'Buda', cursive; }
-p, span, a, li { font-family: 'Thasadith', sans-serif; line-height: 150%;}  /* Quattrocentro? py6? */
-a { color: whitesmoke; }
+p, span, a, li {
+  font-family: 'Quattrocento Sans', sans-serif;
+  font-weight: 400;
+  line-height: 150%;
+}
+a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
-svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-rendering: optimizeSpeed; } */
+svg path { stroke-linejoin: round; pointer-events: visiblePainted; }
+  /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
+ul.show-bullets li { list-style: outside; }
+ul.show-bullets--square li { list-style: square; }
+
+/* details triangle marker position is absolute to legend-log-item (in chrome, anyway)*/
+#legend-log details > summary::-webkit-details-marker {
+  position: absolute;
+  top: 0.5; left: 8px;
+}
+/* hide details triangle marker until child content added */
+details.hide-triangle > summary {
+  list-style: none;
+}
+details.hide-triangle > summary::-webkit-details-marker {
+  display: none;
+}
+/* adjust indent/border-l on child legend items only, while keeping all label text centered */
+.legend-log-child-item {
+  margin-left: 12px
+}
+.legend-log-child-item label {  /*log-name*/
+  margin-left: -12px
+}
+
+/* color summary symbol */
+details.color-symbol > summary,
+details.color-symbol > summary::-webkit-details-marker {
+  color: #2A4C48;
+}
+/* but not summary text */
+details > summary > span {
+  color: rgba(0,0,0,0.75);
+}
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
-#dash { transition: 0.6s all; } /* not doing much */
-#veil,#modal-bg { pointer-events: none; }
+#dash { transition: 0.6s; } /* not doing much */
+#veil { pointer-events: none; }
 #modal-about,#get-options,#modal-close { pointer-events: all; }
 #map {  /* i.e. .svg-container */
   top:0;
@@ -34,9 +69,36 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
   overflow: hidden;
   /* padding-bottom: 100%; /* aspect ratio = height/width * 50% */
 }
+#encounters {
+  scroll-behavior: smooth;
+  transition: 0.4s;
+}
+#elevation,#clock {
+  border-radius: 5px 50px;
+  background: #dbd99f;
+}
+#odometer,#compass {
+  border-radius: 50px 5px;
+  background: #dbd99f;
+}
+#elevation,#odometer { border-top: 1px double dimgray; }
+#odometer,#clock { border-right: 1px double dimgray; }
+#compass,#clock { border-bottom: 1px double dimgray; }
+#elevation,#compass { border-left: 1px double dimgray; }
+#footer a { color: darksalmon; /* font-weight: 700; */ }
+#dash { overflow-y:hidden; }
+#resizable { height: 120px; }
 
+#dash .resizer { cursor: ns-resize; pointer-events: all; }
 
-.bg-base { background: #2A4C48; } /* #dbd99f; } */
+/* reverse triangle position and direction on data source details elements  */
+.reverse-order { direction: rtl; }
+.reverse-order li a,
+.reverse-order li .nevermind-reverse {
+  direction: ltr; unicode-bidi: embed;
+}
+
+.bg-base { background: #2A4C48; }
 /* .bg-main {} */
 .bg-map { background: var(--bg-dark1); }
 .bg-section { background: var(--bg-dark1); }
@@ -44,7 +106,10 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .bg-modal { background: #adbab8; }
 .bg-accent1 { background: var(--bg-accent1); }
 .bg-accent2 { background: var(--bg-accent2); }
-.txt-fancy { font-family: 'Raleway Dots', cursive; }
+.bg-dark1 { background: var(--bg-dark1); }
+.bg-dark2 { background: var(--bg-dark2); }
+.txt-fancy { font-family: 'Fredericka the Great', cursive; }
+.txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
 
 .disappear-up {
@@ -66,34 +131,32 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 .tooltip {
   position: absolute;
   text-align: center;
-  /* width: 60px;
-  height: 28px; */
   padding: 12px 18px;
   border-radius: 2px;
   pointer-events: none;
   background: honeydew;
   border: 2px;
 }
-.legend-item { }
-.legend-symbol { }
-.legend-text { }
-.hover { stroke-width: 0.2px; opacity: 1}
+.hover { stroke-opacity: 1; opacity: 1 }
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
+.txt-xxs { font-size: 0.5em; }
+.txt-compact { line-height: 0.8em; }
 
-/* .hide-overflow {
-  overflow: hidden;
+.flex1 { order: 1; }
+.flex2 { order: 2; }
+.flex3 { order: 3; }
+.flex4 { order: 4; }
+.flex5 { order: 5; }
+.flex6 { order: 6; }
+
+.already-open { animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both; }
+.limit-reached { animation: shake2 1s cubic-bezier(.36,.07,.19,.97) both; }
+.already-open, .limit-reached {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
-.slide-out {
-  transition: 0.4s;
-} */
-
-/* .svg-content {
-  display: inline-block;
-  position: absolute;
-  top: 0;
-  left: 0;
-} */
 
 /* TRIGGER PTS and other quadtree data */
 .quad-datum {
@@ -124,17 +187,46 @@ svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-re
 }
 
 /* MEDIA QUERIES */
-@media screen and (min-width: 400px) { }
+/* @media screen and (min-width: 400px) { } */
 @media screen and (min-width: 640px) {
+  #resizable { height: 180px; }
+  .normal-order-mm { direction: ltr; }
   .widget {
     border: 4px solid #6B7063;
     border-radius: 5px;
     box-shadow: 1px 1px 1px 1px #2A4C48;
   }
+  /* missing from Assembly */
+  .align-l-mm { text-align: left !important; }
+  .align-r-mm { text-align: right !important; }
 }
-@media screen and (min-width: 800px) { }
-/* @media screen and (min-width: 800px) and (max-width: 860px) {
-  /* remove awkward padding from top/bottom of form
-  fieldset { padding: 0 auto;}
-} */
-@media screen and (min-width: 1200px) { }
+@media screen and (min-width: 640px) and (max-width: 1199px) {
+  .flex3-mm-ml { order: 3; }
+  .flex4-mm-ml { order: 4; }
+}
+@media screen and (min-width: 1200px) {
+  .reverse-order-mxl { direction: rtl; }
+  .reverse-order-mxl li a,
+  .reverse-order-mxl li .nevermind-reverse {
+    direction: ltr; unicode-bidi: embed;
+  }
+  .flex3-mxl { order: 3; }
+  .flex4-mxl { order: 4; }
+  /* missing from Assembly */
+  .align-l-mxl { text-align: left !important; }
+  .align-r-mxl { text-align: right !important; }
+}
+
+/* ANIMATION */
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+@keyframes shake2 {
+  10%, 90% { transform: translate3d(-0.5px, 0, 0); }
+  20%, 80% { transform: translate3d(1.5px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-2px, 0, 0); }
+  40%, 60% { transform: translate3d(2px, 0, 0); }
+}

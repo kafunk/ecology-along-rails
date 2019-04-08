@@ -4,12 +4,10 @@
   <meta charset='utf-8' />
   <title>Ecology Along the Rails</title>
   <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-  <!-- <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.css' rel='stylesheet' /> -->
   <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet' />
-  <link href="https://fonts.googleapis.com/css?family=Mirza:400,500,600,700|Buda:300|Raleway+Dots|Stardos+Stencil:400,700|Thasadith:400,400i,700" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css?family=Mirza:400,500,600,700|Buda:300|Quattrocento+Sans:400,400i,700,700i|Fredericka+the+Great|Sirin+Stencil" rel="stylesheet" />
   <link href='css/styles.css' rel='stylesheet' />
 </head>
-
 <body>
 
   <!-- inner body wrapper (vertical)-->
@@ -35,7 +33,7 @@
     <main id="main" class="flex-child flex-child--grow bg-main">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative"> <!-- flex-parent--start-cross,stretch-cross-mxl-->
+      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden">
 
         <!-- map and dash pane -->
         <section id="section" class="flex-child flex-child--grow scroll-hidden bg-section">
@@ -44,12 +42,12 @@
           <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane-->
 
             <!-- map and overlay pane -->
-            <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-darken75"> <!--h-full?-->
+            <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-darken75">
 
               <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-map">
 
                 <!-- map overlay: buttons, legend, other ui -->
-                <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl"> <!-- elements' zIndex individually increased as z4 to prevent blocking access to map itself -->
+                <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl"> <!-- child elements' zIndex individually increased to z4 to prevent blocking access to map itself -->
 
                   <!-- top left // Custom Data UI Elements -->
                   <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z4 none'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
@@ -58,12 +56,11 @@
                     <button disabled id="play-pause" class='btn round bg-lighten75 play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none'><del>Play/Pause</del></button>
                     <!-- stop/init counter without data resets -->
                     <button id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl' onclick="selectNew()">Select New Route</button>
-                    <!-- prompt user: do you wish to select a new route? + follow through -->
                   </div>
 
                   <!-- top right // About/Info icon on small screens -->
-                  <div id="info" class="absolute top right mx-neg6 mt-neg1 py3 py6-mm px3 px6-mm z4 none-ml">
-                    <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round mt-neg3-mm mr-neg3-mm' onclick="toggleModal('modal-about')">
+                  <div id="info" class="absolute top right mr-neg6 z4 none-ml">
+                    <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round' onclick="toggleModal('modal-about')">
                       <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
                     </button>
                   </div>
@@ -76,15 +73,15 @@
                     <span>Routing via to Rome2Rio</span>
                   </div> -->
 
-                  <!-- bottom left // Zoom buttons, maybe, eventually -->
-                  <!-- <div id="zoom" class="absolute bottom right h18 h24-mm flex-parent-inline mx6 mb24 z2">
-                    <button disabled class="btn btn--disabled btn--pill btn--pill-hl bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round px3 px6-mm py0">
-                      <svg class='icon link color-darken50'><use xlink:href='#icon-plus'></use></svg>
+                  <!-- also top right: zoom buttons -->
+                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column z4 mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
+                    <button id="zoomIn" class="btn btn--pill btn--pill-vt bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm">
+                      <svg class='icon w18 h18 w24-ml link color-darken50 px0'><use xlink:href='#icon-plus'></use></svg>
                     </button>
-                    <button disabled class="btn btn--disabled btn--pill btn--pill-hr bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round px3 px6-mm py0 py3-mm mr3">
-                      <svg class='icon link color-darken50'><use xlink:href='#icon-minus'></use></svg>
+                    <button id="zoomOut" class="btn btn--pill btn--pill-vb bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm">
+                      <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-minus'></use></svg>
                     </button>
-                  </div> -->
+                  </label>
 
                 </div> <!-- end of ui-overlay-group -->
 
@@ -101,31 +98,31 @@
             <div id="dash-plus" class="absolute bottom w-full"><!-- ** remove 'absolute' to keep separate from map ** -->
 
               <!-- dash toggles and content group -->
-              <div class="flex-parent flex-parent--column flex-parent--stretch-cross flex-parent--center-main">
+              <div class="flex-parent flex-parent--column flex-parent--stretch-cross flex-parent--center-main relative">
 
-                <div id="dash-toggles" class="flex-child">
+                <div id="dash-toggles" class="flex-child z4">
 
                   <div class="flex-parent flex-parent--center-cross flex-parent--center-main relative">
 
                     <!-- dash expand triggers -->
                     <label id="dash-expand" class="flex-child h24 z2">
                       <!-- dash expand triangle--u -->
-                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 color-darken25-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full' onclick="expand('dash','up')">
+                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full' onclick="expand('dash','up')">
                         <span id="dash-up" class='icon triangle-l triangle-l--u mx-auto mt-neg18 mt-neg6-mxl'></span>
                       </button>
                     </label>
 
                     <label id="dash-collapse" class="flex-child h12 z2 none">
                       <!-- dash collapse triangle--d -->
-                      <button class='absolute left right btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround w-full h18' onclick="collapse('dash','down')">
+                      <button id="dash-collapse-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround w-full h18' onclick="collapse('dash','down')">
                         <span class='icon triangle-l triangle-l--d mx-auto mt0 mt12-mm'></span>
                       </button>
                     </label>
 
                     <div id="attribution" class='absolute right color-lighten50 bg-darken50 round-tl round-bl px6 px12-mm px24-mxl mt-neg18 mt-neg24-mxl txt-xs txt-s-mxl txt-shadow-lighten10 z1'>
-                      <span>Visualized with D3.js</span>
+                      <span>Visualized with <a target="_blank" href="https://d3js.org">D3.js</a></span>
                       <span class="px3-mm">||</span>
-                      <span>Routing via to Rome2Rio</span>
+                      <span>Routing via <a target="_blank" href="https://www.rome2rio.com">Rome2Rio</a></span>
                     </div>
 
                   </div>
@@ -139,114 +136,171 @@
                   <div id="dash-wrapper" class='flex-parent flex-parent--stretch-cross'>
 
                     <!-- dash content group -->
-                    <div id="dash-content" class='flex-child bg-lighten25 round-mm shadow-darken25-mm w-full mx6-mm bg-transparent'>
+                    <div id="dash-content" class='flex-child round-mm shadow-darken25-mm w-full px6-mm bg-transparent'>
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main px6-mm py12-mm'>
+                      <div id="resizable2" class='flex-parent flex-parent--column flex-parent--center-main pt3 px6-mm py12-mm'>
 
                         <!-- Dash--Header -->
-                        <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl-mm round-tr-mm pb3 pt6"><!-- hmin18 if content-->
-                          <!-- <h3 class='txt-h4 txt-bold txt-em pt3'>Dashboard</h3> -->
+                        <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl-mm round-tr-mm pb3 pt6 flex-parent flex-parent--center-cross flex-parent--center-main"><!-- hmin18 if content-->
+                          <!-- <h3 class='flex-child txt-h4 txt-bold txt-em pt3'>Dashboard</h3> -->
                         </div>
 
                         <!-- Dash--Main -->
-                        <div class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-ml round-bl-mm round-br-mm">
+                        <div id="resizable" class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-mxl round-bl-mm round-br-mm">
+
+                          <!-- resizer -->
+                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full opacity50 ml-neg12-mm bg-yellow-light-on-hover z5"></div>
 
                           <!-- main content inner wrapper -->
-                          <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross grid'>
-
-                            <!-- Narration -->
-                            <div id="narration" class="flex-child flex-child--grow-ml col col--12 col--4-ml bg-lighten25 px6 pt6 pb3 px12-mm pt12-mm pb6-mm pl12-mm pr6-ml py12-ml">
-
-                              <div class="flex-parent flex-parent--column round flex-parent--center-main h-full">
-
-                                <!-- header -->
-                                <div id="narration-header" class="flex-child flex-child-no-shrink bg-darken25 align-center round-tl round-tr color-lighten75 py3">
-                                  <h5 class='txt-h6 txt-fancy txt-em txt-bold'>Currently passing:</h5>
-                                  <!-- You are currently:</h5> -->
-                                </div>
-
-                                <div id="narration-txt" class="flex-child flex-child--grow px12 bg-lighten50 flex-parent flex-parent--center-cross">
-                                  <div id="encounters" class="flex-child flex-child--grow flex-parent flex-parent--space-between-main flex-parent--center-cross h60"><!--hmin60 hmax120"><!-- flex-parent--row-reverse flex-parent--column-ml -->
-                                  </div>
-                                </div>
-
-                                <div id="narration-footer" class="flex-child flex-child--no-shrink hmin6 bg-darken25 round-bl round-br"></div>
-
-                              </div>
-
-                            </div> <!-- end of narration -->
-
-                            <!-- Compass + -->
-                            <div id="compass-plus" class="flex-child flex-child--grow col col--5 col--4-ml bg-lighten25 pl6 pr3 pb6 pt3 pl12-mm pr6-mm pb12-mm pt6-mm px6-ml py12-ml">
-
-                              <div class="flex-parent--column h-full flex-parent round flex-parent--end-main">
-
-                                <!-- header -->
-                                <div id="compass-header" class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
-
-                                <!-- compass content -->
-                                <div class="flex-child flex-child--grow bg-lighten50 scroll-auto px12 py6 grid">
-                                  <div id="widgets" class="col col--12 grid align-l clearfix">
-                                    <span id="compass" class="col col--6">
-                                      current bearing
-                                    </span>
-                                    <span id="elevation" class="col col--6 align-r fr">
-                                      current elevation
-                                    </span>
-                                  </div>
-                                  <div id="miles-in" class="col col--12 align-center">
-                                    miles in
-                                  </div>
-                                  <div id="remaining" class="col col--12 grid align-l clearfix">
-                                    <span id="time" class="col col--6">time remaining</span>
-                                    <span id="distance" class="col col--6 align-r fr">distance remaining</span>
-                                  </div>
-                                </div>
-
-                                <!-- compass footer -->
-                                <div id="compass-footer" class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
-
-                              </div>
-
-                            </div> <!-- end of compass+ -->
+                          <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid'>
 
                             <!-- Legend-Log -->
-                            <div id="legend-log" class="flex-child flex-child--grow bg-lighten25 col col--7 col--4-ml pl3 pr6 pb6 pt3 pl6-mm pr12-mm pt6-mm pb12-mm py12-ml">
+                            <div class="col col--5 h-full">
 
-                              <div class="flex-parent flex-parent--column round flex-parent--space-between-main h-full flex-parent--stretch-cross">
+                              <div id="legend-log" class="flex-child flex-child--grow h-full py6 py12-mm pr6 pl6 pl12-mm">
 
-                                <!-- header -->
-                                <div id="legend-log-header" class="flex-child flex-child-no-shrink bg-darken25 align-center round-tl round-tr color-lighten75 py3">
-                                  <h5 class='txt-h6 txt-fancy txt-em txt-bold'>Journey Log</h5>
+                                <div class="flex-parent flex-parent--column round h-full">
+
+                                  <!-- header -->
+                                  <div id="legend-log-header" class="flex-child flex-child--no-shrink bg-darken25 round-tl round-tr color-lighten75 hmin24 py3 flex-parent flex-parent--center-cross flex-parent--center-main">
+                                    <h5 class='flex-child txt-h6 txt-fancy2 txt-em txt-bold'>Journey Log</h5>
+                                  </div>
+
+                                  <!-- to-from insert -->
+                                  <div id="from-to" class="flex-child px3 py3 bg-lighten25 scroll-auto">
+                                    <div class="flex-parent flex-parent--center-cross flex-parent--center-main h-full">
+                                      <div id="from" class="flex-child txt-xs pl12 pr3 flex-parent flex-parent--column">
+                                        <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-depart'></use></svg>
+                                      </div>
+                                      <div id="to" class="flex-child txt-xs pl3 pr12 flex-parent flex-parent--column-reverse">
+                                        <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-arrive'></use></svg>
+                                      </div>
+                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 mx-auto scroll-auto"></div>
+                                    </div>
+                                  </div>
+
+                                  <!-- sibling resizer -->
+                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z5"></div>
+
+                                  <!-- main content / dynamically populated legend items  -->
+                                  <div id="log-content-wrapper" class="flex-child flex-child--grow align-center w-full bg-lighten75 px12 py6 scroll-auto">
+                                    <div id="legend-log-content" class="flex-parent flex-parent--column flex-parent--center-main border-t border-b border--dash scroll-auto">
+                                    </div>
+                                  </div>
+
+                                  <!-- legend-log footer -->
+                                  <div id="legend-log-footer" class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
+
                                 </div>
 
-                                <!-- main content / dynamically populated legend items  -->
-                                <div id="legend-log-content" class="flex-child flex-child--grow align-center w-full bg-lighten50 scroll-auto px12 py6">
-                                  <div class="flex-parent flex-parent--column">
-                                    <div id="legend-log-item" class="flex-child flex-child--no-shrink hmin18 hmin24-mm border-t border-b border--dash">
-                                      <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
-                                        <span id="log-symbol" class="flex-child flex-child--no-shrink wmin24">sym</span>
-                                        <span id="log-name" class="flex-child flex-child--grow">name</span>
-                                        <span id="log-count" class="flex-child flex-child--no-shrink wmin24">#</span>
+                              </div>
+
+                            </div>
+
+                            <!-- Widgets -->
+                            <div class="col none block-ml col--2-ml h-full">
+
+                              <div id="widgets-plus" class="flex-child flex-child--grow h-full px6 py6 py12-mm">
+
+                                <div class="flex-parent flex-parent--column h-full round">
+
+                                  <!-- header -->
+                                  <div class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
+
+                                  <!-- content -->
+                                  <div class="flex-child flex-child--grow bg-lighten75 px6 py6 scroll-auto">
+                                    <div id="widgets" class="flex-parent flex-parent--stretch-cross flex-parent--space-between-main h-full grid round-full bg-darken50">
+                                      <div id="row1" class="col col--12 grid">
+                                        <div id="elevation-wrapper" class="flex-child col col--6 px3 pb3">
+                                          <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        </div>
+                                        <div id="odometer-wrapper" class="flex-child col col--6 px3 pb3">
+                                          <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        </div>
+                                      </div>
+                                      <div id="row" class="col col--12 grid">
+                                        <div id="compass-wrapper" class="flex-child col col--6 px3 pt3">
+                                          <div id="compass" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        </div>
+                                        <div id="clock-wrapper" class="flex-child col col--6 px3 pt3">
+                                          <div id="clock" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
+
+                                  <!-- footer -->
+                                  <div class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
+
                                 </div>
 
-                                <!-- legend-log footer -->
-                                <div id="legend-log-footer" class="flex-child flex-child--no-shrink hmin6 bg-darken25 round-bl round-br"></div>
+                              </div>
 
-                              </div> <!-- end of legend-log-inner-wrapper -->
+                            </div>
 
-                            </div> <!--end of legend-log-small -->
+                            <!-- Narration -->
+                            <div class="col col--7 col--5-ml h-full">
+
+                              <div id="narration" class="flex-child flex-child--grow h-full py6 py12-mm pl6 pr6 pr12-mm">
+
+                                <div class="flex-parent flex-parent--column h-full round">
+
+                                  <!-- header -->
+                                  <div id="narration-header" class="flex-child flex-child--no-shrink bg-darken25 round-tl round-tr color-lighten75 hmin24 py3 flex-parent flex-parent--center-cross flex-parent--center-main">
+                                    <h5 class='flex-child txt-h6 txt-fancy2 txt-em txt-bold'>You are currently:</h5>
+                                  </div>
+
+                                  <div id="narration-txt" class="flex-child flex-child--grow bg-lighten75 px3 py3 grid">
+                                    <div id="encounters-A" class="h-full col col--4 flex-parent flex-parent--column-reverse scroll-auto">
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Traversing special places</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Encountering incredible things</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Beholding the world made fresh again</span>
+                                      </div>
+                                    </div>
+                                    <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column-reverse align-center scroll-auto">
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Encountering incredible things</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Beholding the world made fresh again</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Traversing special places</span>
+                                      </div>
+                                    </div>
+                                    <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column-reverse align-r scroll-auto">
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Beholding the world made fresh again</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Traversing special places</span>
+                                      </div>
+                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px3 py3 encounter">
+                                        <span>Encountering incredible things</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div id="narration-footer" class="flex-child flex-child--no-shrink h6 bg-darken25 round-bl round-br"></div>
+
+                                </div>
+
+                              </div>
+
+                            </div>
 
                           </div>
 
                         </div> <!-- end dash-main -->
 
                         <!-- Dash--Footer -->
-                        <!-- <footer class='flex-child flex-child-no-shrink h0 bg-lighten25 round-bl round-br'></footer> -->
+                        <!-- <footer class='flex-child flex-child--no-shrink h0 bg-lighten25 round-bl round-br'></footer> -->
 
                       </div>
 
@@ -260,67 +314,224 @@
 
             </div> <!-- end of dash pane -->
 
-            <!-- modal/veil/loader group -->
-            <div id="modal-plus" class="fixed left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none">
+            <div id="veil" class="absolute top bottom right left h-full z4 opacity50 bg-lighten50"></div>
 
-              <div id="veil" class="fixed top bottom right left z4 opacity50 bg-lighten50"></div>
+            <!-- modal/loader group -->
+            <div id="modal-plus" class="absolute left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none">
 
-              <div id="map-init-load" class='fixed left right loading z4 none'></div>
+              <div id="map-init-load" class='absolute left right loading z4 none'></div>
 
-              <div id="modal-bg" class="flex-child flex-parent flex-parent--center-cross flex-parent--center-main bg-transparent z5"> <!--relative-->
+              <div class="flex-child flex-parent flex-parent--center-cross flex-parent--center-main bg-transparent bg-lighten75 z5">
 
                 <!-- modal content options -->
-                <div id="modal" class="flex-child flex-child--grow mx36 my36 round">
+                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative h-full">
 
                   <!-- inner modal wrapper -->
-                  <div class='flex-parent flex-parent--center-cross grid wmax600 mx-auto round relative'><!--flex-parent--stretch-cross flex-parent--space-between-main -->
+                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round h-full'>
 
                     <!-- featured content // Modal About -->
-                    <div id="modal-about" class='flex-child flex-child--grow col col--12 shadow-darken75 round px12 py12 mx-auto bg-modal none'>
+                    <div id="modal-about" class='flex-child flex-child--grow shadow-darken75 round px12 mx-auto py12 bg-modal none wmax360 wmax600-mm hmax360 h-full'>
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main'>
+                      <div class='flex-parent flex-parent--column flex-parent--center-main h-full'>
 
                         <!-- About--Header -->
-                        <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl round-tr hmin18 pb6 pt12">
-                          <h3 class='txt-h4 txt-bold txt-em'>About This Map</h3>
+                        <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 pt6 pb3 flex-parent flex-parent--center-cross flex-parent--center-main">
+                          <h3 class='flex-child txt-h4 txt-bold txt-em'>About This Map</h3>
                         </div>
 
                         <!-- About--Main -->
-                        <div class="flex-child flex-child--grow bg-lighten75 txt-m round-bl round-br scroll-auto">
+                        <div class="flex-child flex-child--grow bg-lighten75 round-bl round-br hmax300 scroll-auto">
+
                           <!-- inner content wrapper -->
-                          <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross grid px24 py18 px36-mm py24-mm">
-                            <!-- main about text, orientation, etc -->
-                            <div class='flex-child col col--offl2 col--10 align-r py3'>
-                              <h4 class="txt-h4 txt-bold py3">Some words</h4>
-                              <p class="py3">This map visualizes ~~~~~~.</p>
-                              <p class="py3">Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam.</p>
+                          <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross py12 px18 px24-mm px30-ml py18-ml">
+                            <!-- MAIN ABOUT TEXT / BASICS -->
+                            <div class='flex-child align-r pl24 py3 pt0-mxl'>
+                              <h4 class="txt-h4 txt-bold py3">Some orienting words</h4>
+                              <p class="py6">
+                                In this map, I offer the user a virtual experience of traversing North America’s passenger rail routes through a dynamically unfolding milieu of terrain, ecology, waterways, and habitat. Color, texture, size, and line suggest the many layers and lives abounding around us; unfolding, echoing paths celebrate and illuminate the surprising shapes of worlds. As a symbolic train navigates the chosen route, protected areas, watersheds, rivers and lakes, and four levels of ecoregions are unveiled as they come within a 0.5 degree or so of the train's path. Naturally, the intersected data appears more dense within this immediate buffer, but the user may be surprised by the sweeping forms and unexpected connections that become apparent among distant places that share lower-level ecoregions. A togglable and height-adjustable dashboard at the base of the screen offers the user a dynamically populating legend/log of the categories encountered, lists the names of all encountered features in scrollable columns, and tracks traversed elevation, bearing, distance, time, and speed.
+                              </p>
                             </div>
-                            <div class='flex-child col col--12 px6 py18 relative'>
+                            <!-- DIVIDER -->
+                            <div class='flex-child px6 py18 my12-mxl relative'>
                               <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
-                                <span class="flex-child txt-s h3">&#10229;//\\//\\&#10230;</span>
-                                <span class="flex-child txt-s h3">&#10229;\\//\\//&#10230;</span>
+                                <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
+                                <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
                               </div>
                             </div>
-                            <!-- data sources, sub-about, furthermore -->
-                            <div class='flex-child col col--offr2 col--10 py3'>
+                            <!-- DATA SOURCES -->
+                            <div class='flex-child pr24 py3'>
                               <h4 class="txt-h4 txt-bold py3">Data sources</h4>
-                              <ul class="py3">
+                              <ul class="py6">
                                 <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2"></div>
-                                  <a target='_blank' href='#'>this is how i go</a>
+                                  <details class="color-symbol">
+                                    <summary><span class="inline-block">Ecoregions</span></summary>
+                                    <ul class="pl12 pl18-ml">
+                                      <li class="txt-li">
+                                        Levels I-III from <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/terrestrial-ecoregions-level-iii'>The Commission for Environmental Cooperation (2006)</a>
+                                      </li>
+                                      <li class="txt-li">
+                                        <span>Level IV Supplements from:</span>
+                                        <ul class="show-bullets txt-s pl12 pl18-ml">
+                                          <li class="txt-li">
+                                            <a target='_blank' href='https://open.canada.ca/data/en/dataset/fe9fd41c-1f67-4bc5-809d-05b62986b26b'>The Dept of Agriculture and Agri-Food (Canada - 2013)</a>
+                                          </li>
+                                          <li class="txt-li">
+                                            <a target='_blank' href='https://www.epa.gov/eco-research/level-iii-and-iv-ecoregions-continental-united-states'>The Environmental Protection Agency (United States - 2011)</a>
+                                          </li>
+                                          <li class="txt-li">
+                                            <a target='_blank' href='http://www.conabio.gob.mx/informacion/metadata/gis/ecort08gw.xml?_xsl=/db/metadata/xsl/fgdc_html.xsl&_indent=no'>
+                                            CONABIO, INEGI, and the INE (Mexico - 2008)</a>
+                                          </li>
+                                        </ul>
+                                      </li>
+                                    </ul>
+                                  </details>
                                 </li>
                                 <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2"></div>
-                                  <a target='_blank' href='#'>when i go</a>
+                                  <details class="color-symbol">
+                                    <summary><span class="inline-block">Watersheds</span></summary>
+                                    <ul class="pl12 pl18-ml">
+                                      <li class="txt-li">
+                                        <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/watersheds'>The Commission for Environmental Cooperation (2010)</a>
+                                      </li>
+                                    </ul>
+                                  </details>
                                 </li>
                                 <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2"></div>
-                                  <a target='_blank' href='#'>like this</a>
+                                  <details class="color-symbol">
+                                    <summary><span class="inline-block">Protected Areas</span></summary>
+                                    <ul class="pl12 pl18-ml">
+                                      <li class="txt-li">
+                                        From <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files'>The Commission for Environmental Cooperation:</a>
+                                        <ul class="show-bullets txt-s pl12 pl18-ml">
+                                          <li class="txt-li">
+                                            <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/north-american-protected-areas-2017'>North American Protected Areas (2017)</a>
+                                          </li>
+                                          <li class="txt-li">
+                                            <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/priority-conservation-areas-grasslands-2010'>Priority Conservation Areas - Grasslands (2010)</a>
+                                          </li>
+                                          <li class="txt-li">
+                                            <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/terrestrial-species-common-conservation-concern'>
+                                            Terrestrial Species of Common Conservation Concern</a>
+                                          </li>
+                                        </ul>
+                                      </li>
+                                      <!-- <li class="txt-li">
+                                        Critical Habitat from the <a target='_blank' href='https://ecos.fws.gov/ecp/report/table/critical-habitat.html'>US Fish &amp; Wildlife Service (2019)</a>
+                                      </li> -->
+                                    </ul>
+                                  </details>
+                                </li>
+                                <li class="txt-li">
+                                  <details class="color-symbol">
+                                    <summary><span class="inline-block">Other Enrich Data</span></summary>
+                                    <ul class="show-bullets--square txt-s pl12 pl18-ml">
+                                      <li class="txt-li">
+                                        Volcanoes from <a target='_blank' href='https://ngmdb.usgs.gov/gmna'>USGS's Geologic Map of North America</a> GIS Database (2009)
+                                      </li>
+                                      <li class="txt-li">
+                                        Geothermal Systems from <a target='_blank' href='https://www.sciencebase.gov/catalog/item/50cf6f4fe4b0fa1303b83888'>USGS's Geothermal Resource Studies Project (2010)</a>
+                                      </li>
+                                    </ul>
+                                  </details>
+                                </li>
+                                <li class="txt-li">
+                                  <details class="color-symbol">
+                                    <summary><span class="inline-block">Railways &amp; Stations</span></summary>
+                                    <ul class="show-bullets--square txt-s pl12 pl18-ml">
+                                      <li class="txt-li">
+                                        <a target='_blank' href='http://osav-usdot.opendata.arcgis.com/datasets/f15d9e40cd1d4170a36bf31d4e6a3c28_0'>The Bureau of Transportation Statistics' National Transportation Atlas Database (2018)</a>
+                                      </li>
+                                      <li>
+                                        <a target='_blank' href='http://osav-usdot.opendata.arcgis.com/datasets/3e9daf681b154fb19372044f4d52941a_0'>The Federal Railroad Administration (2018)</a>
+                                      </li>
+                                      <li class="txt-li">
+                                        <a target='_blank' href='https://www.naturalearthdata.com/downloads/10m-cultural-vectors'>Natural Earth 1:10m Railroads</a>
+                                      </li>
+                                      <li class="txt-li">
+                                        <a target='_blank' href='https://www.amtrak.com/train-routes'>Amtrak</a>
+                                      </li>
+                                      <li class="txt-li">
+                                        <a target='_blank' href='https://www.viarail.ca/en/plan-your-trip/find-a-station'>VIA Rail</a>
+                                      </li>
+                                      <li class="txt-li">
+                                        <a target='_blank' href='https://www.alaskarailroad.com/ride-a-train/route-map'>Alaska Railroad</a>
+                                      </li>
+                                    </ul>
+                                  </details>
+                                </li>
+                                <li class="txt-li">
+                                  <details class="color-symbol">
+                                    <summary><span class="inline-block">Physical Baselayer</span></summary>
+                                    <ul class="pl12 pl18-ml">
+                                      <li class="txt-li">
+                                        <a target='_blank' href='https://www.naturalearthdata.com/downloads/10m-physical-vectors'>Natural Earth 1:10m Vectors:</a>
+                                        <ul class="show-bullets txt-s pl12 pl18-ml">
+                                          <li class="txt-li">Rivers + Lake Centerlines</li>
+                                          <li class="txt-li">Lakes + Reservoirs</li>
+                                        </ul>
+                                      </li>
+                                    </ul>
+                                  </details>
+                                </li>
+                                <li class="txt-li">
+                                  <details class="color-symbol">
+                                    <summary><span class="inline-block">Cultural Baselayer</span></summary>
+                                    <ul class="pl12 pl18-ml">
+                                      <li class="txt-li">
+                                        <a target='_blank' href='https://www.naturalearthdata.com/downloads/10m-cultural-vectors'>Natural Earth 1:10m Vectors:</a>
+                                        <ul class="show-bullets txt-s pl12 pl18-ml">
+                                          <li class="txt-li">Admin 0</li>
+                                          <li class="txt-li">Admin 1</li>
+                                          <li class="txt-li">Populated Places</li>
+                                          <li class="txt-li">Urban Areas</li>
+                                        </ul>
+                                      </li>
+                                    </ul>
+                                  </details>
                                 </li>
                               </ul>
                             </div>
+                            <!-- DIVIDER -->
+                            <div class='flex-child px6 py18 my12-mxl relative'>
+                              <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
+                                <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
+                                <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
+                              </div>
+                            </div>
+                            <!-- TECHNOLOGY STACK -->
+                            <div class='flex-child align-r pl24 py3'>
+                              <h4 class="txt-h4 txt-bold py3">Technologies used</h4>
+                              <p class="py6">
+                                This map represents my final project of my final class of UKY's <a target="_blank" href="https://newmapsplus.as.uky.edu/">NMP Graduate Certificate in Digital Mapping</a>. As such, it was meant to serve as a culmination and showcase of my newfound mapping and coding skills. Never one to choose the easy route, I challenged myself hugely by foregoing pre-scaffolded mapping libraries such as Leaflet and Mapbox, instead opting to build this work from a more fundamental ground using D3.js, <a target="_blank" href="https://github.com/topojson/topojson/wiki">TopoJSON</a>, and plenty of vanilla JavaScript as the knife edge of my code. By way of learning D3, I oriented to a variety of modern web standards including SVG, Canvas, REST &amp; HTTP, CSS &amp; HTML. I did rely on Mapbox’s <a target="_blank" href="https://labs.mapbox.com/assembly/">Assembly</a> CSS framework in building the page layout, and happily used their <a target="_blank" href="http://turfjs.org/">Turf.js</a> library for on-the-fly geoprocessing. <a target="_blank" href="https://www.rome2rio.com/documentation/1-4/search/">Rome2Rio’s Search API</a> and <a target="_blank" href="https://elevation-api.io/">Elevation-API.io</a> serve the data that allows a user to customize their experience from tens of thousands of possible combinations. A call to Mapbox's <a target="_blank" href="https://github.com/mapbox/polyline">Polyline.js</a> allows for easy conversion of Rome2Rio’s returned path string from encoded polyline to GeoJSON. Finally, <a target="_blank" href="https://vis4.net/chromajs/">Chroma.js</a> and <a target="_blank" href="https://riccardoscalco.it/textures/">Textures.js</a> helped with dynamic styling and differentiating the unveiled geometries. This technology stack provided me with a solid taste of the need for an ecosystem of roles within web development while still leaving me with maximal room for creative freedom and control over even the tiniest elements.
+                              </p>
+                              <p class="py6">
+                                Before all of this, of course, came the data wrangling itself, which was in many ways a more challenging and overwhelming venture for my recent GIS-newbie self. My familiarity with tools and software including QGIS, PostGIS SQL, and the <a target="_blank" href="https://github.com/mbloch/mapshaper/wiki/Introduction-to-the-Command-Line-Tool">Mapshaper</a> CLI grew enormously as I persisted though countless moments of frustration and confusion, regularly frozen screens, and ferociously humming CPU fans that still failed to keep my fingers from being literally burned by the sharp heat emitted through the edges of my laptop keys. Slowed but not stopped, I experimented with GRASS and GDAL scripts, memorized the differences between various kind of SQL joins, internalized some sense of what it means for a process to be "expensive," and ultimately moved toward refining a handful of multi-layered workflows involving sequenced geospatial data processing algorithms. I am proud of the resulting data layers, which balance a need for both simplicity and detail while remaining robust, accurate, and flexible.
+                              </p>
+                            </div>
+                            <!-- DIVIDER -->
+                            <div class='flex-child px6 py18 my12-mxl relative'>
+                              <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
+                                <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
+                                <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
+                              </div>
+                            </div>
+                            <!-- REFLECTIONS -->
+                            <div class='flex-child pr24 py3 pb0-mxl'>
+                              <h4 class="txt-h4 txt-bold py3">On process, learning, &amp; giving up</h4>
+                              <p class="py6">
+                                What can I say? This map is a map. It is also an experiment and a failure, a celebration, a journey, an offering, and the product of a lonely winter. In committing to an idea for my final NMP project, I wanted to create a surprising, clean, multilayered, atypical web map that would appeal to travelers, potential travelers, and vicarious travelers, train enthusiasts, journey seekers, and the geo- and eco-curious. I was drawn to train routes as a grounding, weighted infrastructure that would necessarily contain and locate my inquiry while also offering a grand glimpse into the many layers of reality making up the here and now. Weighted infrastructure or not, to say this project got away from me would be a sore understatement. It ballooned and wandered and tangled back on itself many times over, consuming the bulk of my focus and time for more months than was reasonable, beyond anyone’s expectation or requirement.
+                              </p>
+                              <p class="py6">
+                                As I force myself to come to a stopping point, I struggle to find words to encapsulate both the profundity of my learning as well as the depth of my disappointment in the final product. Ultimately, this map represents both the grand potential I see in web maps as a grounding, connective, illuminating force, as well as the difficulty of&mdash;and my particular failure at&mdash;manifesting any such product. It both epitomizes the kind of content I long for in web mapping and data visualization realms&mdash;orienting and augmentative of human connection to a world beyond screens&mdash;and also elucidates the many challenges [I, we, maps] face[d] in elegantly and thoroughly translating such lofty ideas into reality. This map navigates, then&mdash;almost literally&mdash;the ecotones and borderlands of what it means to fail, to succeed, and to learn. There remain countless barriers and discontinuities between my ideas and their satisfactory implementation. There are a million little things I still wanted to add to this program, a million more I have yet to fix. Giving up on it (for now) hurts a little. It is also the right, and only, thing to do.
+                              </p>
+                              <p class="py6">
+                                On the brighter side, these symbolic trains I spent months animating became the very real vehicle of some deep learning and meaningful skill, the bulk of which should be easily translatable into other web development and data visualization contexts. I have repeatedly surprised myself with my own persistence and dogged enjoyment of the work, even when I was in totally over my head. I problem solved like hell at just about every turn, honed my capacity for sieving through masses of information the web was always happy to offer me, and experienced from the soul up the truth of Marijn Haverbeke’s <a target="_blank" href="https://eloquentjavascript.net/00_intro.html">assertion</a> that “[t]he art of programming is the skill of controlling complexity.” Although I know the final code is by no means the most artful possible version of this program&mdash;the JavaScript spanning, as it does, some 3800 lines&mdash;the iterative process of writing and refining it all has embedded in me a much deeper understanding of what I am to be striving for, and helped me build the muscle and stamina necessary for moving forward with clarity again, and again, and again.
+                              </p>
+                            </div>
                           </div>
+
                         </div>
 
                       </div>
@@ -328,7 +539,7 @@
                     </div>
 
                     <!-- GET START/END FORM -->
-                    <form id="get-options" class="flex-child flex-child--grow col col--12 wmax600 shadow-darken75 round px12 py12 mx-auto bg-modal">
+                    <form id="get-options" class="flex-child flex-child--grow col col--12 wmax600 w600-mxl shadow-darken75 round px12 py12 mx-auto bg-modal">
                       <div class="flex-parent flex-parent--center-cross grid bg-lighten50">
                         <!-- Form Header-->
                         <legend class="flex-child col col--12 col--6-mm col--5-mxl my24 align-center px24 px12-ml color-darken75">
@@ -340,7 +551,6 @@
                           <fieldset class="py6 relative">
                             <!-- default input (search box with matching) wrapper -->
                             <div class='absolute flex-parent flex-parent--center-cross w36 h36 pl3'>
-                              <!-- <svg class='icon'><use xlink:href='#icon-caret-right'></use></svg> -->
                               <span class="triangle--r"></span>
                             </div>
                             <input type="text" id="getOption0" class="input pl36" value="Enter origin" list="startList" placeholder="You have to start somewhere" required />
@@ -358,10 +568,9 @@
                             </datalist>
                           </fieldset>
                           <!-- Get End -->
-                          <fieldset class="py6">
+                          <fieldset class="py6 mt3">
                             <!-- default input (search box with matching) wrapper -->
                             <div class='absolute flex-parent flex-parent--center-cross w36 h36 pl3'>
-                              <!-- <svg class='icon'><use xlink:href='#icon-caret-right'></use></svg> -->
                               <span class="triangle--r"></span>
                             </div>
                             <input type="text" id="getOption1" class="input pl36" value="Enter destination" list="endList" placeholder="Everything ends" required />
@@ -382,7 +591,7 @@
                         <!-- GO button -->
                         <fieldset class="flex-child col col--12 h36">
                           <button id="submit-btn" class="h-full w-full btn btn--darken50 unround txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main" onclick="onSubmit(this.form.getOption0.value,this.form.getOption1.value)">
-                            <span id="submit-btn-txt" class="txt-fancy flex-child txt-l mt-neg3">LET'S GO</span>
+                            <span id="submit-btn-txt" class="txt-fancy2 flex-child txt-l mt-neg12 pt6 mb-neg3">LET'S GO</span>
                             <span id="submit-btn-load" class="flex-child loading loading--s loading--dark none"></span>
                           </button>
                         </fieldset>
@@ -391,7 +600,7 @@
 
                     <!-- modal close button -->
                     <label id="modal-close">
-                      <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active px0 py0 mt-neg12 mr-neg12 mt-neg18-mm mr-neg18-mm' onclick="toggleModal()">
+                      <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active round-full px3 py3 mt6 mr6 mt3-mm mr3-mm z5' onclick="toggleModal()">
                         <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-close'/></svg>
                       </button>
                     </label>
@@ -409,13 +618,13 @@
         </section>
 
         <!-- ASIDE -->
-        <aside id="aside" class='flex-child scroll-hidden wmax360-mxl bg-aside'> <!-- relative? --> <!-- absolute bottom relative-mxl  h-full-mxl-->
+        <aside id="aside" class='flex-child scroll-hidden bg-aside'>
 
           <!-- inner about/sidebar content wrapper -->
-          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross"><!--  space-between-main -->
+          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross ">
 
             <!-- about/sources pane -->
-            <div id="about-plus" class="flex-child bg-lighten75-mxl"> <!-- relative? scroll-hidden? --> <!-- w-full relative mb-neg6 mb0-ml">
+            <div id="about-plus" class="flex-child bg-lighten75-mxl">
 
               <!-- about toggles and content group -->
               <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross">
@@ -429,14 +638,12 @@
                     <label id="about-expand" class="flex-child h24 w24-mxl none">
 
                       <!-- about expand triangle--u -->
-                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 color-darken25-on-hover color-darken75-on-active unround h24 w-full none-mxl' onclick="expand('about','up')"><!-- unround or round-t-full? border-t? -->
-                        <span id="about-up" class='icon triangle-l triangle-l--u mx-auto mt-neg6'>
-                          <!-- <svg class='icon absolute bg-transparent color-darken75 h36 w36 ml-neg18 pb12 z5'><use xlink:href='#icon-info'/></svg> -->
-                        </span>
+                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround h24 w-full none-mxl' onclick="expand('about','up')">
+                        <span id="about-up" class='icon triangle-l triangle-l--u mx-auto mt-neg6'></span>
                       </button>
 
                       <!-- about expand triangle--l -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround border-r px0 none block-mxl z4' onclick="expand('about','left')"><!--opacity50 border-l bg-accent2-->
+                      <button class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z4' onclick="expand('about','left')">
                         <span class='icon triangle-l triangle-l--l'></span>
                       </button>
 
@@ -446,13 +653,13 @@
                     <label id="about-collapse" class="flex-child h12 w6-mxl z4">
 
                       <!-- about collapse triangle--d -->
-                      <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl' onclick="collapse('about','down')">
+                      <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl' onclick="collapse('about','down')">
                         <span class='icon triangle-l triangle-l--d mx-auto'></span>
                       </button>
 
                       <!-- about collapse triangle--r -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken25-on-hover color-darken75-on-active border-l unround none block-mxl' onclick="collapse('about','right')"><!-- border border--2 round-full py6 pr6 pl0 -->
-                        <span class='icon triangle-l triangle-l--r ml-neg3'></span> <!-- none inline-block-mxl absolute left -->
+                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active border-l unround none block-mxl' onclick="collapse('about','right')">
+                        <span class='icon triangle-l triangle-l--r ml-neg3'></span>
                       </button>
 
                     </label>
@@ -461,10 +668,10 @@
 
                 </div>
 
-                <div id="about" class="flex-child wmax300-mxl"><!-- relative -->
+                <div id="about" class="flex-child w360-mxl wmin240-mxl">
 
-                  <!-- about inner wrapper --> <!-- rm fp-center-main?-->
-                  <div id="about-wrapper" class='flex-parent flex-parent--column-mxl flex-parent--stretch-cross flex-parent--center-main py12-mxl px12-mxl'><!--my3-mxl-->
+                  <!-- about inner wrapper -->
+                  <div id="about-wrapper" class='flex-parent flex-parent--column-mxl flex-parent--stretch-cross flex-parent--center-main py12-mxl px12-mxl'>
 
                     <!-- content -->
                     <div id="about-content" class='flex-child bg-lighten25 round-mm shadow-darken25-mm h-full-mxl mx6-mm mb6-mm mx12-mm mb12-mm mx0-mxl my0-mxl w-full w-auto-mxl'>
@@ -473,51 +680,203 @@
                       <div class='flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross flex-parent--space-between-main h-full-mxl px6 py6'>
 
                         <!-- About--Header -->
-                        <div class="flex-child flex-child-no-shrink bg-lighten25 align-center round-tl round-tr hmin18 hmin36-mxl pb3 pt6 py12-mxl">
-                          <h3 class='txt-h4 txt-bold txt-em pt3 pt0-mxl'>About This Map</h3>
+                        <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 hmin36-mxl pt6 pb3 py12-mxl flex-parent flex-parent--center-cross flex-parent--center-main">
+                          <h3 class='flex-child txt-h4 txt-bold txt-em pt3 pt0-mxl'>About This Map</h3>
                         </div>
 
                         <!-- About--Main -->
                         <div class="flex-child hmax120 hmax-none-mxl h-full-mxl bg-lighten50 txt-s txt-m-ml round-bl round-br scroll-auto">
 
                           <!-- inner content wrapper -->
-                          <div class="flex-child flex-parent flex-parent--column flex-parent--row-mm flex-parent--column-mxl flex-parent--space-between-main flex-parent--stretch-cross grid px12 py6 py12-mm px24-mxl py18-mxl mx6 my6 mx0-mm my0-mm mx12-mxl my12-mxl">
-                            <!-- main about text, orientation, etc -->
-                            <div class='flex-child col col--offl2 col--10 col--offl1-mm col--4-mm col--11-mxl align-r py3 pt0-mxl'>
-                              <h4 class="txt-h5 txt-h4-ml txt-bold py3">Some words</h4>
-                              <p class="py3">This map visualizes ~~~~~~.</p>
-                              <p class="py3">Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Sed posuere consectetur est at lobortis. Aenean eu leo quam.</p>
-                            </div>
-                            <div class='flex-child col col--12 col--2-mm col--12-mxl px6 py18 my30-mxl relative'>
-                              <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
-                                <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
-                                <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
+                          <div class="flex-parent flex-parent--column flex-parent--row-mm flex-parent--column-mxl flex-parent--space-between-main flex-parent--stretch-cross grid px12 py6 py12-mm px18-mxl py18-mxl mx6 my6 mx0-mm my0-mm mx12-mxl my6-mxl">
+                            <div class="col col--12 col--6-mm pr36-mm pr0-mxl col--12-mxl">
+                              <!-- MAIN ABOUT TEXT / BASICS -->
+                              <div class='flex-child flex1 align-r pl24 py3 pt0-mxl'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">Some orienting words</h4>
+                                <p class="py6">
+                                  In this map, I offer the user a virtual experience of traversing North America’s passenger rail routes through a dynamically unfolding milieu of terrain, ecology, waterways, and habitat. Color, texture, size, and line suggest the many layers and lives abounding around us; unfolding, echoing paths celebrate and illuminate the surprising shapes of worlds. As a symbolic train navigates the chosen route, protected areas, watersheds, rivers and lakes, and four levels of ecoregions are unveiled as they come within a 0.5 degree or so of the train's path. Naturally, the intersected data appears more dense within this immediate buffer, but the user may be surprised by the sweeping forms and unexpected connections that become apparent among distant places that share lower-level ecoregions. A togglable and height-adjustable dashboard at the base of the screen offers the user a dynamically populating legend/log of the categories encountered, lists the names of all encountered features in scrollable columns, and tracks traversed elevation, bearing, distance, time, and speed.
+                                </p>
+                              </div>
+                              <!-- DIVIDER -->
+                              <div class='flex-child flex2 px6 py18 my12-mxl relative'>
+                                <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
+                                  <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
+                                  <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
+                                </div>
+                              </div>
+                              <!-- TECHNOLOGY STACK -->
+                              <div class='flex-child flex4 flex3-mm-ml flex4-mxl align-r-mm align-l-mxl pr24 pr0-mm pl24-mm pl0-mxl pr24-mxl py3'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">Technologies used</h4>
+                                <p class="py6">
+                                  This map represents my final project of my final class of UKY's <a target="_blank" href="https://newmapsplus.as.uky.edu/">NMP Graduate Certificate in Digital Mapping</a>. As such, it was meant to serve as a culmination and showcase of my newfound mapping and coding skills. Never one to choose the easy route, I challenged myself hugely by foregoing pre-scaffolded mapping libraries such as Leaflet and Mapbox, instead opting to build this work from a more fundamental ground using D3.js, <a target="_blank" href="https://github.com/topojson/topojson/wiki">TopoJSON</a>, and plenty of vanilla JavaScript as the knife edge of my code. By way of learning D3, I oriented to a variety of modern web standards including SVG, Canvas, REST &amp; HTTP, CSS &amp; HTML. I did rely on Mapbox’s <a target="_blank" href="https://labs.mapbox.com/assembly/">Assembly</a> CSS framework in building the page layout, and happily used their <a target="_blank" href="http://turfjs.org/">Turf.js</a> library for on-the-fly geoprocessing. <a target="_blank" href="https://www.rome2rio.com/documentation/1-4/search/">Rome2Rio’s Search API</a> and <a target="_blank" href="https://elevation-api.io/">Elevation-API.io</a> serve the data that allows a user to customize their experience from tens of thousands of possible combinations. A call to Mapbox's <a target="_blank" href="https://github.com/mapbox/polyline">Polyline.js</a> allows for easy conversion of Rome2Rio’s returned path string from encoded polyline to GeoJSON. Finally, <a target="_blank" href="https://vis4.net/chromajs/">Chroma.js</a> and <a target="_blank" href="https://riccardoscalco.it/textures/">Textures.js</a> helped with dynamic styling and differentiating the unveiled geometries. This technology stack provided me with a solid taste of the need for an ecosystem of roles within web development while still leaving me with maximal room for creative freedom and control over even the tiniest elements.
+                                </p>
+                                <p class="py6">
+                                  Before all of this, of course, came the data wrangling itself, which was in many ways a more challenging and overwhelming venture for my recent GIS-newbie self. My familiarity with tools and software including QGIS, PostGIS SQL, and the <a target="_blank" href="https://github.com/mbloch/mapshaper/wiki/Introduction-to-the-Command-Line-Tool">Mapshaper</a> CLI grew enormously as I persisted though countless moments of frustration and confusion, regularly frozen screens, and ferociously humming CPU fans that still failed to keep my fingers from being literally burned by the sharp heat emitted through the edges of my laptop keys. Slowed but not stopped, I experimented with GRASS and GDAL scripts, memorized the differences between various kind of SQL joins, internalized some sense of what it means for a process to be "expensive," and ultimately moved toward refining a handful of multi-layered workflows involving sequenced geospatial data processing algorithms. I am proud of the resulting data layers, which balance a need for both simplicity and detail while remaining robust, accurate, and flexible.
+                                </p>
                               </div>
                             </div>
-                            <!-- data sources, sub-about, furthermore -->
-                            <div class='flex-child col col--offr2 col--10 col--offr1-mm col--4-mm col--11-mxl py3 pb0-mxl'>
-                              <h4 class="txt-h5 txt-h4-ml txt-bold py3">Data sources</h4>
-                              <ul class="py3">
-                                <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2 mb-neg1-mxl"></div>
-                                  <a target='_blank' href='#'>this is how i go</a>
-                                </li>
-                                <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2 mb-neg1-mxl"></div>
-                                  <a target='_blank' href='#'>when i go</a>
-                                </li>
-                                <li class="txt-li">
-                                  <div class="triangle triangle--r color-symbol inline-block mb-neg2 mb-neg1-mxl"></div>
-                                  <a target='_blank' href='#'>like this</a>
-                                </li>
-                              </ul>
+                            <div class="col col--12 col--6-mm pl36-mm pl0-mxl col--12-mxl">
+                              <!-- DATA SOURCES -->
+                              <div class='flex-child flex3 flex4-mm-ml flex3-mxl align-r align-l-mm align-r-mxl pl24 pl0-mm pr24-mm pl24-mxl pr0-mxl py3'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">Data sources</h4>
+                                <ul class="py6">
+                                  <li class="txt-li">
+                                    <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
+                                      <summary><span class="inline-block">Ecoregions</span></summary>
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                        <li class="txt-li">
+                                          Levels I-III from <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/terrestrial-ecoregions-level-iii'>The Commission for Environmental Cooperation (2006)</a>
+                                        </li>
+                                        <li class="txt-li">
+                                          <span class="nevermind-reverse">Level IV Supplements from:</span>
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                            <li class="txt-li">
+                                              <a target='_blank' href='https://open.canada.ca/data/en/dataset/fe9fd41c-1f67-4bc5-809d-05b62986b26b'>The Dept of Agriculture and Agri-Food (Canada - 2013)</a>
+                                            </li>
+                                            <li class="txt-li">
+                                              <a target='_blank' href='https://www.epa.gov/eco-research/level-iii-and-iv-ecoregions-continental-united-states'>The Environmental Protection Agency (United States - 2011)</a>
+                                            </li>
+                                            <li class="txt-li">
+                                              <a target='_blank' href='http://www.conabio.gob.mx/informacion/metadata/gis/ecort08gw.xml?_xsl=/db/metadata/xsl/fgdc_html.xsl&_indent=no'>
+                                              CONABIO, INEGI, and the INE (Mexico - 2008)</a>
+                                            </li>
+                                          </ul>
+                                        </li>
+                                      </ul>
+                                    </details>
+                                  </li>
+                                  <li class="txt-li">
+                                    <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
+                                      <summary><span class="inline-block">Watersheds</span></summary>
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                        <li class="txt-li">
+                                          <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/watersheds'>The Commission for Environmental Cooperation (2010)</a>
+                                        </li>
+                                      </ul>
+                                    </details>
+                                  </li>
+                                  <li class="txt-li">
+                                    <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
+                                      <summary><span class="inline-block">Protected Areas</span></summary>
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                        <li class="txt-li">
+                                          From <a class="nevermind-reverse" target='_blank' href='http://www.cec.org/tools-and-resources/map-files'>The Commission for Environmental Cooperation:</a>
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                            <li class="txt-li">
+                                              <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/north-american-protected-areas-2017'>North American Protected Areas (2017)</a>
+                                            </li>
+                                            <li class="txt-li">
+                                              <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/priority-conservation-areas-grasslands-2010'>Priority Conservation Areas - Grasslands (2010)</a>
+                                            </li>
+                                            <li class="txt-li">
+                                              <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/terrestrial-species-common-conservation-concern'>
+                                              Terrestrial Species of Common Conservation Concern</a>
+                                            </li>
+                                          </ul>
+                                        </li>
+                                        <!-- <li class="txt-li">
+                                          Critical Habitat from the <a target='_blank' href='https://ecos.fws.gov/ecp/report/table/critical-habitat.html'>US Fish &amp; Wildlife Service (2019)</a>
+                                        </li> -->
+                                      </ul>
+                                    </details>
+                                  </li>
+                                  <li class="txt-li">
+                                    <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
+                                      <summary><span class="inline-block">Other Enrich Data</span></summary>
+                                      <ul class="show-bullets--square reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                        <li class="txt-li">
+                                          <span class="nevermind-reverse">Volcanoes from <a target='_blank' href='https://ngmdb.usgs.gov/gmna'>USGS's Geologic Map of North America</a> GIS Database (2009)</span>
+                                        </li>
+                                        <li class="txt-li">
+                                          Geothermal Systems from <a target='_blank' href='https://www.sciencebase.gov/catalog/item/50cf6f4fe4b0fa1303b83888'>USGS's Geothermal Resource Studies Project (2010)</a>
+                                        </li>
+                                      </ul>
+                                    </details>
+                                  </li>
+                                  <li class="txt-li">
+                                    <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
+                                      <summary><span class="inline-block">Railways &amp; Stations</span></summary>
+                                      <ul class="show-bullets--square reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                        <li class="txt-li">
+                                          <a target='_blank' href='http://osav-usdot.opendata.arcgis.com/datasets/f15d9e40cd1d4170a36bf31d4e6a3c28_0'>The Bureau of Transportation Statistics' National Transportation Atlas Database (2018)</a>
+                                        </li>
+                                        <li>
+                                          <a target='_blank' href='http://osav-usdot.opendata.arcgis.com/datasets/3e9daf681b154fb19372044f4d52941a_0'>The Federal Railroad Administration (2018)</a>
+                                        </li>
+                                        <li class="txt-li">
+                                          <a target='_blank' href='https://www.naturalearthdata.com/downloads/10m-cultural-vectors'>Natural Earth 1:10m Railroads</a>
+                                        </li>
+                                        <li class="txt-li">
+                                          <a target='_blank' href='https://www.amtrak.com/train-routes'>Amtrak</a>
+                                        </li>
+                                        <li class="txt-li">
+                                          <a target='_blank' href='https://www.viarail.ca/en/plan-your-trip/find-a-station'>VIA Rail</a>
+                                        </li>
+                                        <li class="txt-li">
+                                          <a target='_blank' href='https://www.alaskarailroad.com/ride-a-train/route-map'>Alaska Railroad</a>
+                                        </li>
+                                      </ul>
+                                    </details>
+                                  </li>
+                                  <li class="txt-li">
+                                    <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
+                                      <summary><span class="inline-block">Physical Baselayer</span></summary>
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                        <li class="txt-li">
+                                          <a class="nevermind-reverse" target='_blank' href='https://www.naturalearthdata.com/downloads/10m-physical-vectors'>Natural Earth 1:10m Vectors:</a>
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                            <li class="txt-li">Rivers + Lake Centerlines</li>
+                                            <li class="txt-li">Lakes + Reservoirs</li>
+                                          </ul>
+                                        </li>
+                                      </ul>
+                                    </details>
+                                  </li>
+                                  <li class="txt-li">
+                                    <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
+                                      <summary><span class="inline-block">Cultural Baselayer</span></summary>
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                        <li class="txt-li">
+                                          <a class="nevermind-reverse" target='_blank' href='https://www.naturalearthdata.com/downloads/10m-cultural-vectors'>Natural Earth 1:10m Vectors:</a>
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                            <li class="txt-li">Admin 0</li>
+                                            <li class="txt-li">Admin 1</li>
+                                            <li class="txt-li">Populated Places</li>
+                                            <li class="txt-li">Urban Areas</li>
+                                          </ul>
+                                        </li>
+                                      </ul>
+                                    </details>
+                                  </li>
+                                </ul>
+                              </div>
+                              <!-- DIVIDER -->
+                              <div class='flex-child flex5 px6 py18 my12-mxl relative'>
+                                <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--center-cross absolute top bottom left right mb12">
+                                  <span class="flex-child txt-xs h3">&#10229;//\\//\\&#10230;</span>
+                                  <span class="flex-child txt-xs h3">&#10229;\\//\\//&#10230;</span>
+                                </div>
+                              </div>
+                              <!-- REFLECTIONS -->
+                              <div class='flex-child flex6 pr24 py3 pb0-mxl'>
+                                <h4 class="txt-h5 txt-h4-ml txt-bold py3">On process, learning, &amp; giving up</h4>
+                                <p class="py6">
+                                  What can I say? This map is a map. It is also an experiment and a failure, a celebration, a journey, an offering, and the product of a lonely winter. In committing to an idea for my final NMP project, I wanted to create a surprising, clean, multilayered, atypical web map that would appeal to travelers, potential travelers, and vicarious travelers, train enthusiasts, journey seekers, and the geo- and eco-curious. I was drawn to train routes as a grounding, weighted infrastructure that would necessarily contain and locate my inquiry while also offering a grand glimpse into the many layers of reality making up the here and now. Weighted infrastructure or not, to say this project got away from me would be a sore understatement. It ballooned and wandered and tangled back on itself many times over, consuming the bulk of my focus and time for more months than was reasonable, beyond anyone’s expectation or requirement.
+                                </p>
+                                <p class="py6">
+                                  As I force myself to come to a stopping point, I struggle to find words to encapsulate both the profundity of my learning as well as the depth of my disappointment in the final product. Ultimately, this map represents both the grand potential I see in web maps as a grounding, connective, illuminating force, as well as the difficulty of&mdash;and my particular failure at&mdash;manifesting any such product. It both epitomizes the kind of content I long for in web mapping and data visualization realms&mdash;orienting and augmentative of human connection to a world beyond screens&mdash;and also elucidates the many challenges [I, we, maps] face[d] in elegantly and thoroughly translating such lofty ideas into reality. This map navigates, then&mdash;almost literally&mdash;the ecotones and borderlands of what it means to fail, to succeed, and to learn. There remain countless barriers and discontinuities between my ideas and their satisfactory implementation. There are a million little things I still wanted to add to this program, a million more I have yet to fix. Giving up on it (for now) hurts a little. It is also the right, and only, thing to do.
+                                </p>
+                                <p class="py6">
+                                  On the brighter side, these symbolic trains I spent months animating became the very real vehicle of some deep learning and meaningful skill, the bulk of which should be easily translatable into other web development and data visualization contexts. I have repeatedly surprised myself with my own persistence and dogged enjoyment of the work, even when I was in totally over my head. I problem solved like hell at just about every turn, honed my capacity for sieving through masses of information the web was always happy to offer me, and experienced from the soul up the truth of Marijn Haverbeke’s <a target="_blank" href="https://eloquentjavascript.net/00_intro.html">assertion</a> that “[t]he art of programming is the skill of controlling complexity.” Although I know the final code is by no means the most artful possible version of this program&mdash;the JavaScript spanning, as it does, some 3800 lines&mdash;the iterative process of writing and refining it all has embedded in me a much deeper understanding of what I am to be striving for, and helped me build the muscle and stamina necessary for moving forward with clarity again, and again, and again.
+                                </p>
+                              </div>
                             </div>
                           </div>
 
                         </div>
 
                         <!-- About--Footer -->
-                        <!-- <footer class='flex-child flex-child-no-shrink h0 bg-lighten25 round-bl round-br'></footer> -->
+                        <!-- <footer class='flex-child flex-child--no-shrink h0 bg-lighten25 round-bl round-br'></footer> -->
 
                       </div>
 
@@ -542,7 +901,7 @@
     <!-- footer stays on the bottom at full width -->
     <footer id="footer" class="flex-child flex-child--no-shrink bg-darken50 color-lighten75 txt-s txt-m-ml">
       <!-- inner horizontal wrapper -->
-      <div class='flex-parent flex-parent--center-cross grid px6 py3 px12-mm px18-ml px24-mxl'>
+      <div class='flex-parent flex-parent--center-cross grid px6 py3 px12-mm px18-ml px24-mxl ml3'>
         <!-- author info -->
         <div class='flex-child col col--5'>
           <span class="mx6">
@@ -552,29 +911,27 @@
           </span>
         </div>
         <!-- break/divider icon visible @ mm+ -->
-        <div class="flex-child col col--2">
+        <div class="flex-child col col--2 ml-neg1">
           <svg class="icon mx-auto h30 w30 color-lighten75"><use xlink:href="assets/compass-rose.svg#compass-rose"/></svg>
         </div>
         <!-- social media -->
-        <div class="flex-child col col--5">
-          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr-neg3">
-            <a target="_blank" href="mailto:kafunk@gmail.com">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="email"><use xlink:href='#icon-mail'/></svg>
-            </a>
-            <a target="_blank" href="https://github.com/kafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="github"><use xlink:href='#icon-github'/></svg>
-            </a>
-            <a target="_blank" href="https://twitter.com/kafunkafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="twitter"><use xlink:href='#icon-twitter'/></svg>
-            </a>
-            <a target="_blank" href="https://www.instagram.com/kafunkafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="instagram"><use xlink:href='#icon-instagram'/></svg>
-            </a>
-            <!-- <a target="_blank" href="https://open.spotify.com/user/kafunkafunk">
-              <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="spotify"><use xlink:href='#icon-spotify'/></svg>
-            </a> -->
-            <!-- Pinterest,Dribbble,LinkedIn? -->
-          </div>
+        <div class="flex-child col col--5 flex-parent flex-parent--end-main flex-parent--center-cross">
+          <a target="_blank" href="mailto:kafunk@gmail.com">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="email"><use xlink:href='#icon-mail'/></svg>
+          </a>
+          <a target="_blank" href="https://github.com/kafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="github"><use xlink:href='#icon-github'/></svg>
+          </a>
+          <a target="_blank" href="https://twitter.com/kafunkafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="twitter"><use xlink:href='#icon-twitter'/></svg>
+          </a>
+          <a target="_blank" href="https://www.instagram.com/kafunkafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="instagram"><use xlink:href='#icon-instagram'/></svg>
+          </a>
+          <!-- <a target="_blank" href="https://open.spotify.com/user/kafunkafunk">
+            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="spotify"><use xlink:href='#icon-spotify'/></svg>
+          </a> -->
+          <!-- Pinterest,Dribbble,LinkedIn? -->
         </div>
       </div>
     </footer>
@@ -586,20 +943,15 @@
   <!-- load Assembly -->
   <script async defer src='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.js'></script>
 
-  <!-- load MapboxGL -->
-  <!-- <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.45.0/mapbox-gl.js'></script> -->
-
   <!-- load Turf.js -->
   <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
-
-  <!-- load Simple Statistics -->
-  <!-- <script src="https://unpkg.com/simple-statistics@6.0.1/dist/simple-statistics.min.js"></script> -->
 
   <!-- load D3 -->
   <script src="https://d3js.org/d3.v5.js"></script>
   <script src="https://unpkg.com/topojson@3"></script>
   <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
   <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+  <!-- <script src="https://unpkg.com/d3-simple-slider"></script> -->
 
   <!-- load Chroma.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.2/chroma.min.js"></script>
