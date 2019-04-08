@@ -73,7 +73,7 @@ details > summary > span {
   scroll-behavior: smooth;
   transition: 0.4s;
 }
-#elevation,#speedometer {
+#elevation,#clock {
   border-radius: 5px 50px;
   background: #dbd99f;
 }
@@ -82,8 +82,8 @@ details > summary > span {
   background: #dbd99f;
 }
 #elevation,#odometer { border-top: 1px double dimgray; }
-#odometer,#speedometer { border-right: 1px double dimgray; }
-#compass,#speedometer { border-bottom: 1px double dimgray; }
+#odometer,#clock { border-right: 1px double dimgray; }
+#compass,#clock { border-bottom: 1px double dimgray; }
 #elevation,#compass { border-left: 1px double dimgray; }
 #footer a { color: darksalmon; /* font-weight: 700; */ }
 #dash { overflow-y:hidden; }
