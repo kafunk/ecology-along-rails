@@ -7,18 +7,25 @@
   --bg-accent2: #5d7876;
 }
 
-body { margin:0; padding:0; } /* background-color:#fafafa; } */
+body { margin:0; padding:0; }
 h1 { font-family: 'Mirza', cursive;} /* note that different fonts will require different margin adjustments */
 h2,h3,h4,h5,h6 { font-family: 'Buda', cursive; }
-p, span, a, li { font-family: 'Thasadith', sans-serif; line-height: 150%;}  /* Quattrocentro? py6? */
+p, span, a, li {
+  font-family: 'Quattrocento Sans', sans-serif;   /* Thasadith? */
+  font-weight: 400;
+  line-height: 150%;
+}
 a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
 svg path { stroke-linejoin: round; pointer-events: visiblePainted; } /* shape-rendering: optimizeSpeed; } */
 
+ul.show-bullets li { list-style: outside; }
+ul.show-bullets--square li { list-style: square; }
+/* ul.show-bullets--inside li { list-style: inside; } */
+
 /* details triangle marker position is absolute to legend-log-item (in chrome, anyway)*/
-/* details > summary,  */
-details > summary::-webkit-details-marker {
+#legend-log details > summary::-webkit-details-marker {
   position: absolute;
   top: 0.5; left: 8px;
 }
@@ -30,11 +37,21 @@ details.hide-triangle > summary::-webkit-details-marker {
   display: none;
 }
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
-details .legend-log-item {
+details.legend-log-item {
   margin-left: 12px
 }
-details .legend-log-item label {  /*log-name*/
+details.legend-log-item label {  /*log-name*/
   margin-left: -12px
+}
+
+/* color summary symbol */
+details.color-symbol > summary,
+details.color-symbol > summary::-webkit-details-marker {
+  color: #2A4C48;
+}
+/* but not summary text */
+details > summary > h6 {
+  color: rgba(0,0,0,0.75);
 }
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
@@ -68,31 +85,21 @@ details .legend-log-item label {  /*log-name*/
 #odometer,#speedometer { border-right: 1px double dimgray; }
 #compass,#speedometer { border-bottom: 1px double dimgray; }
 #elevation,#compass { border-left: 1px double dimgray; }
-#footer a {
-  color: darksalmon;
-  /* font-weight: 700; */
-}
+#footer a { color: darksalmon; /* font-weight: 700; */ }
 #dash { overflow-y:hidden; }
 #from-to { height: 120px; }
 #resizable { height: 120px; }
 
-#dash .resizer {
- cursor: ns-resize;
- pointer-events: all;
- /* z-index:100; */
+#dash .resizer { cursor: ns-resize; pointer-events: all; }
+
+/* reverse triangle position and direction on data source details elements  */
+.reverse-order { direction: rtl; }
+.reverse-order li a,
+.reverse-order li .nevermind-reverse {
+  direction: ltr; unicode-bidi: embed;
 }
 
-.ticks {
-  font: 10px sans-serif;
-}
-.handle {
-  fill: #fff;
-  stroke: #000;
-  stroke-opacity: 0.5;
-  stroke-width: 1.25px;
-}
-
-.bg-base { background: #2A4C48; } /* #dbd99f; } */
+.bg-base { background: #2A4C48; }
 /* .bg-main {} */
 .bg-map { background: var(--bg-dark1); }
 .bg-section { background: var(--bg-dark1); }
@@ -125,17 +132,12 @@ details .legend-log-item label {  /*log-name*/
 .tooltip {
   position: absolute;
   text-align: center;
-  /* width: 60px;
-  height: 28px; */
   padding: 12px 18px;
   border-radius: 2px;
   pointer-events: none;
   background: honeydew;
   border: 2px;
 }
-/* .legend-item { }
-.legend-symbol { }
-.legend-text { } */
 .hover { stroke-opacity: 1; opacity: 1 }
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
@@ -189,6 +191,7 @@ details .legend-log-item label {  /*log-name*/
 /* @media screen and (min-width: 400px) { } */
 @media screen and (min-width: 640px) {
   #resizable { height: 180px; }
+  .normal-order-mm { direction: ltr; }
   .widget {
     border: 4px solid #6B7063;
     border-radius: 5px;
@@ -203,6 +206,11 @@ details .legend-log-item label {  /*log-name*/
   .flex4-mm-ml { order: 4; }
 }
 @media screen and (min-width: 1200px) {
+  .reverse-order-mxl { direction: rtl; }
+  .reverse-order-mxl li a,
+  .reverse-order-mxl li .nevermind-reverse {
+    direction: ltr; unicode-bidi: embed;
+  }
   .flex3-mxl { order: 3; }
   .flex4-mxl { order: 4; }
   /* missing from Assembly */
