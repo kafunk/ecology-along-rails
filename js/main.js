@@ -490,22 +490,22 @@
 
 // MAKE DASHBOARD RESIZABLE from http://jsfiddle.net/meetamit/e38bLdjk/1/
 
-  var childResizer = d3.select('.child-resizer'),
-    siblingResizer = d3.select(".sibling-resizer");
+  var childResizers = d3.selectAll('.child-resizer'),
+    siblingResizers = d3.selectAll(".sibling-resizer");
 
   var childResize = d3.drag()
     .on('drag', childDrag);
   var siblingResize = d3.drag()
     .on('drag', siblingDrag);
 
-  childResizer.call(childResize)
-  siblingResizer.call(siblingResize)
+  childResizers.call(childResize)
+  siblingResizers.call(siblingResize)
 
-  // for childResizer, ensure no event listener conflict with nearby dash expand/collapse btns (https://bl.ocks.org/mbostock/a84aeb78fea81e1ad806)
-  d3.select("#dash-expand-btn")
+  // ensure no event listener conflicts between resizer divs and nearby collapse btns (https://bl.ocks.org/mbostock/a84aeb78fea81e1ad806)
+  d3.select("#dash-collapse-btn")
     .on("touchstart", nozoom)
     .on("touchmove", nozoom)
-  d3.select("#dash-collapse-btn")
+  d3.select("#about-collapse-btn")
     .on("touchstart", nozoom)
     .on("touchmove", nozoom)
 
@@ -923,6 +923,16 @@
 
     function parseReceived(raw) {
 
+      // debugging rare error from turf.js
+      if (!Array.isArray(raw.routes[0].segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat()) || raw.routes[0].segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat().length < 2) {
+        console.log("problem!")
+        console.log(raw)
+        console.log(raw.routes[0].segments)
+        console.log(raw.routes[0].segments.map(d=>polyline.toGeoJSON(d.path)))
+        console.log(raw.routes[0].segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates))
+        console.log(raw.routes[0].segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat())
+      }
+
       let route = raw.routes[0],
        mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat()),
         inMiles = kmToMi(route.distance);
@@ -1167,7 +1177,7 @@
           }
         }))].filter(d => d !== undefined);
 
-        let agencyHtml = `<span>via</span><br>`
+        let agencyHtml = `<span class="txt-em">via</span> `
         if (agencies.length > 2) {
 
           agencies.splice((agencies.length - 1),0,"& ");
@@ -1711,8 +1721,10 @@
                              .classed("disappear-down",false)
           // make sure section-wrapper not "relative"
           d3.select("#section-wrapper").classed("relative",false)
-          // adjust dash padding so long as #about collapsed on mxl
+          // adjust dash (& associated) padding so long as #about collapsed on mxl
+          d3.select("#attribution").classed("mr24-mxl", true)
           d3.select("#dash-content").classed("px30-mxl",true)
+          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
           // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
@@ -1749,6 +1761,7 @@
           // reset dash and attribution margins
           d3.select("#attribution").classed("mr24-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
+          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
         }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
         d3.select("#about").classed("disappear-right", false)
@@ -1770,7 +1783,7 @@
   }
 
   function collapseDirection(width) {
-    return (width > 1200) ? "right" : "down";
+    return (width > 1199) ? "right" : "down";
   }
 
 //// GEOJSON + TOPOJSON HELPERS
@@ -2062,20 +2075,67 @@ console.log(zoom1)
 
   }
 
-  function siblingDrag() {
+  let bottomAsideHeightMin = 240;
+  function siblingDrag() {  // default adjusts height only
 
-    let prevSibHeight = this.previousElementSibling.getBoundingClientRect().height;
-        nextSibHeight = this.nextElementSibling.getBoundingClientRect().height;
+  // <!-- invisible when #about closed -->
+  // on move to smaller screens, reset aside height?
+  // adjust div margins
+
+    let prevHeight = this.previousElementSibling.getBoundingClientRect().height,
+        nextHeight = this.nextElementSibling.getBoundingClientRect().height;
+
+    let prevMin = 0, prevMax = Infinity, nextMin = 0, nextMax = Infinity;
+
+    // if (this.nextElementSibling.id === "aside") {
+    //
+    //   if (window.clientHeight > 1199) {
+    //
+    //     // adjust width, not height! then get outta here
+    //     widthAdjust(this);
+    //     return;
+    //
+    //     function widthAdjust(node) {
+    //
+    //       let prevWidth = node.previousElementSibling.getBoundingClientRect().width,
+    //           nextWidth = node.nextElementSibling.getBoundingClientRect().width;
+    //
+    //       // min width built in with css classes
+    //       nextMax = window.innerWidth;
+    //
+    //       // get new prevSibling width, within bounds
+    //       let prevX = prevWidth + d3.event.dx;
+    //       prevX = Math.min(prevMax,Math.max(prevMin, prevX));
+    //
+    //       // get new nextSibling width, within bounds
+    //       let nextX = nextWidth - d3.event.dx;
+    //       nextX = Math.min(nextMax,Math.max(nextMin, nextX));
+    //
+    //       // style prev sibling
+    //       d3.select(node.previousElementSibling).style('width', prevX + 'px');
+    //
+    //       // style next sibling
+    //       d3.select(node.nextElementSibling).style('width', nextX + 'px');
+    //
+    //     }
+    //
+    //   }
+    //
+    //   nextMin = bottomAsideHeightMin;
+    //   mainHeight = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight;  //  - marginY*2,
+    //
+    //   nextMax = mainHeight;
+    //   prevMax = mainHeight - nextMin;
+    //
+    // }
 
     // get new prevSibling height, within bounds
-    let prevY = prevSibHeight + d3.event.y;
-    // prevY = min/max
-    // Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
+    let prevY = prevHeight + d3.event.dy;
+    prevY = Math.min(prevMax,Math.max(prevMin, prevY));
 
     // get new nextSibling height, within bounds
-    let nextY = nextSibHeight - d3.event.y;
-    // nextY = min/max
-    // Math.min(svg.node().clientHeight - 96 ,Math.max(66, y));
+    let nextY = nextHeight - d3.event.dy;
+    nextY = Math.min(nextMax,Math.max(nextMin, nextY));
 
     // style prev sibling
     d3.select(this.previousElementSibling).style('height', prevY + 'px');
@@ -3108,7 +3168,7 @@ console.log(zoom1)
           symbolSet.add(symbol.id)
 
           let newItem = d3.select(`#${parentDivId}`).append("div")
-            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm border-t border--dash legend-log-item relative",true)
+            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item relative",true)
             .html(getLogHtml(group,symbol.id,isParent))
             .style("opacity", 0)  // initially
 
@@ -3155,12 +3215,12 @@ console.log(zoom1)
             // COMBAK same ID used on two elements
             if (isParent) {
               html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle">
-                <summary id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross">
+                <summary id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash hmin24">
                   ${innerHtml}
                 </summary>
               </details>`
             } else {
-              html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-l py3">
+              html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross legend-log-child-item border-l py3">
                 ${innerHtml}
               </div>`
             }
@@ -3318,10 +3378,11 @@ console.log(zoom1)
 
       // size- and element-specific toggles upon expand/collapse of various elements
       if (elementStr === "about") {
-        if (window.innerWidth > 1200) {
+        if (window.innerWidth > 1199) {
           d3.select("#section-wrapper").classed("relative", true);
           d3.select("#attribution").classed("mr24-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
+          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
         } else {
           d3.select("#dash-up").classed("mt-neg18", true)
           d3.select("#dash-up").classed("mt-neg6", false)
@@ -3359,10 +3420,11 @@ console.log(zoom1)
 
     // size- and element-specific toggles upon expand/collapse of various elements
     if (elementStr === "about") {
-      if (window.innerWidth > 1200) {
+      if (window.innerWidth > 1199) {
         d3.select("#section-wrapper").classed("relative", false)
         d3.select("#attribution").classed("mr24-mxl", true)
         d3.select("#dash-content").classed("px30-mxl",true)
+        d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
       } else {
         d3.select("#dash-up").classed("mt-neg6", true)
         d3.select("#dash-up").classed("mt-neg18", false)
@@ -3997,7 +4059,6 @@ console.log(zoom1)
 // PERFORMANCE IMPROVEMENT IDEAS
   // removing unneeded elements from DOM as animation progresses
   // removing everything from DOM at end of experience (WHY DOES MY COMPUTER HUM FOR 5 MINUTES POST EVERY ANIMATION)
-    // https://beta.observablehq.com/@mbostock/disposing-content
   // use path.measure() or path.area() instead of turf.length() calculations to determine animation variables? how would pixel units translate to time?
   // taken from github issue notes:
     // redraw SVG (supported by use of `clipExtent()` or similar?) at certain moments within script
@@ -4071,3 +4132,7 @@ console.log(zoom1)
   // determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
   // implementing anything else possible to improve performance (see notes above, github issue#1)
   // other (*)s if time
+
+// is any of this invalidation stuff application, or relevant only within the context of Observable?
+  // https://beta.observablehq.com/@mbostock/disposing-content
+  // invalidation.then(() => cancelAnimationFrame(request));

@@ -37,10 +37,10 @@ details.hide-triangle > summary::-webkit-details-marker {
   display: none;
 }
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
-details.legend-log-item {
+.legend-log-child-item {
   margin-left: 12px
 }
-details.legend-log-item label {  /*log-name*/
+.legend-log-child-item label {  /*log-name*/
   margin-left: -12px
 }
 
@@ -87,9 +87,10 @@ details > summary > h6 {
 #elevation,#compass { border-left: 1px double dimgray; }
 #footer a { color: darksalmon; /* font-weight: 700; */ }
 #dash { overflow-y:hidden; }
-#from-to { height: 120px; }
+/* #from-to { height: 120px; } */
 #resizable { height: 120px; }
 
+/* #aside-resizer { cursor: ns-resize; pointer-events: all; } */
 #dash .resizer { cursor: ns-resize; pointer-events: all; }
 
 /* reverse triangle position and direction on data source details elements  */
@@ -206,6 +207,7 @@ details > summary > h6 {
   .flex4-mm-ml { order: 4; }
 }
 @media screen and (min-width: 1200px) {
+  /* #aside-resizer { cursor: ew-resize; pointer-events: all; } */
   .reverse-order-mxl { direction: rtl; }
   .reverse-order-mxl li a,
   .reverse-order-mxl li .nevermind-reverse {

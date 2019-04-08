@@ -153,7 +153,7 @@
                         <div id="resizable" class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-mxl round-bl-mm round-br-mm">
 
                           <!-- resizer -->
-                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full ml-neg12-mm ml-neg36-ml opacity50 bg-yellow-light-on-hover z5"></div>
+                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full opacity50 ml-neg12-mm bg-yellow-light-on-hover z5"></div>
 
                           <!-- main content inner wrapper -->
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid'>
@@ -171,24 +171,24 @@
                                   </div>
 
                                   <!-- to-from insert -->
-                                  <div id="from-to" class="flex-child bg-lighten25 scroll-auto">
-                                    <div class="flex-parent flex-parent--center-cross flex-parent--center-main h-full py3 px3">
+                                  <div id="from-to" class="flex-child px3 py3 bg-lighten25 scroll-auto">
+                                    <div class="flex-parent flex-parent--center-cross flex-parent--center-main h-full">
                                       <div id="from" class="flex-child txt-xs pl12 pr3 flex-parent flex-parent--column"><!--if centering: w36 w60-mm--><!--alt: ml6 mt6--><!--or start-cross-->
-                                        <svg class='icon flex-child h18 w18 h24-mm w24-mm'><use xlink:href='#icon-depart'></use></svg><!--if centering: fl mb3--><!--alt: fr-->
+                                        <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-depart'></use></svg><!--if centering: fl mb3--><!--alt: fr-->
                                       </div>
                                       <div id="to" class="flex-child txt-xs pl3 pr12 flex-parent flex-parent--column-reverse"><!--if centering: w36 w60-mm align-r--><!--alt:mb6 mr6--><!--or end-cross-->
-                                        <svg class='icon flex-child h18 w18 h24-mm w24-mm'><use xlink:href='#icon-arrive'></use></svg><!--if centering: fr mt3--><!--alt: fl-->
+                                        <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-arrive'></use></svg><!--if centering: fr mt3--><!--alt: fl-->
                                       </div>
-                                      <div id="via" class="flex-child txt-spacing2 txt-xs pl12 pr6 mx-auto scroll-auto"></div><!--if centering: align-r-->
+                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 mx-auto scroll-auto"></div><!--if centering: align-r-->
                                     </div>
                                   </div>
 
                                   <!-- sibling resizer -->
-                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z5"></div><!-- bg-orange -->
+                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z5"></div>
 
                                   <!-- main content / dynamically populated legend items  -->
-                                  <div id="log-content-wrapper" class="flex-child flex-child--grow align-center h-full w-full bg-lighten75 px12 py6 scroll-auto">
-                                    <div id="legend-log-content" class="flex-parent flex-parent--column border-b border--dash h-full scroll-auto">
+                                  <div id="log-content-wrapper" class="flex-child flex-child--grow align-center w-full bg-lighten75 px12 py6 scroll-auto">
+                                    <div id="legend-log-content" class="flex-parent flex-parent--column flex-parent--center-main border-t border-b border--dash scroll-auto">
                                     </div>
                                   </div>
 
@@ -622,17 +622,20 @@
 
         </section>
 
+        <!-- sibling resizer -->
+        <!-- <div id="aside-resizer" class="flex-child resizer sibling-resizer h3 w-full h-full-mxl w6-mxl ml-neg2-mxl opacity50 bg-orange bg-yellow-light-on-hover z5"></div> -->
+
         <!-- ASIDE -->
-        <aside id="aside" class='flex-child scroll-hidden wmax360-mxl bg-aside'> <!-- relative? --> <!-- absolute bottom relative-mxl  h-full-mxl-->
+        <aside id="aside" class='flex-child scroll-hidden bg-aside'> <!-- NOT relative? --> <!-- absolute bottom relative-mxl  h-full-mxl-->
 
           <!-- inner about/sidebar content wrapper -->
-          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross"><!--  space-between-main -->
+          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross "><!--  space-between-main -->
 
             <!-- about/sources pane -->
-            <div id="about-plus" class="flex-child bg-lighten75-mxl"> <!-- relative? scroll-hidden? --> <!-- w-full relative mb-neg6 mb0-ml">
+            <div id="about-plus" class="flex-child bg-lighten75-mxl"> <!-- NOT relative--><!-- scroll-hidden? --> <!-- w-full relative mb-neg6 mb0-ml">
 
               <!-- about toggles and content group -->
-              <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross">
+              <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross"><!--NOT relative-->
 
                 <!-- toggles -->
                 <div id="about-toggles" class="flex-child">
@@ -675,7 +678,7 @@
 
                 </div>
 
-                <div id="about" class="flex-child wmax360-mxl"><!-- relative -->
+                <div id="about" class="flex-child w360-mxl wmin240-mxl"><!-- relative -->
 
                   <!-- about inner wrapper --> <!-- rm fp-center-main?-->
                   <div id="about-wrapper" class='flex-parent flex-parent--column-mxl flex-parent--stretch-cross flex-parent--center-main py12-mxl px12-mxl'><!--my3-mxl-->
