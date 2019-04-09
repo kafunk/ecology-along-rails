@@ -2635,14 +2635,13 @@ console.log(zoom1)
         let origId = id.slice(),
            lengthA = turf.length(gjA, miles),
            lengthB = turf.length(gjB, miles),
-             // baseT = [lengthA,lengthB];
              baseT = Math.ceil((lengthA + lengthB) / 2);
 
         gjA.properties = {...gj.properties}
         gjB.properties = {...gj.properties,...{oid: origId, id: origId + "-2"}}
 
-        if (gjA.geometry.coordinates.length) revealLine(gjA,baseT) // [0]);
-        if (gjB.geometry.coordinates.length) revealLine(gjB,baseT) // [1]);
+        if (gjA.geometry.coordinates.length) revealLine(gjA,baseT)
+        if (gjB.geometry.coordinates.length) revealLine(gjB,baseT)
 
       }
 
@@ -3974,108 +3973,56 @@ console.log(zoom1)
 
 // })
 
-//// INCOMPLETE TASKS AND NOTES ////
+//// INCOMPLETE TODO ////
 
-// LITTLE THINGS
-  // make timing of split lines the same again; no fun / disorienting for one to wait for the other
-  // line-dash ease slower at end
-  // new color for modal
+// LITTLE TASKS
+  // change line-dash ease (fast in middle, slower at end)
   // change projection to equidistant (instead of equal area)
   // some other summarizing info to right of agency/line summary; then reduce text within widgets (eg '102 of 3207 miles elapsed' => '102 miles elapsed')
 
 // LITTLE BUT STUMPING ME RIGHT NOW
   // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin) (*)
 
-// MEDIUM
+// MEDIUM TASKS
   // automatically order legend log categories
-  // ecozones, protected areas their own group? or combine all PAs
-  // more interesting icons for point data?
-    // NPS svg
-    //  maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
-    // assembly #icon-mountain icon -- mount, mountain, mt, mtn
+  // better clarity/communication of protected areas classifications; their own group with further togglable subgroups? or combine all PAs? (but I rely on their separation in determining symbology)
+  // ensure contrast of textured features maintains sufficient visibility
+  // clean up code:
+    // be super consistent and clear including '' vs "", use of var/const/let, spacing, semicolons, etc
+    // refactor, optimize, condense, DRY, improve structure
 
-// MAJOR!! *** = NEED HELP!
-  // *** performance improvement! (see ideas below) ***
-
-// WISHLIST/FUN (*) == highlights
-  // polygon radial animation / so fancy (see styling notes below; must first make a determination re: transitioning to canvas) (*)
-  // add autocomplete/suggestions to R2R search
-  // add underlying shaded relief terrain layer (*)
-    // http://www.shadedrelief.com/birds_eye/gallery.html?
-  // more data-driven styling (what though?)
+// WISHLIST/FUN
+  // a pause button
+  // ability to select route visually, by clicking on city/rail stn locations from map
   // visualizing all number data within dash:
     // elevation grid/tracker
     // compass needle
     // better clock/odometer visual approximations
-  // ability to control pace of train (WOULD HAVE TO BE ADJUSTED BEFORE ANIMATION BEGINS SINCE TIMING OF TRANSITIONS PREDETERMINED)
-  // orig options matches sorted by distance
+  // mousing over log/narration elements highlights all within map
+  // polygon radial animation / so fancy (see styling notes below; must first make a determination re: transitioning to canvas) (*)
+  // add underlying shaded relief terrain layer (*)
+    // http://www.shadedrelief.com/birds_eye/gallery.html?
+  // ability for user to control pace of train (* would have to be adjusted before animation begins since timing of transitions predetermined *)
+  // toggle layers on/off: eco, hydro, geo, protected areas
+  // user chosen sort of origin/destination options?
+    // random shuffle, by distance, alphabetical
+  // add autocomplete/suggestions to R2R search (using their API; maybe this would fix some problem cities?)
+  // more interesting icons for point data
+    // maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
+    // assembly: #icon-mountain (for mount, mountain, mt, mtn)
+    // noun project: trees, tunnel, train?, NPS (my outline)
+
+// GIVING UP FOR NOW
   // add more enrich data (mostly pts): tunnels, bridges, iNaturalist, glaciers, species-specific polygons (habitat/range, https://www.worldwildlife.org/publications/wildfinder-database)
   // animate rivers in direction of flow: http://www.hydrosheds.org/download
-
-// GIVING UP ON:
-  // use x/y to transition-collapse down from tooltip/element itself into dash/log
-  // journey log separates from dash and grows with content on wider screens, overtaking #about (if #about toggled)
-  // ability to replay, ff?, rewind??? (dash/animate back)
-    // would need so much help with state management stuff: animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData) ***
+  // ability to replay, ff?, rewind (dash/animate back)
+    // would need so much help with state management stuff: animation frame, rendered reveal -- and questions about local/session storage (R2R returns, processed/filtered enrichData)
   // ability to takeSnapshot()=> save inner screenshot in log
   // ability to "select random" in prompt route
 
-// MAAAAYBE
-  // new train icon that rotates along with headlights
-  // verbose console errors (in Chrome)
-    // "[Violation] Forced reflow while executing JavaScript took 39ms"
-      // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
-  // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
-    // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
-    // css states?
-
-////
-
-// PERFORMANCE IMPROVEMENT IDEAS
-  // removing unneeded elements from DOM as animation progresses (not sure what this would be)
-  // removing everything from DOM at end of experience (WHY DOES MY COMPUTER HUM FOR 5 MINUTES POST EVERY ANIMATION)
-  // use path.measure() or path.area() instead of turf.length() calculations to determine animation variables? how would pixel units translate to time?
-  // taken from github issue notes:
-    // redraw SVG (supported by use of `clipExtent()` or similar?) at certain moments within script
-    // appropriately truncate coordinates and other values wherever possible
-    // slim library imports / take only what I need
-  // search/filter dynamically on backend? is this possible? goal: avoid bringing all of north america's enrichData into the browser every time
-  // dynamically simplify map geometries?
-  // is any of this invalidation stuff application, or relevant only within the context of Observable?
-    // https://beta.observablehq.com/@mbostock/disposing-content
-    // invalidation.then(() => cancelAnimationFrame(request));
-  // use Canvas! even WebGL?
-    // stardust.js? https://www.cs.ucsb.edu/~holl/pubs/Ren-2017-EuroVis.pdf
-    // possible to integrate with some svg elements that I would like to retain mouseover interaction, etc?
-    // ----->>>> https://github.com/kafunk/eco-rails/issues/1 <<<<-----
-    // links:
-      // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
-      //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
-      // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
-      // https://beta.observablehq.com/@mbostock/randomized-flood-fill
-      // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
-      // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
-
-// STYLING NOTES:
-  // polygon transitions: ideally, if I do end up using canvas, something akin to https://observablehq.com/@mbostock/randomized-flood-fill
-  // if SVG, advanced play:
-    // CSS filters: blur(),brightness(),hueRotate()
-    // mix-blend-mode, filters: sepia(), blur(), drop-shadow(), grayscale()
-    // backdrop filters? (not much browser compatability?)
-    // SVG filters: feGaussianBlur, etc
-  // basic transitions can also interpolate between:
-    // visibility: visible and visibility: hidden
-    // opacity [0, 1]
-    // colors
-    // location
-    // size
-
-// CODE CLEAN
-  // be super consistent and clear including '' vs "", use of var/const/let, spacing, semicolons, etc
-  // refactor, optimize, condense, DRY, improve structure
-
-// ISSUES
-  // keeping zindexes in line on small screen sizes (modal vs attribution, toggle buttons)
+// OTHER ISSUES
+  // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
+  // keep zindexes in line on small screen sizes (modal vs attribution, toggle buttons)
   // remaining open github issues (form focus issue: use focus-within?)
   // several more interspersed COMBAKs, FIXMEs, TODOs
   // PROBLEM CITIES (R2R issue)
@@ -4088,27 +4035,77 @@ console.log(zoom1)
       // Saskatoon, SK
       // Memphis, TN
       // Burlington, IA
-    // REMOVE:
 
-// BACKBURNER ISSUES
-  // author txt bunches up on small screens when making font-weight of links bold (currently links simply unbolded)
-  // add circle size reference to legend? (radius as representative of orig area for all polygons (under a certain threshold) I collapsed into their centroids)
-  // label mess (currently commented out)
+// MAAAAYBE
+  // new color for modal?
+  // new train icon that rotates along with headlights
+  // verbose console errors (in Chrome)
+    // "[Violation] Forced reflow while executing JavaScript took 39ms"
+      // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
+  // create toggle structure for page layout such that DOM responsivity requires less conditional logic; preset toggle groups for  various panes/panels (integrating all the if/else logic within calcSize(), expand(), and collapse() into styles.css doc; creating style groups to toggle on/off)
+    // https://developer.mozilla.org/en-US/docs/Web/Events/toggle
+    // css states?
+  // add circle size reference to legend (radius as representative of orig area for all polygons (under a certain threshold) I collapsed into their centroids)
+  // fix/reinstitute label mess (currently commented out)
 
+//////
+
+// POLYGON STYLING NOTES
+  // ideally, if I do end up using canvas, something akin to https://observablehq.com/@mbostock/randomized-flood-fill
+  // if SVG, advanced play:
+    // CSS filters: blur(),brightness(),hueRotate()
+    // mix-blend-mode, filters: sepia(), blur(), drop-shadow(), grayscale()
+    // backdrop filters? (not much browser compatability?)
+    // SVG filters: feGaussianBlur, etc
+    // plus interpolating between opacity, visibility, colors, location, size
+
+// IMPROVED PERFORMANCE IMPROVEMENT NOTES
+  // POSSIBLE APPROACHES
+    // Transitioning entire rendering structure from SVG to Canvas/WebGL
+      // Concerns: Time/complexity of doing so, challenge of maintaining mouseover interaction, etc
+    // Setting up a server to store and provide requested route data (currently querying files only after importing all possible options)
+    // Clearing and storing DOM content, invalidating timers and transitions, etc
+      // removing everything from DOM at end of experience / selection of new route
+      // removing unneeded elements from DOM as animation progresses (not sure what this would be)
+    // Refactoring little areas of my script, eg:
+      // using path.measure() or path.area() instead of turf.length() calculations to determine transition variables (mostly timing)
+      // appropriately truncating coordinates and other values wherever possible
+      // slim library imports / take only what I need
+    // Adding new optimization measures to my script
+      // dynamically simplifying map geometries
+      // redrawing SVG (supported by use of `clipExtent()` or similar?) at certain moments within script
+  // QUESTIONS FOR RICH
+    // is any of this invalidation stuff application, or relevant only within the context of Observable?
+      // https://beta.observablehq.com/@mbostock/disposing-content
+      // invalidation.then(() => cancelAnimationFrame(request));
+  // LINKS
+    // Stardust.js: https://www.cs.ucsb.edu/~holl/pubs/Ren-2017-EuroVis.pdf
+    // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
+    //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
+    // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
+    // https://beta.observablehq.com/@mbostock/randomized-flood-fill
+    // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
+    // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
 
 ////////
 
 // NOTES FOR RICH:
-// I would recommend starting with all functions toggled close for program outline overview / reduced overwhelm
-// I have left in a few commented-out visualizations of my process in case it helps you understand how the script is working
-// Would appreciate general impressions, feedback, what works, what doesn't, the little things I am no longer seeing after all these months
-// Would also appreciate any tips you have re: priority features I still hope to add, including:
-  // a pause button
-  // ability to select route visually, by clicking on city/rail stn locations from map
-  // visualizing all number data tracker within dashboard (compass, elevation grid)
-  // mousing over log/narration elements highlights all within map
-// Most importantly, I still need specific help with certain issues including, in order of current importance:
-  // resolving textured symbol output (apparent issue with .style("fill") on newly created symbol span -- see FIXME note within addNewGroup() function)
-  // clearing everything necessary/possible upon 'select new route'
-  // determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
-  // implementing anything else possible to improve performance (see old notes above, github issue#1)
+
+  // I would recommend starting with all functions toggled close for program outline overview / reduced overwhelm ( ⌥⌘{ in Atom)
+
+  // I have left in a few commented-out visualizations of my process in case it helps you understand how the script is working (esp quadtree searches)
+
+  // Would appreciate general impressions, feedback, what works, what doesn't, the little things I am no longer seeing after all these months
+
+  // Would also appreciate any tips you have re: priority features I still hope to add, including:
+    // a pause button
+    // ability to select route visually, by clicking on city/rail stn locations from map
+    // visualizing all number data tracker within dashboard (compass, elevation grid)
+    // mousing over log/narration elements highlights all within map
+    // possibly more from wishlist, see above
+
+  // Most importantly, I still need specific help with certain issues including, in order of current importance:
+    // resolving textured symbol output (apparent issue with .style("fill") on newly created symbol span -- see FIXME note within addNewGroup() function)
+    // clearing everything necessary/possible upon 'select new route'
+    // determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
+    // implementing anything else possible to improve performance (see notes above, old github issue#1)
