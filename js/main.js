@@ -2635,13 +2635,14 @@ console.log(zoom1)
         let origId = id.slice(),
            lengthA = turf.length(gjA, miles),
            lengthB = turf.length(gjB, miles),
-             baseT = [lengthA,lengthB];
+             // baseT = [lengthA,lengthB];
+             baseT = Math.ceil((lengthA + lengthB) / 2);
 
         gjA.properties = {...gj.properties}
         gjB.properties = {...gj.properties,...{oid: origId, id: origId + "-2"}}
 
-        if (gjA.geometry.coordinates.length) revealLine(gjA,baseT[0]);
-        if (gjB.geometry.coordinates.length) revealLine(gjB,baseT[1]);
+        if (gjA.geometry.coordinates.length) revealLine(gjA,baseT) // [0]);
+        if (gjB.geometry.coordinates.length) revealLine(gjB,baseT) // [1]);
 
       }
 
