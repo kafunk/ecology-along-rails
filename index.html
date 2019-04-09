@@ -176,7 +176,19 @@
                                       <div id="to" class="flex-child txt-xs pl3 pr12 flex-parent flex-parent--column-reverse">
                                         <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-arrive'></use></svg>
                                       </div>
-                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 mx-auto scroll-auto"></div>
+                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 pr6--ml mx-auto scroll-auto"></div>
+                                      <div id="totals" class="flex-child flex-child--no-shrink txt-compact txt-xs pl6 pr3 mr3 scroll-auto none inline-block-ml flex-parent flex-parent--column flex-parent--center-main flex-parent--end-cross">
+                                        <span class="flex-child none block-ml flex-parent flex-parent--center-cross">
+                                          <svg class='flex-child icon h18 w18 mb-neg6 none inline-block-ml'><use xlink:href='#icon-globe'></use></svg>
+                                          <span class="flex-child none inline-block-ml txt-em">Total distance:</span>
+                                          <span id="total-miles" class="flex-child none block-ml align-r"></span>
+                                        </span>
+                                        <span class="flex-child none block-ml flex-parent flex-parent--center-cross">
+                                          <svg class='flex-child icon h18 w18 mb-neg6 none inline-block-ml'><use xlink:href='#icon-clock'></use></svg>
+                                          <span class="flex-child none inline-block-ml txt-em">Time in transit:</span>
+                                          <span id="total-time" class="flex-child none block-ml align-r"></span>
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
 
@@ -212,18 +224,18 @@
                                   <div class="flex-child flex-child--grow bg-lighten75 px6 py6 scroll-auto">
                                     <div id="widgets" class="flex-parent flex-parent--stretch-cross flex-parent--space-between-main h-full grid round-full bg-darken50">
                                       <div id="row1" class="col col--12 grid">
-                                        <div id="elevation-wrapper" class="flex-child col col--6 px3 pb3">
+                                        <div id="elevation-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pb3">
                                           <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
-                                        <div id="odometer-wrapper" class="flex-child col col--6 px3 pb3">
+                                        <div id="odometer-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pb3">
                                           <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
                                       </div>
                                       <div id="row" class="col col--12 grid">
-                                        <div id="compass-wrapper" class="flex-child col col--6 px3 pt3">
+                                        <div id="compass-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pt3">
                                           <div id="compass" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
-                                        <div id="clock-wrapper" class="flex-child col col--6 px3 pt3">
+                                        <div id="clock-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pt3">
                                           <div id="clock" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
                                         </div>
                                       </div>

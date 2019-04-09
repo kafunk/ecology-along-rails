@@ -1223,12 +1223,25 @@
 
             d3.select("#elevation").append("span")
               .attr("id","current-feet")
-              .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+              .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto",true)
               .text(elevation)
 
             d3.select("#elevation").append("span")
-              .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
-              .html(`feet above<br> sea level`)
+              .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
+              .html("feet<br> ASL")
+              .on("mouseover", function() {
+                d3.select(this).append("div")
+                  .attr("class","tooltip px6 pt6 pb3 bg-darken75 color-lighten75 z5")
+                  .style("left", (d3.event.clientX + 6) + "px")
+                  .style("top", (d3.event.layerY + 36) + "px")
+                  .style("fill", "dimgray")
+                  .style("stroke", "whitesmoke")
+                  .style("opacity", 1)
+                  .text("above sea level")
+              })
+              .on("mouseout", function() {
+                d3.select(this).selectAll(".tooltip").remove();
+              })
 
           });
 
@@ -1238,14 +1251,17 @@
 
           totalMiles = Math.round(chosen.totalDistance);
 
+          d3.select("#total-miles").append("text")
+            .text(`${totalMiles} miles`)
+
           d3.select("#odometer").append("span")
             .attr("id","current-miles")
-            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto",true)
             .text("0")
 
           d3.select("#odometer").append("span")
-            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
-            .html(`of ${totalMiles} miles<br> elapsed`)
+            .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
+            .html("miles<br> elapsed")
 
         }
 
@@ -1254,14 +1270,17 @@
           totalTime = Math.round(chosen.totalTime),  // in minutes
          minPerMile = totalTime / totalMiles;
 
+          d3.select("#total-time").append("text")
+            .text(`${totalTime} minutes`)
+
           d3.select("#clock").append("span")
             .attr("id","current-time")
-            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto",true)
             .text("0")
 
           d3.select("#clock").append("span")
-            .classed("flex-child txt-compact txt-xs txt-s-mxl ml6 mr-neg3",true)
-            .html(`of ${totalTime}<br> transit minutes<br> elapsed`)
+            .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
+            .html("minutes<br> elapsed")
 
         }
 
@@ -1271,16 +1290,16 @@
 
           d3.select("#compass").append("span")
             .attr("id","current-bearing")
-            .classed("flex-child txt-s txt-m-mxl txt-mono",true)
+            .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto mt-neg3",true)
             .text(azimuth0)
 
           d3.select("#compass").append("span")
-            .classed("flex-child txt-compact txt-xs txt-s-mxl",true)
+            .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
             .text("degrees")
 
           d3.select("#compass").append("span")
-            .attr("id","current-quadrant")
-            .classed("flex-child txt-xs txt-s-mxl mt-neg1",true)
+            .attr("id", "current-quadrant")
+            .classed("flex-child txt-xs txt-s-mxl mx-auto mt-neg3 mb-neg6",true)
             .text(getQuadrant(azimuth0))
 
         }
@@ -3970,10 +3989,6 @@ console.log(zoom1)
 // })
 
 //// INCOMPLETE TODO ////
-
-// LITTLE TASKS
-  // change line-dash ease (fast in middle, slower at end)
-  // some other summarizing info to right of agency/line summary; then reduce text within widgets (eg '102 of 3207 miles elapsed' => '102 miles elapsed')
 
 // LITTLE BUT STUMPING ME RIGHT NOW
   // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin) (*)
