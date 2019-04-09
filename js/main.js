@@ -90,16 +90,6 @@
 
 // PROJECTIONS & PATHS
 
-  // EPSG 102008ish
-  // var projection = d3.geoConicEqualArea()
-  //   .center([0,40])
-  //   .rotate([96, 0])
-  //   .parallels([20, 60])
-  // assuming 256,256 'tile' size, proj:aea, unit:meters, datum:nad83
-  // .center([x_0,lat_0])
-  // .rotate([-lon_0,y_0])
-  // .parallels([lat_1,lat_2])
-
   // EPSG:102010
   var projection = d3.geoConicEquidistant()
     .center([0,0])
@@ -2836,7 +2826,7 @@ console.log(zoom1)
   function revealLine(gj,baseT) {
 
     let t = Math.max(minT,baseT * tpm),
-      trans = d3.transition().duration(t).ease(d3.easeLinear)
+      trans = d3.transition().duration(t).ease(d3.easeCubicOut)
 
     let lineOpacity = 0.8;
 
@@ -2893,7 +2883,7 @@ console.log(zoom1)
   function revealPolygon(gj,spine,baseT) {
 
     let t = Math.max(minT,baseT * tpm),
-      trans = d3.transition().duration(t).ease(d3.easeLinear) // queer yesss
+      trans = d3.transition().duration(t).ease(d3.easeLinear)
 
     // update as group join to keep elements properly layered (bigger on bottom)
     encounteredPolys.add(gj)
@@ -3983,7 +3973,6 @@ console.log(zoom1)
 
 // LITTLE TASKS
   // change line-dash ease (fast in middle, slower at end)
-  // change projection to equidistant (instead of equal area)
   // some other summarizing info to right of agency/line summary; then reduce text within widgets (eg '102 of 3207 miles elapsed' => '102 miles elapsed')
 
 // LITTLE BUT STUMPING ME RIGHT NOW
