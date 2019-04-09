@@ -91,14 +91,20 @@
 // PROJECTIONS & PATHS
 
   // EPSG 102008ish
-  var projection = d3.geoConicEqualArea()
-    .center([0,40])
-    .rotate([96, 0])
-    .parallels([20, 60])
-  // assuming 256,256 'tile' size // proj:aea, unit:meters, datum:nad83
+  // var projection = d3.geoConicEqualArea()
+  //   .center([0,40])
+  //   .rotate([96, 0])
+  //   .parallels([20, 60])
+  // assuming 256,256 'tile' size, proj:aea, unit:meters, datum:nad83
   // .center([x_0,lat_0])
   // .rotate([-lon_0,y_0])
   // .parallels([lat_1,lat_2])
+
+  // EPSG:102010
+  var projection = d3.geoConicEquidistant()
+    .center([0,0])
+    .rotate([96,0])
+    .parallels([20,60])
 
   var path = d3.geoPath().projection(projection);
 
