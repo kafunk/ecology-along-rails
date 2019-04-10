@@ -83,6 +83,7 @@
     .on("dblclick", function() {
       resetZoom()  // having this inside wrapper function avoids error from not yet having declared `active`
     })
+    .classed("no-zoom", true)
 
   // all rendered/zoomable content
   var g = svg.append("g")
@@ -96,29 +97,23 @@
     .rotate([96,0])
     .parallels([20,60])
 
-  var path = d3.geoPath().projection(projection);
+  var path = d3.geoPath().projection(projection),
+      line = d3.line().curve(d3.curveCardinal.tension(0));
 
-  var line = d3.line().curve(d3.curveCardinal.tension(0));
-
-// SLIDERS & OTHER USER CONTROLS
+// PAN/ZOOM BEHAVIOR
 
   // SET UP ZOOM BUTTON CONTROL
-  let scaleExtent = [0,49], step = 6,
-    zoomValues = d3.range(scaleExtent[0],scaleExtent[1],step);
-
-  let min = Math.min(...zoomValues),
-      max = Math.max(...zoomValues);
-  d3.select("button#zoomIn")
-    .attr("min", min)
-    .attr("max", max)
-  d3.select("button#zoomOut")
-    .attr("min", min)
-    .attr("max", max)
+  let zoomStep = 1,
+    zoomLevels = [0,12],
+   scaleExtent = [scale0*0.8, scale0*64],
+    zoomScales = d3.scalePow()
+     .exponent(3)
+     .domain(zoomLevels)
+     .range(scaleExtent)
+     .clamp(true);
 
   d3.select("label#zoom").attr("value",scale0)
   d3.selectAll("button.zoom-btn").on('click', zoomClick);
-
-// PAN/ZOOM BEHAVIOR
 
   var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0)
 
@@ -126,8 +121,12 @@
 
   var zoom = d3.zoom()
     // .translateExtent(extent0)  // things eventually get wonky trying to combine these limits with responsive SVG
-    // .scaleExtent([scale0*0.5, scale0*64])
+    .scaleExtent(scaleExtent)
     .on("zoom", zoomed)
+    .filter(() => {
+      // dbl-clicking on background does not trigger zoom (actually resets it)
+      return !(d3.event.type === "dblclick" && d3.event.path[0].classList.contains('no-zoom'))
+    })
 
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
@@ -1957,33 +1956,36 @@
     // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons
     let direction = (this.id === "zoomIn") ? 1 : -1;
 
-    let oValue = +d3.select(this.parentNode).attr("value"),
-      newValue = oValue + step * direction;
+    let oScale = +d3.select(this.parentNode).attr("value"),
+         oStep = zoomScales.invert(oScale),
+       newStep = oStep + zoomStep * direction,
+      newScale = zoomScales(newStep);
 
-    if (newValue <= d3.select(this).attr("max") && newValue >= d3.select(this).attr("min")) {
+    // if newScale is exactly min/max, offer visual affordance (little shake) that zoom limit reached
+    if (newStep === zoomLevels[0] || newStep === zoomLevels[1]) {
 
-      d3.select(this.parentNode).attr("value", newValue);
+      d3.select(this).classed("limit-reached",true)
+      d3.timeout(() => {
+        d3.select(this).classed("limit-reached",false);
+      }, 300);
+
+    } else {
+
+      // then store new value and apply new zoom transform
+      d3.select(this.parentNode).attr("value", newScale);
 
       // get current transform
-      let currentTransform = getCurrentTransform(g);
+      let currentTransform = getCurrentTransform(g); // or simply d3.zoomTransform(svg.node())?
       // get current center pt by working backwards through centerTransform() from current transform
       let centerPt = getCenterFromTransform(currentTransform);
       // get identity of centered transform at new zoom level
-      let zoom1 = getIdentity(centerTransform(centerPt,newValue));
-console.log(zoom1)
+      let zoom1 = getIdentity(centerTransform(centerPt,newScale));
+
       svg.transition().duration(400).ease(zoomEase)
          .call(zoom.transform, zoom1)
          .on("end", () => {
            g.attr("transform", zoom1.toString())
          })
-
-    } else {
-
-      // offer visual affordance (little shake) that zoom limit reached
-      d3.select(this).classed("limit-reached",true)
-      d3.timeout(() => {
-        d3.select(this).classed("limit-reached",false);
-      }, 300);
 
     }
 
@@ -2075,7 +2077,7 @@ console.log(zoom1)
 
     svg.transition().duration(zoomDuration/4) // .ease(d3.easeLinear)
       .call(zoom.transform, zoom0)
-
+      
   }
 
   function nozoom() {
@@ -3990,7 +3992,7 @@ console.log(zoom1)
 
 //// INCOMPLETE TODO ////
 
-// LITTLE BUT STUMPING ME RIGHT NOW
+// STUMPING ME RIGHT NOW
   // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin) (*)
 
 // MEDIUM TASKS
