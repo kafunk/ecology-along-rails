@@ -47,10 +47,10 @@
               <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-map">
 
                 <!-- map overlay: buttons, legend, other ui -->
-                <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl"> <!-- child elements' zIndex individually increased to z4 to prevent blocking access to map itself -->
+                <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
 
                   <!-- top left // Custom Data UI Elements -->
-                  <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z4 none'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
+                  <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z2 none'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
                     <button disabled id="replay" class='btn round bg-lighten75 replay mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none'><del>Replay</del></button>
                     <!-- keep route choice, reset counter, reset data reveal, begin again -->
                     <button disabled id="play-pause" class='btn round bg-lighten75 play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none'><del>Play/Pause</del></button>
@@ -59,7 +59,7 @@
                   </div>
 
                   <!-- top right // About/Info icon on small screens -->
-                  <div id="info" class="absolute top right mr-neg6 z4 none-ml">
+                  <div id="info" class="absolute top right mr-neg6 z2 none-ml">
                     <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round' onclick="toggleModal('modal-about')">
                       <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
                     </button>
@@ -74,7 +74,7 @@
                   </div> -->
 
                   <!-- also top right: zoom buttons -->
-                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column z4 mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
+                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column z2 mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
                     <button id="zoomIn" class="btn btn--pill btn--pill-vt bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm">
                       <svg class='icon w18 h18 w24-ml link color-darken50 px0'><use xlink:href='#icon-plus'></use></svg>
                     </button>
@@ -100,7 +100,7 @@
               <!-- dash toggles and content group -->
               <div class="flex-parent flex-parent--column flex-parent--stretch-cross flex-parent--center-main relative">
 
-                <div id="dash-toggles" class="flex-child z4">
+                <div id="dash-toggles" class="flex-child z2">
 
                   <div class="flex-parent flex-parent--center-cross flex-parent--center-main relative">
 
@@ -150,7 +150,7 @@
                         <div id="resizable" class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-mxl round-bl-mm round-br-mm">
 
                           <!-- resizer -->
-                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full opacity50 ml-neg12-mm bg-yellow-light-on-hover z5"></div>
+                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full opacity50 ml-neg12-mm bg-yellow-light-on-hover z3"></div>
 
                           <!-- main content inner wrapper -->
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid'>
@@ -176,7 +176,7 @@
                                       <div id="to" class="flex-child txt-xs pl3 pr12 flex-parent flex-parent--column-reverse">
                                         <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-arrive'></use></svg>
                                       </div>
-                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 pr6--ml mx-auto scroll-auto"></div>
+                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 pr6--ml mt3 mx-auto scroll-auto"></div>
                                       <div id="totals" class="flex-child flex-child--no-shrink txt-compact txt-xs pl6 pr3 mr3 scroll-auto none inline-block-ml flex-parent flex-parent--column flex-parent--center-main flex-parent--end-cross">
                                         <span class="flex-child none block-ml flex-parent flex-parent--center-cross">
                                           <svg class='flex-child icon h18 w18 mb-neg6 none inline-block-ml'><use xlink:href='#icon-globe'></use></svg>
@@ -193,7 +193,7 @@
                                   </div>
 
                                   <!-- sibling resizer -->
-                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z5"></div>
+                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z3"></div>
 
                                   <!-- main content / dynamically populated legend items  -->
                                   <div id="log-content-wrapper" class="flex-child flex-child--grow align-center w-full bg-lighten75 px12 py6 scroll-auto">
@@ -554,7 +554,7 @@
                     <form id="get-options" class="flex-child flex-child--grow col col--12 wmax600 w600-mxl shadow-darken75 round px12 py12 mx-auto bg-modal">
                       <div class="flex-parent flex-parent--center-cross grid bg-lighten50">
                         <!-- Form Header-->
-                        <legend class="flex-child col col--12 col--6-mm col--5-mxl my24 align-center px24 px12-ml color-darken75">
+                        <legend class="flex-child col col--12 col--6-mm col--5-mxl my24 align-center px12 px12-ml color-darken75">
                           <h2 class="txt-h3 txt-fancy color-darken75">Select a Route <br class="none inline-block-mm"/> to Experience</h2>
                         </legend>
                         <!-- Fieldset wrapper-->
@@ -655,14 +655,14 @@
                       </button>
 
                       <!-- about expand triangle--l -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z4' onclick="expand('about','left')">
+                      <button class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z2' onclick="expand('about','left')">
                         <span class='icon triangle-l triangle-l--l'></span>
                       </button>
 
                     </label>
 
                     <!-- about collapse triggers -->
-                    <label id="about-collapse" class="flex-child h12 w6-mxl z4">
+                    <label id="about-collapse" class="flex-child h12 w6-mxl z2">
 
                       <!-- about collapse triangle--d -->
                       <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl' onclick="collapse('about','down')">
