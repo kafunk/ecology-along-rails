@@ -2077,7 +2077,7 @@
 
     svg.transition().duration(zoomDuration/4) // .ease(d3.easeLinear)
       .call(zoom.transform, zoom0)
-      
+
   }
 
   function nozoom() {
@@ -3697,7 +3697,7 @@
       // exiting
       // traversing
 
-    let pre = `<span class="name txt-s txt-m-mxl">`;
+    let pre = `<span class="name txt-compact txt-s txt-m-mxl">`;
 
     // main output
     let mainOut = getName(d);
@@ -3707,14 +3707,14 @@
 
     if (d.property("category") === "Ecoregion") {
       mainOut += `<br />
-      <span class="name-ii txt-compact txt-em txt-xs txt-s-mxl ">Level ${d.property("level")} Ecoregion</span >
+      <span class="name-ii txt-em txt-xs txt-s-mxl ">Level ${d.property("level")} Ecoregion</span >
       `
     }
 
     if (d.property("more-info")) {
       mainOut += `
       <br />
-      <span class="more-info txt-compact txt-xs txt-s-mxl">${d.property("more-info")}</span>
+      <span class="more-info txt-em txt-xs txt-s-mxl">${d.property("more-info")}</span>
       `
     }
 
@@ -4121,3 +4121,13 @@
     // clearing everything necessary/possible upon 'select new route'
     // determining if/how I should go about converting visualization from SVG => 2D Canvas or even webGL
     // implementing anything else possible to improve performance (see notes above, old github issue#1)
+
+
+//// PARTIAL MTG NOTES
+// FILL vs BACKGROUND url
+// background url applicable only to SVG
+// video by June 11th
+// automatically highlight map featreures and list elements
+// currently passing --> legend at top
+// RESET upon 'select new route'
+// PAUSE BUTTON

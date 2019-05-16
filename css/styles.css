@@ -112,6 +112,11 @@ details > summary > span {
 .txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
 
+.svg-content {
+  position: absolute;
+  /* width: 100%; */
+}
+
 .disappear-up {
   position: fixed; top: -600px; transition: 0.6s all;
 }
@@ -141,7 +146,7 @@ details > summary > span {
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
 .txt-xxs { font-size: 0.5em; }
-.txt-compact { line-height: 0.8em; }
+.txt-compact { line-height: 1.2em; }
 
 .flex1 { order: 1; }
 .flex2 { order: 2; }
