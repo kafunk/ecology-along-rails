@@ -18,7 +18,7 @@ p, span, a, li {
 a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
-svg path { stroke-linejoin: round; pointer-events: visiblePainted; }
+svg path { stroke-linejoin: round; } /* pointer-events: visiblePainted; } */
   /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
 ul.show-bullets li { list-style: outside; }
@@ -54,21 +54,16 @@ details > summary > span {
   color: rgba(0,0,0,0.75);
 }
 
+svg#svg {
+  z-index: 3; /* can z-index apply to svg element itself? */
+  pointer-events: none;
+}
+
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
 #veil { pointer-events: none; }
-#modal-about,#get-options,#modal-close { pointer-events: all; }
-#map {  /* i.e. .svg-container */
-  top:0;
-  bottom:0;
-  height:100%;
-  width:100%;
-  display: inline-block;
-  position: relative;
-  vertical-align: middle;
-  overflow: hidden;
-  /* padding-bottom: 100%; /* aspect ratio = height/width * 50% */
-}
+/* #modal-about,#get-options,#modal-close { pointer-events: auto; } */
+
 #encounters {
   scroll-behavior: smooth;
   transition: 0.4s;
@@ -89,7 +84,14 @@ details > summary > span {
 #dash { overflow-y:hidden; }
 #resizable { height: 120px; }
 
-#dash .resizer { cursor: ns-resize; pointer-events: all; }
+#dash .resizer { cursor: ns-resize; pointer-events: auto; }
+
+canvas#main { pointer-events: none; }
+
+#base {
+  height: 100%;
+  width: 100%;
+}
 
 /* reverse triangle position and direction on data source details elements  */
 .reverse-order { direction: rtl; }
@@ -111,6 +113,10 @@ details > summary > span {
 .txt-fancy { font-family: 'Fredericka the Great', cursive; }
 .txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
+
+/* canvas#background { z-index: 1; } */
+canvas#main { z-index: 2; }
+/* canvas#hover { z-index: 3; } */
 
 .disappear-up {
   position: fixed; top: -600px; transition: 0.6s all;
@@ -141,7 +147,7 @@ details > summary > span {
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
 .txt-xxs { font-size: 0.5em; }
-.txt-compact { line-height: 0.8em; }
+.txt-compact { line-height: 1.2em; }
 
 .flex1 { order: 1; }
 .flex2 { order: 2; }
@@ -156,34 +162,6 @@ details > summary > span {
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
-}
-
-/* TRIGGER PTS and other quadtree data */
-.quad-datum {
-  stroke-width: 0.1px;
-  opacity: 0.6;
-  fill: darkgoldenrod;
-  stroke: goldenrod;
-}
-.trigger-pt {
-  opacity: 0.8;
-  fill: darkmagenta;
-  stroke: lightgreen;
-}
-.quad-datum--scanned {
-  fill: lightgreen;
-  stroke: darkgoldenrod;
-  transition: 0.6s all;
-}
-.quad-datum--selected {
-  fill: tomato;
-  stroke: darksalmon;
-  transition: 0.6s all;
-}
-.quad-datum--removed {
-  fill: darksalmon;
-  stroke: dimgray;
-  transition: 0.6s all;
 }
 
 /* MEDIA QUERIES */
