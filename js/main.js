@@ -341,7 +341,7 @@
     spec: {
       bounds: {},
       center: {
-        get scale0() { return svgProjection.scale(); }
+        get scale0() { return svgProjection.scale(); },
       },
       size: {
         get translate0() { return projection.translate(); },
@@ -1316,16 +1316,14 @@
 
     Promise.resolve(prepareEnvironment(receivedData)).then(() => { //proceed
 
-      let opts0 = { padBottom: -d3.select("#dash").node().clientHeight }  // equivalent to dashAdust
-console.log(opts0.padBottom)
-      let boundsTransform1 = getBoundsTransform(data1,opts0),
-        // dashAdjust0 = 0, // getDashAdjust(), // fullDash
-        options = {
-          scale: Math.min(maxInitZoom,Math.ceil(boundsTransform1.k)) // ,
-          // padBottom: defaultOptions.boundsTransform.padBottom + dashAdjust0
-        };
+      defaultOptions.spec.bounds.padBottom = defaultOptions.init.padBottom + (d3.select("#dash").node().clientHeight * 1.25);
 
-      let routeBoundsIdentity = getIdentity(getCenterTransform(svgPath.centroid(data1),options));
+      let boundsTransform1 = getBoundsTransform(data1),
+          opts1 = {
+            scale: Math.min(maxInitZoom,Math.ceil(boundsTransform1.k))
+          };
+
+      let routeBoundsIdentity = getIdentity(getCenterTransform(svgPath.centroid(data1),opts1));
 
       zoomRender.restart(render);
 
@@ -1784,7 +1782,7 @@ console.log(opts0.padBottom)
 
       let zoomScale = Math.min(maxInitZoom,Math.ceil([Math.min(boundsTransform2.k,boundsTransform3.k),routeBoundsIdentity.k].reduce((a,b) => a + b) / 2));
 
-      zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale }};
+      zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale } };
 
       let p0 = simpPath.node().getPointAtLength(0),
           p1 = simpPath.node().getPointAtLength(simpLength);
@@ -2474,7 +2472,7 @@ console.log(opts0.padBottom)
 
   function getCenterTransform([x,y],options) {  // returns transform centering point at predetermined scale
 
-    let opts = {...defaultOptions.centerTransform, ...options}
+    let opts = { ...defaultOptions.centerTransform, ...options, ...{ padBottom: defaultOptions.init.padBottom + (d3.select("#dash").node().clientHeight * 1.25) } }
 
     let d = svgProjection.translate(),
         k = opts.scale0 || svgProjection.scale();
@@ -2484,8 +2482,8 @@ console.log(opts0.padBottom)
 
     // calc new translate at scale
     let tk = opts.scale,
-        tx = pt0[0] * tk + d[0] + opts.padRight - opts.padLeft,
-        ty = pt0[1] * tk + d[1] + opts.padBottom - opts.padTop - height/2;
+        tx = pt0[0] * tk + d[0] - opts.padRight + opts.padLeft,
+        ty = pt0[1] * tk + d[1] - opts.padBottom + opts.padTop; // - height/2;
 
     return { x: tx, y: ty, k: tk };
 
