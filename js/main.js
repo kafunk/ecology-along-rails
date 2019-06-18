@@ -4628,6 +4628,8 @@ console.log(projectionDeux.translate())
   // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
   // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
 
-// https://www.datamake.io/blog/d3-zoom#geo-canvas!
 
+// https://www.datamake.io/blog/d3-zoom#geo-canvas!
 // background gradient N->S brightest mid continent
+// TODO add fade transitions to content removal
+// .html("feet<br /> <abbr title='Above Sea Level' class='txt-abbr'>ASL</abbr>")
