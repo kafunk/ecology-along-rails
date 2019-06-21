@@ -976,30 +976,7 @@
     // define Rome2Rio API query string
     let apiCall = `https://free.rome2rio.com/api/1.4/json/Search?key=V8yzAiCK&oName=${a}&dName=${b}&oKind=station&dKind=station&noAir&noAirLeg&noBus&noFerry&noCar&noBikeshare&noRideshare&noTowncar&noMinorStart&noMinorEnd&noPrice`
 
-// // url (required), options (optional)
-// // let received = await d3.json(apiCall).then(response => {
-// let received = await fetch(apiCall, { credentials: 'include' }).then(response => {
-//   console.log(response)
-//   if (response.ok) {
-//     return response;
-//   } else {
-//     throw Error(`Request rejected with status ${response.status}`)
-//   }
-// }).then(function(returnedValue) {
-// 	console.log(returnedValue)
-//   return returnedValue;
-// }).catch(function(err) {
-//   console.log(err)
-// });
-//
-// console.log(received)
     let received = d3.json(apiCall).then(validate,onError);
-// console.log(received)
-// let result = await received;
-//
-// console.log(result)
-//
-// return result;
 
     return received;
 
