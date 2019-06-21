@@ -52,7 +52,7 @@
 
                   <!-- top left // Custom Data UI Elements -->
                   <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z3 none'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
-                    <button disabled id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl point-all' onclick="selectNew()">Select New Route</button>
+                    <button disabled id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl point-all'>Select New Route</button>
                     <!-- keep route choice, reset counter, reset data reveal, begin again -->
                     <button disabled id="replay" class='btn round bg-lighten75 replay mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none'><del>Replay</del></button>
                     <!-- stop/init counter without data resets -->
@@ -61,18 +61,10 @@
 
                   <!-- top right // About/Info icon on small screens -->
                   <div id="info" class="absolute top right mr-neg6 z3 none-ml">
-                    <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round point-all' onclick="toggleModal('modal-about')">
+                    <button id="info-btn" class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round point-all'>
                       <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
                     </button>
                   </div>
-
-                  <!-- bottom right // Basic/Expected Map Elements -->
-                  <!-- <div id="attribution" class='absolute bottom right mt-neg18 color-lighten50 bg-darken50 px6 round-tl round-bl px12-mm px18-mxl mr-neg3-mm mr-neg6-mxl txt-xs txt-s-mxl txt-shadow-lighten10 z1> -->
-                    <!-- Attribution * ALSO POSITIONED RELATIVE TO DASH PANEL * should be visualized here only when dash hidden -->
-                    <!-- <span>Visualized with D3.js</span>
-                    <span class="px3">||</span>
-                    <span>Routing via to Rome2Rio</span>
-                  </div> -->
 
                   <!-- also top right: zoom buttons -->
                   <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
@@ -87,18 +79,7 @@
                 </div> <!-- end of ui-overlay-group -->
 
                 <!-- map svg/canvas -->
-                <div id="map" class="flex-child flex-child--grow bg-darken50 mb-neg6">
-                  <!-- <svg height="780" width="780" class="align-center mx-auto"><use href="assets/my-compass-rose.svg#my-compass-rose"/></svg> -->
-                </div>
-                <!-- <div id="stage" class="absolute top bottom right left flex-parent"> --> <!-- flex-parent--center-main flex-parent--center-cross -->
-                  <!-- <div id="map" class="flex-child flex-child--grow relative"> --> <!-- bg-darken50 h-full w-full -->
-                    <!-- <svg id="base" class="absolute top left"></svg> -->
-                    <!-- <canvas id="background" class="absolute top left"></canvas> -->
-                    <!-- <canvas id="main" class="absolute top left"></canvas> -->
-                    <!-- <canvas id="hover" class="absolute top left"></canvas> -->
-                    <!-- <svg id="svg" class="absolute top left"></svg>
-                  </div>
-                </div> -->
+                <div id="map" class="flex-child flex-child--grow bg-darken50 mb-neg6"></div>
 
               </div>
 
@@ -117,14 +98,14 @@
                     <!-- dash expand triggers -->
                     <label id="dash-expand" class="flex-child h24 z2">
                       <!-- dash expand triangle--u -->
-                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full' onclick="expand('dash','up')">
+                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full'>
                         <span id="dash-up" class='icon triangle-l triangle-l--u mx-auto mt-neg18 mt-neg6-mxl'></span>
                       </button>
                     </label>
 
                     <label id="dash-collapse" class="flex-child h12 z2 none">
                       <!-- dash collapse triangle--d -->
-                      <button id="dash-collapse-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround w-full h18' onclick="collapse('dash','down')">
+                      <button id="dash-collapse-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround w-full h18'>
                         <span class='icon triangle-l triangle-l--d mx-auto mt0 mt12-mm'></span>
                       </button>
                     </label>
@@ -615,7 +596,7 @@
                         </div> <!-- end fieldset wrapper -->
                         <!-- GO button -->
                         <fieldset class="flex-child col col--12 h36">
-                          <button id="submit-btn" class="h-full w-full btn btn--darken50 unround txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main" onclick="onSubmit(this.form.getOption0.value,this.form.getOption1.value)">
+                          <button id="submit-btn" class="h-full w-full btn btn--darken50 unround txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main">
                             <span id="submit-btn-txt" class="txt-fancy2 flex-child txt-l mt-neg12 pt6 mb-neg3">LET'S GO</span>
                             <span id="submit-btn-load" class="flex-child loading loading--s loading--dark none"></span>
                           </button>
@@ -625,7 +606,7 @@
 
                     <!-- modal close button -->
                     <label id="modal-close">
-                      <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active round-full px3 py3 mt6 mr6 mt3-mm mr3-mm z5' onclick="toggleModal()">
+                      <button id="modal-close-btn" class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active round-full px3 py3 mt6 mr6 mt3-mm mr3-mm z5'>
                         <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-close'/></svg>
                       </button>
                     </label>
@@ -663,12 +644,12 @@
                     <label id="about-expand" class="flex-child h24 w24-mxl none">
 
                       <!-- about expand triangle--u -->
-                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround h24 w-full none-mxl' onclick="expand('about','up')">
+                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround h24 w-full none-mxl'>
                         <span id="about-up" class='icon triangle-l triangle-l--u mx-auto mt-neg6'></span>
                       </button>
 
                       <!-- about expand triangle--l -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z2' onclick="expand('about','left')">
+                      <button id="about-left-btn" class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z2'>
                         <span class='icon triangle-l triangle-l--l'></span>
                       </button>
 
@@ -678,12 +659,12 @@
                     <label id="about-collapse" class="flex-child h12 w6-mxl z2">
 
                       <!-- about collapse triangle--d -->
-                      <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl' onclick="collapse('about','down')">
+                      <button id="about-down-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl'>
                         <span class='icon triangle-l triangle-l--d mx-auto'></span>
                       </button>
 
                       <!-- about collapse triangle--r -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active border-l unround none block-mxl' onclick="collapse('about','right')">
+                      <button id="about-right-btn" class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active border-l unround none block-mxl'>
                         <span class='icon triangle-l triangle-l--r ml-neg3'></span>
                       </button>
 
