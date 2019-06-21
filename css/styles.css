@@ -18,7 +18,7 @@ p, span, a, li {
 a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
-svg path { stroke-linejoin: round; pointer-events: visiblePainted; }
+svg path { stroke-linejoin: round; }
   /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
 ul.show-bullets li { list-style: outside; }
@@ -29,12 +29,17 @@ ul.show-bullets--square li { list-style: square; }
   position: absolute;
   top: 0.5; left: 8px;
 }
+svg#svg {
+ z-index: 3; /* can z-index apply to */
+}
+
 /* hide details triangle marker until child content added */
 details.hide-triangle > summary {
   list-style: none;
 }
 details.hide-triangle > summary::-webkit-details-marker {
   display: none;
+  list-style: none;
 }
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
 .legend-log-child-item {
@@ -56,19 +61,7 @@ details > summary > span {
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
-#veil { pointer-events: none; }
-#modal-about,#get-options,#modal-close { pointer-events: all; }
-#map {  /* i.e. .svg-container */
-  top:0;
-  bottom:0;
-  height:100%;
-  width:100%;
-  display: inline-block;
-  position: relative;
-  vertical-align: middle;
-  overflow: hidden;
-  /* padding-bottom: 100%; /* aspect ratio = height/width * 50% */
-}
+
 #encounters {
   scroll-behavior: smooth;
   transition: 0.4s;
@@ -89,7 +82,7 @@ details > summary > span {
 #dash { overflow-y:hidden; }
 #resizable { height: 120px; }
 
-#dash .resizer { cursor: ns-resize; pointer-events: all; }
+#dash .resizer { cursor: ns-resize; }
 
 /* reverse triangle position and direction on data source details elements  */
 .reverse-order { direction: rtl; }
@@ -97,6 +90,9 @@ details > summary > span {
 .reverse-order li .nevermind-reverse {
   direction: ltr; unicode-bidi: embed;
 }
+
+.point-none { pointer-events: none }
+.point-all { pointer-events: all }
 
 .bg-base { background: #2A4C48; }
 /* .bg-main {} */
@@ -133,7 +129,6 @@ details > summary > span {
   text-align: center;
   padding: 12px 18px;
   border-radius: 2px;
-  pointer-events: none;
   background: honeydew;
   border: 2px;
 }
@@ -141,8 +136,12 @@ details > summary > span {
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
 .txt-xxs { font-size: 0.5em; }
-.txt-compact { line-height: 0.8em; }
+.txt-compact { line-height: 1.2em; }
+.txt-compact2 { line-height: 0.8em; }
 
+.unstyled {
+ list-style: none;
+}
 .flex1 { order: 1; }
 .flex2 { order: 2; }
 .flex3 { order: 3; }
