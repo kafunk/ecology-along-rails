@@ -1,4 +1,4 @@
-// (function () {
+(function () {
 
 ///////////////////////////
 //// SETUP ENVIRONMENT ////
@@ -6,11 +6,6 @@
 ///////////////////////////
 
 //// INITIATE DATA LOAD
-
-  // Typical Mapshaper CLI transform:
-    // mapshaper *filein*.geojson name=*objectunits* \
-    //     -o quantization=1e5 format=topojson mapshaped/*fileout*.json
-    // then simplified and cleaned in browser for visual
 
   // background/reference
   var initBounds = d3.json("data/final/bounding.json"),
@@ -37,10 +32,7 @@
   var state0 = {}; // restorable?
   var experience = { initiated: false, animating: false, paused: false }
   var togglesOff = { info: false, select: false }
-  var panned = { flag: false, i0: 0, i1: 0 }
-
-  var watershedParent = false,
-          riverParent = false;
+  var panned = { flag: false, transform: null, centerAdjust: null, i0: 0, i1: 0 }
 
  // OTHER WORTHWHILE
 
@@ -49,7 +41,7 @@
 
 //// KEEP ADJUSTABLE VARIABLES ACCESSIBLE: eventually some of these could be user-controlled via sliders and such
 
-  var arcSteps = 500  // how fine tuned SVG path animation
+  var arcSteps = 500,  // how fine tuned SVG path animation
     headlightRadius = 2.8,
     trainPtRadius = 0.8,
     arcSpan = 0.16 * tau, // (in radians)
@@ -63,36 +55,52 @@
     trainEase = d3.easeSinInOut,
     relativeDim = 0.4;  // dimBackground level; lower values => greater dim
 
+// AS YET EMPTY, ZERO, OR UNDEFINED
+
+  var timer;
+
+  var patterns = {
+    // eg "jupiter": CanvasPattern {}
+  }
+
+  var zoomAlongOptions = {};
+
+  var prevTranslate, prevRotate, prevExtent, searchExtent;
+
+  var transPt0,rotatePt0;
+
+  var mm = 0, accumReset = 0, geoMM;
+
+  var totalMiles, totalTime, minPerMile;
+
+  var routeQuadtree;
+
+  var firstIdentity, lastIdentity;
+
+  // all unprojected: init bounds (ie continent), full route, first route frame, last route frame
+  let data0, data1, data2, data3;
+
+  var trainPt, headlights;
+
+  var fullPath, fullLength, tFull;
+
+  var zoomArc, zoomLength, tPad;
+
+  var semiSimp, semiSimpLength;
+
+  var labels = [];
+
+  var routeDashInterpolator;
+
+  var logBackgrounds = {
+    // geomType: finalImgSrc
+  };
+
 // FUNCTION EXPRESSIONS
 
-  // var getProjCoords = function(d,altCoords) {
-  //   let coords = (altCoords && Array.isArray(altCoords)) ? altCoords : d.geometry.coordinates;  // occasionally second param == single digit meant as factor for getScale(); don't accept as altCoord if not in coord format
-  //   return projection(coords);
-  // }
   var projectArray = function(unprojCoordArr) {
     return unprojCoordArr.map(d => (Array.isArray(d[0])) ? projectArray(d) : projection(d));
   }
-  // var getScale = function(d,factor = 1) {  // passed d at same time d is passed to getProjCoords; ignore here
-  //   return factor * projection.scale(); // scale0?
-  // }
-  // var getFullArc = function(localThis,scale = getScale(),coords = [0,0]) {
-  //   let rFactor = d3.select(localThis).attr("r") || 1;
-  //   return [coords[0], coords[1], +(rFactor * scale / 1200).toFixed(2), 0, tau];
-  // }
-  // var getLineWidth = function(localThis,scale = getScale()) {
-  //   let rFactor = d3.select(localThis).attr("r") || 2;
-  //   return +(rFactor * scale / 2400).toFixed(2);
-  // }
-  // var getSetLineDash = function(localThis,scale = getScale()) {
-  //   let rFactor = d3.select(localThis).attr("r") || 2,
-  //     value0 = Math.max(1,+(rFactor * scale / 2400).toFixed());
-  //   return [value0, value0 * 2];
-  // }
-  // var stopZoomRender = function() {
-  //   render(); // call render one last time first
-  //   zoomRender.stop();
-  //   // d3.timeout(() => zoomRender.stop(),100);
-  // }
   var cityState = d => {
     let region = d.state || d.province;
     return d.city + ", " + region;
@@ -120,7 +128,7 @@
     .attr("height", height)
     .attr("preserveAspectRatio", "xMidYMid meet") // slice")
     .attr("viewBox", `0 0 ${width} ${height}`)
-    .on("click", clickPause)
+    .on("click", togglePause)
 
   var hiddenSvg = d3.select("#map").append("svg")
     .attr("id", "hidden-svg")
@@ -181,21 +189,9 @@
 
   // EPSG:102010
   var projection = d3.geoConicEquidistant()
-    // .center([0,0])
     .rotate([96,0])
     .parallels([20,60])
-
-  // // for tracking projection of zoom0 (bounds of data0) across size adjustments
-  // var projectionDeux = d3.geoConicEquidistant()
-  //   .center([0,0])
-  //   .rotate([96,0])
-  //   .parallels([20,60])
-
-  // // for calculation purposes only, such that transforms can be rendered via official zoomTransforms (with transitions if desired) throughout script
-  // var projectionTrois = d3.geoConicEquidistant()
-  //   .center([0,0])
-  //   .rotate([96,0])
-  //   .parallels([20,60])
+    .clipExtent(paddedExtent0);
 
   var reflectedY = d3.geoIdentity()
     .reflectY(true)
@@ -216,18 +212,20 @@
      .exponent(3)
      .domain(zoomLevels)
      .range(scaleExtent)
+     .interpolate(d3.interpolateRound)
      .clamp(true);
 
   d3.select("label#zoom").attr("value",scale0)
-  d3.selectAll("button.zoom-btn").on('click', zoomClick);
+  d3.select("button#zoomIn").on('click', zoomClick);
+  d3.select("button#zoomOut").on('click', zoomClick);
 
   var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0)
 
   var active = d3.select(null);
 
   var zoom = d3.zoom()
-    // .translateExtent(extent0)  // things eventually get wonky trying to combine these limits with responsive SVG
-    // .scaleExtent(scaleExtent)
+    .translateExtent(paddedExtent0)  // things eventually get wonky trying to combine these limits with responsive SVG
+    .scaleExtent(scaleExtent)
     .on("zoom", zoomed)
     .filter(() => {
       // dbl-clicking on background does not trigger zoom (actually resets it)
@@ -236,6 +234,20 @@
 
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
+
+//// DASH LOG BACKGROUNDS
+
+  let ptImgSrc = '',
+    polyImgSrc = '',
+    lineImgSrc = '';
+
+  let ptCanvas = d3.select("#encounters-A").select("canvas#pts")
+  let polyCanvas = d3.select("#encounters-B").select("canvas#polys")
+  let lineCanvas = d3.select("#encounters-C").select("canvas#lines")
+
+  let ptContext = ptCanvas.node().getContext("2d")
+  let polyContext = polyCanvas.node().getContext("2d")
+  let lineContext = lineCanvas.node().getContext("2d")
 
 //// COLORS
 
@@ -455,8 +467,10 @@
       fullTxt: "Protected Areas - Group 3",  // remaining
       weight: 3,
       textureType: "circles",
-      textureProps: { complement: true, thicker: 36, lighter: 18 },
-      swatchAdjust: { thicker: 1, lighter: 0 }
+      textureProps: { complement: true, thicker: 48, lighter: 24 },
+      swatchAdjust: { thinner: 18, lighter: 0 }
+      // textureProps: { complement: true, thicker: 36, lighter: 18 },
+      // swatchAdjust: { thicker: 1, lighter: 0 }
       // no keywords; CATEGORY === "Protected Area" && DESCRIPTION !== "Inventoried Roadless Area"
     }
   },
@@ -539,59 +553,6 @@
       paKeys = Object.keys(paTags),
     tagWords = Object.values(paTags).map(d => d.keywords);
 
-// AS YET EMPTY, ZERO, OR UNDEFINED
-
-  var timer;
-
-  var patterns = {
-    // eg "jupiter": CanvasPattern {}
-  }
-
-  var zoomAlongOptions = {};
-
-  var prevTranslate, prevRotate, prevExtent, searchExtent;
-
-  var transPt0,rotatePt0;
-
-  var mm = 0, accumReset = 0, geoMM;
-
-  var totalMiles, totalTime, minPerMile;
-
-  var routeQuadtree;
-
-  var firstIdentity, lastIdentity;
-
-  // all unprojected: init bounds (ie continent), full route, first route frame, last route frame
-  let data0, data1, data2, data3;
-
-  var trainPt, headlights;
-
-  var fullPath, fullLength, tFull;
-
-  var simpPath, simpLength, tPad;
-
-  var semiSimp, semiSimpLength;
-
-  var labels = [];
-
-  var routeDashInterpolator;
-
-  var logBackgrounds = {
-    // geomType: finalImgSrc
-  };
-
-  let ptImgSrc = '',
-    polyImgSrc = '',
-    lineImgSrc = '';
-
-  let ptCanvas = d3.select("#encounters-A").select("canvas#pts")
-  let polyCanvas = d3.select("#encounters-B").select("canvas#polys")
-  let lineCanvas = d3.select("#encounters-C").select("canvas#lines")
-
-  let ptContext = ptCanvas.node().getContext("2d")
-  let polyContext = polyCanvas.node().getContext("2d")
-  let lineContext = lineCanvas.node().getContext("2d")
-
 // CUSTOM DISPATCH BEHAVIOR
 
   let dispatch = d3.dispatch("depart","move","encounter","arrive")
@@ -634,11 +595,6 @@
     data0 = topojson.feature(data,data.objects.bounds);
 
     projection.fitExtent(extent0,data0);
-    projection.clipExtent(paddedExtent0);
-
-    // constrain zoom behavior (scale)
-    zoom.scaleExtent([scale0 * 0.8, scale0*64])
-        .translateExtent(paddedExtent0)
 
   }, onError)
 
@@ -950,6 +906,8 @@
 
     let testOpt0 = opt0.split(', '),  // note space after comma
         testOpt1 = opt1.split(', ');
+
+    // remove "CHI" (Chichuacame) as state to align with R2R returns
     if (testOpt0[testOpt0.length-1] === 'CHI') {
       opt0 = testOpt0.slice(0, testOpt0.length-1).join(" ");
     }
@@ -1018,7 +976,30 @@
     // define Rome2Rio API query string
     let apiCall = `https://free.rome2rio.com/api/1.4/json/Search?key=V8yzAiCK&oName=${a}&dName=${b}&oKind=station&dKind=station&noAir&noAirLeg&noBus&noFerry&noCar&noBikeshare&noRideshare&noTowncar&noMinorStart&noMinorEnd&noPrice`
 
+// // url (required), options (optional)
+// // let received = await d3.json(apiCall).then(response => {
+// let received = await fetch(apiCall, { credentials: 'include' }).then(response => {
+//   console.log(response)
+//   if (response.ok) {
+//     return response;
+//   } else {
+//     throw Error(`Request rejected with status ${response.status}`)
+//   }
+// }).then(function(returnedValue) {
+// 	console.log(returnedValue)
+//   return returnedValue;
+// }).catch(function(err) {
+//   console.log(err)
+// });
+//
+// console.log(received)
     let received = d3.json(apiCall).then(validate,onError);
+// console.log(received)
+// let result = await received;
+//
+// console.log(result)
+//
+// return result;
 
     return received;
 
@@ -1128,13 +1109,6 @@
       // keep radius consistent with filtered pool of enrichData
       chosen.bufferedRoute = turf.buffer(chosen.lineString, headlightDegrees, {units: "degrees", steps: 12});
 
-      // // optional buffer viz
-      // g.append("path")
-      //  .attr("id","route-buffer")
-      //  .attr("d", line(chosen.bufferedRoute.geometry.coordinates[0].map(d => projection(d))))
-      //  .attr("fill","slateblue")
-      //  .attr("stroke","black")
-
       let possFeatures = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
 
       // bind all trigger points to the DOM for en route intersection
@@ -1156,10 +1130,7 @@
 
         routeQuadtree = makeQuadtree(quadData,options)
 
-        // // optional grid visualization:
-        // visualizeGrid(routeQuadtree) (also toggle commented out in searchQuadtree())
-
-        // non-optional quadtree binding; optional visualization (within function):
+        // non-optional quadtree binding
         bindQuadtreeData(routeQuadtree,true) // triggerPtFlag === true
 
       },onError)
@@ -1175,41 +1146,11 @@
 
         let quadtree = makeQuadtree(quadtreeData,{bounding:dataExtent})
 
-        // // optional data viz; toggle commented out areas in searchQuadtree(), too, for full experience
-        // visualizeGrid(quadtree);
-        // bindQuadtreeData(quadtree);
-
         let searchExtent = padExtent(path.bounds(chosen.bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad; uncomment below for visual
-
-        // g.append("rect")
-        //   .datum(searchExtent)
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .style("fill","orange")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.3px")
-        //   .style("opacity",0.4)
-        //
-        // g.append("rect")
-        //   .datum(path.bounds(chosen.bufferedRoute))
-        //   .attr("x", d => { return d[0][0]; })
-        //   .attr("y", d => { return d[0][1]; })
-        //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-        //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-        //   .style("fill","lightyellow")
-        //   .style("stroke","whitesmoke")
-        //   .style("stroke-width","0.3px")
-        //   .style("opacity",0.4)
 
         let filteredEnrich = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
 
-        // console.log("total filtered from pool by quadtree #1:",filteredEnrich.length)
-
         let possibleFeatures = new Set(filteredEnrich.map(d => d.properties.id));
-
-        // console.log("unique possibleFeatures by id:",[...possibleFeatures].length)
 
         enrichPts.then(pts => {
           topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.has(d.properties.id) }).forEach(pt => {
@@ -1255,20 +1196,11 @@
 
       let routeBoundsIdentity = getIdentity(getCenterTransform(path.centroid(data1),options));
 
-      // console.log(width)
-      // console.log(bottomPad)
-      // // good: // 787, 94
-      // // not enough: 578, 58
-      // // console.log(d3.select("#dash").node().clientHeight / 3) // 71
-      // console.log((d3.select("#dash").node().clientHeight - boundsHeight)/2.75)
-
       // control timing with transition start/end events
-      // zoomRender.restart(render) // ifcanvasbase
       svg.transition().duration(zoomDuration).ease(zoomEase)
         .call(zoom.transform, routeBoundsIdentity)
         .on("start", transitionIn)
         .on("end", () => {
-          // stopZoomRender(); // ifcanvasbase
           // confirm g transform where it should be
           g.attr("transform", routeBoundsIdentity.toString())
           // keep zoomClick btns in line
@@ -1593,7 +1525,6 @@
     let zoomFollow = getZoomFollow(routeObj);
 
     // bind zoomArc to DOM for tracking only (not visible)
-    let zoomArc;
     if (zoomFollow.arc.length) {
       zoomArc = g.append("path")
         .attr("id", "zoom-arc")
@@ -1604,11 +1535,12 @@
         // // toggle below for visual of zoomArc
         // .style("stroke", "rebeccapurple")
         // .style("stroke-width",1)
+      zoomLength = zoomArc.node().getTotalLength();
     }
 
     // final user prompt/countdown??
     // if (confirm("Ready?")) {
-      getSet(zoomFollow,zoomArc,routeBoundsIdentity); // initiate movement!
+      getSet(zoomFollow,routeBoundsIdentity); // initiate movement!
     // }
 
     function getZoomFollow(routeObj) {
@@ -1670,7 +1602,7 @@
 
   }
 
-  function getSet(zoomFollow,zoomArc,routeBoundsIdentity) {
+  function getSet(zoomFollow,routeBoundsIdentity) {
 
     let t = zoomDuration;
 
@@ -1682,10 +1614,6 @@
     semiSimp = g.select("#semi-simp");
 
     if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
-
-      // store zoomArc as flag to zoomAlong
-      simpPath = zoomArc;
-      simpLength = simpPath.node().getTotalLength();
 
       // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
       let bounds2 = path.bounds(data2),
@@ -1700,34 +1628,18 @@
           bottomPad = (width > 640) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3 : (d3.select("#dash").node().clientHeight + boundsHeightAvg)/2;
           // bottomPad = (d3.select("#dash").node().clientHeight - boundsHeightAvg)/2.75;
 
-      // console.log(bottomPad)
-      // // console.log(d3.select("#dash").node().clientHeight / 3) // 71
-      // console.log((d3.select("#dash").node().clientHeight - boundsHeightAvg)/2.75)
-
       // store for getCenterTransform called without zoomAlongOptions
       defaultOptions.spec.center.padBottom = bottomPad;
 
       zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale*2, padBottom: bottomPad }};
 
-      let p0 = simpPath.node().getPointAtLength(0),
-          p1 = simpPath.node().getPointAtLength(simpLength);
+      let p0 = zoomArc.node().getPointAtLength(0),
+          p1 = zoomArc.node().getPointAtLength(zoomLength);
 
       // then calc final first/last frames at constant scale with center centered! (note diff fn call)
-      // firstIdentity = getIdentity(getCenterTransform(path.centroid(data2),options));
-      // firstIdentity = getIdentity(getCenterTransform([p0.x,p0.y],options))
       firstIdentity = getIdentity(getCenterTransform([p0.x,p0.y],zoomAlongOptions))
-      // firstIdentity = getIdentity(getCenterTransform(projection(zoomFollow.firstThree[1]),options))
-      // firstIdentity = getIdentity(getCenterTransform(projection(zoomFollow.firstThree[1]),zoomAlongOptions))
 
-      // lastIdentity = getIdentity(getCenterTransform(path.centroid(data3),options));
-      // lastIdentity = getIdentity(getCenterTransform([p1.x,p1.y],options))
       lastIdentity = getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
-      // lastIdentity = getIdentity(getCenterTransform(projection(zoomFollow.lastThree[1]),options))
-      // lastIdentity = getIdentity(getCenterTransform(projection(zoomFollow.lastThree[1]),zoomAlongOptions))
-
-      // let dashAdjust0 = d3.select("#dash").node().clientHeight/2;
-      // firstIdentity.y -= dashAdjust0;
-      //  lastIdentity.y -= dashAdjust0;
 
       tPad = zoomFollow.tpsm * zoomFollow.focus;  // use tpsm to delay zoomFollow until train hits mm <zoomFollow.focus>; tps(implified)m because focusPt is calculated from simplified route
 
@@ -1736,12 +1648,7 @@
        lastIdentity = routeBoundsIdentity;
     }
 
-    // console.log(routeBoundsIdentity)
-    // console.log(firstIdentity)
-    // console.log(lastIdentity)
-
     // coordinate zoom to first frame, turning on headlights, dimming background, expanding dash, and ultimately (for real!) initiating train and route animation
-    // zoomRender.restart(render); // ifcanvasbase
     svg.transition().duration(t).ease(zoomEase)
       .call(zoom.transform, firstIdentity)
       .on("start", () => {
@@ -1766,7 +1673,6 @@
         svg.on("scroll.zoom",null)
       })
       .on("end", () => {
-        // stopZoomRender(); // ifcanvasbase
         // keep zoom buttons up to date
         d3.select("label#zoom").attr("value",firstIdentity.k)
         // confirm g exactly in alignment for next transition
@@ -1777,7 +1683,7 @@
 
     function dimBackground(t) {
 
-      let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#urban-mesh"),d3.select("#country-mesh")], // d3.select("#railways"),d3.select("#rivers")
+      let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#urban-mesh"),d3.select("#country-mesh")],
           dimLess = [d3.select("#state-mesh")];
 
        let dimGroup = dimMore.map(d => {
@@ -1797,16 +1703,9 @@
         // access currentOpacity or default fallback
         let currentOpacity = group.selection.style("opacity") || group.selection.attr("globalAlpha") || 1;
 
-        // ifcanvasbase
-        // ensure globalAlpha included in 'attrs' property for appropriate context/rendering updates
-        // let currentAttrs = group.selection.property('attrs').slice();
-        // if (!currentAttrs.includes('globalAlpha')) currentAttrs.push('globalAlpha');
-        // group.selection.property("attrs",currentAttrs);
-
         // update current globalAlpha attr according to passed dimFactor
         group.selection.transition().duration(t)
           .style("opacity", currentOpacity * group.dimFactor)
-          // .attr("globalAlpha", currentOpacity * group.dimFactor)
 
       })
 
@@ -1824,21 +1723,15 @@
     // dispatch.call("move", trainPt)
     trainMove(elapsed)
     // zoomFollow if necessary
-    if (simpPath && elapsed >= tPad && elapsed <= tFull-tPad) {
+    if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) {
       let transform = getZoomAlongTransform(elapsed);
-      // zoomRender.restart(render) // ifcanvasbase
       svg.call(zoom.transform, getIdentity(transform))
-      // .on("end",stopZoomRender) // ifcanvasbase
     }
     // update dash trackers
     trackerUpdate(getMM(elapsed))
     // watch for animation end // times must be spot on!
     if (elapsed > tFull) {
       timer.stop();
-      // rendering.stop(); // ifcanvasbase
-      // zoomRender.restart(render) // ifcanvasbase
-      svg.call(zoom.transform, lastIdentity)
-        // .on("end", stopZoomRender) // ifcanvasbase
       // signal train arrival
       dispatch.call("arrive", this);
     }
@@ -1850,20 +1743,21 @@
 
     // DON'T FUCK WITH ME (HARD EARNED)
     let simpT = d3.scaleLinear().domain([tPad,tFull-tPad]),
-        simpL = t => trainEase(t) * simpLength,
+        simpL = t => trainEase(t) * zoomLength,
             l = simpL(simpT(elapsed)),
-            p = simpPath.node().getPointAtLength(l),
+            p = zoomArc.node().getPointAtLength(l),
             k = +d3.select("label#zoom").attr("value");
 
     // if user has manually panned since animation start, offset zoomAlong center by translate values
     if (panned.flag) {
       // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
       if (panned.i1 > panned.i0) {
+        panned.i0++;
         // get current center pt by working backwards through centerTransform() from stored panned.transform
         let currentCenter = getCenterFromTransform(panned.transform);
         panned.centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
-        // resumeAnimation();
-        panned.i0++;
+        // resume from here?
+        // if (!experience.manualPause) resumeAnimation();
       }
       p.x += panned.centerAdjust[0],
       p.y += panned.centerAdjust[1];
@@ -1876,63 +1770,31 @@
 
   }
 
-  // function goOnNow(simpPath,lastIdentity) {
-  //   dispatch.call("depart", this)
-  //   // transition train along entire route
-  // 	point.transition().delay(tPause).duration(tFull).ease(d3.easeSinInOut)
-	// 	  .attrTween("transform", translateAlong(fullPath))
-  //     // point transition triggers additional elements
-  //     .on("start", () => {
-  //       // kick off global timer!
-  //       timer = d3.timer(animate)
-  //       // keep headlights on, simulating search for triggerPts
-  //       headlights.transition().duration(tFull).ease(d3.easeSinInOut)
-  //         .attrTween("transform", bearWithMe(semiSimp,azimuth0))
-  //       // illuminate path traversed as train progresses
-  //       fullPath.style("opacity", 1)
-  //         .transition().duration(tFull).ease(d3.easeSinInOut)
-  //           .styleTween("stroke-dasharray",tweenDash)
-  //       // zoomFollow if necessary
-  //       if (simpPath) { // (firstThree[1] !== lastThree[1]) {
-  //         g.transition().delay(tDelay).duration(tMid).ease(d3.easeSinInOut)
-  //           .attrTween("transform", zoomAlong(simpPath))
-  //       }
-  //     })
-  //     .on("end", () => {
-  //       // dispatch custom "arrive" event
-  //       dispatch.call("arrive", this)
-  //       // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
-  //       svg.transition().duration(zoomDuration).ease(zoomEase)
-  //         .call(zoom.transform, lastIdentity)
-  //         .on("end", () => {
-  //           // confirm g transform in alignment
-  //           g.attr("transform",lastIdentity.toString())
-  //           // reenable integrated free zooming and panning
-  //           svg.call(zoom)
-  //         })
-  //     });
-  // }
-
-  // function animate(elapsed) {
-  //   // dispatch another move event
-  //   dispatch.call("move", point)
-  //   trackerUpdate(getMM(elapsed))
-  // }
-
 ////////////////////////////////////////////////
 ///// EVENT LISTENERS & VISUAL AFFORDANCES /////
 ////////////////////////////////////////////////
 
 // CLICK EVENTS
-  // Default Prevention
-  d3.select("#submit-btn").on("click", function() {
-    d3.event.preventDefault();
-    d3.select("#submit-btn-txt").classed("none",true);
-    d3.select("#submit-btn-load").classed("none",false);
-  })
   d3.select("#about-down").on("click", function() {
     d3.select(this).classed("manual-close",true);
   })
+
+  // Crucial button functionality (migrated from inline html)
+  d3.select("#submit-btn").on("click",function() {
+    d3.event.preventDefault();
+    d3.select("#submit-btn-txt").classed("none",true);
+    d3.select("#submit-btn-load").classed("none",false);
+    onSubmit(this.form.getOption0.value,this.form.getOption1.value);
+  })
+  d3.select("#select-new").on("click", () => selectNew())
+  d3.select("#info-btn").on("click", () => toggleModal("modal-about"))
+  d3.select("#dash-expand-btn").on("click", () =>  expand("dash","up"))
+  d3.select("#dash-collapse-btn").on("click", () =>  collapse('dash','down'))
+  d3.select("#modal-close-btn").on("click", () =>  toggleModal())
+  d3.select("#about-up-btn").on("click", () => expand('about','up'))
+  d3.select("#about-left-btn").on("click", () => expand('about','left'))
+  d3.select("#about-down-btn").on("click", () => collapse('about','down'))
+  d3.select("#about-right-btn").on("click", () => collapse('about','right'))
 
   // setup event listener on modal open
   d3.select(window).on("dblclick", function() {
@@ -1941,9 +1803,6 @@
       toggleModal()  // toggle close
     }
   })
-
-  // Custom Buttons
-  // d3.select("#play-pause").on("click", remoteControl.playPause(e))
 
 // LOAD EVENTS
   d3.select(window).on("load", function () {
@@ -2186,13 +2045,6 @@
 
     // minZ = 1 / tk / tk;
 
-    // ifcanvasbase
-    // context.translate(tx, ty);
-    // context.scale(tk, tk);
-    // SVG transform stored here, applied in render() for better syncing with <canvas>
-    // gTransform = `translate(${tx},${ty}) scale(${tk})`;
-    // gStroke = `${1 / (tk * tk)} px`;
-
     g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + tk + ")");
 
     g.style("stroke-width", 1 / (tk * tk) + "px");
@@ -2245,8 +2097,7 @@
       let centerPt = getCenterFromTransform(currentTransform);
       // get identity of centered transform at new zoom level
       let zoom1 = getIdentity(getCenterTransform(centerPt,{scale:newScale}));
-console.log(zoom1)
-console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
+
       // zoomRender.restart(render) // ifcanvasbase
       svg.transition().duration(400).ease(zoomEase)
          .call(zoom.transform, zoom1)
@@ -2260,26 +2111,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     // if (experience.animating && !experience.manualPause) resumeAnimation();
 
   }
-
-  // function getSizeTransform(options) {  // get transform to adjust current data/bounds to new screen size
-  //
-  //   let opts = {...defaultOptions.sizeTransform, ...options};
-  //
-  //   // calc pre-transformed offset
-  //   let x = (opts.translate0[0] - opts.width0/2) / opts.scale0,
-  //       y = (opts.translate0[1] - opts.height0/2) / opts.scale0;
-  //
-  //   // calc scale adjustments
-  //   let k = Math.max(opts.width1 / width, opts.height1 / opts.height0);
-  //
-  //    // calc new scale and translate
-  //   let tk = opts.scale0 * k,
-  //       tx = x * tk + opts.width1 / 2,
-  //       ty = y * tk + opts.height1 / 2;
-  //
-  //   return {k: tk, x: tx, y: ty};
-  //
-  // }
 
   function getCenterFromTransform(transform,options) {
     // get current center by working backwards through centerTransform() from current transform
@@ -2332,43 +2163,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
 
   }
 
-  // function getBoundsTransform(gj = data1, options) {
-  //
-  //   let opts = {...defaultOptions.boundsTransform, ...options}
-  //
-  //   projectionTrois.fitExtent([[opts.padLeft,opts.padTop],[opts.width - opts.padRight,opts.height - opts.padBottom]],gj); // note projection version
-  //
-  //   let translate = projectionTrois.translate(),
-  //           scale = projectionTrois.scale();
-  //
-  //   return { k: scale, x: translate[0], y: translate[1] };
-  //
-  // }
-
-  // function getCenterTransform([x,y],options) {  // returns transform centering point at predetermined scale
-  //
-  //   // let opts = { ...defaultOptions.centerTransform, ...options, ...{ padBottom: defaultOptions.init.padBottom + (d3.select("#dash").node().clientHeight * 1.25) }}
-  //
-  //   let opts = {...defaultOptions.centerTransform, ...options};
-  //
-  //   // let d = projection.translate(),
-  //   //     k = opts.scale0 || projection.scale();
-  //
-  //   let k = opts.scale0;
-  //
-  //   // calc pre-transformed offset
-  //   let pt0 = getCenterFromTransform({x:x, y:y, k:k});
-  //
-  //   // calc new translate at scale
-  //   let tk = opts.scale,
-  //       tx = pt0[0] * tk - opts.padRight + opts.padLeft,
-  //       ty = pt0[1] * tk - opts.padBottom + opts.padTop;
-  //       // -tk
-  //
-  //   return { x: tx, y: ty, k: tk };
-  //
-  // }
-
   function getIdentity(atTransform,k) {
     // returns d3.zoomIdentity while providing option for stable k
     return d3.zoomIdentity
@@ -2391,13 +2185,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     return {x: tx, y: ty, k: tk};
 
   }
-
-  // function dashAdjust(identity) {
-  //   // transform bounds identity north to make space for dashboard
-  //   let quarterDash = d3.select("#dash").node().clientHeight/4;
-  //   identity.y += quarterDash; // was -=
-  //   return identity;
-  // }
 
   function resetZoom() {
 
@@ -2472,38 +2259,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     return quadtree;
   }
 
-  // function visualizeGrid(quadtree) {
-  //
-  //   ///// QUADTREE / TRIGGER NODES ADDED TO DOM
-  //   let grid = g.append("g")
-  //               .classed("quadtree", true)
-  //
-  //   grid.selectAll(".quadnode")
-  //       .data(nodes(quadtree))
-  //       .enter().append("rect")
-  //         .classed("quadnode", true)
-  //         .attr("x", function(d) { return d.x0; })
-  //         .attr("y", function(d) { return d.y0; })
-  //         .attr("width", function(d) { return d.y1 - d.y0; })
-  //         .attr("height", function(d) { return d.x1 - d.x0; })
-  //         .style("fill", chroma.random())
-  //         .style("stroke", "whitesmoke")
-  //         .style("stroke-width", "0.4px")
-  //         .style("opacity", 0.3)
-  //
-  //   // Collapse the quadtree into an array of rectangles.
-  //   function nodes(quadtree) {
-  //     var nodes = [];
-  //     quadtree.visit(function(node, x0, y0, x1, y1) {
-  //       node.x0 = x0, node.y0 = y0;
-  //       node.x1 = x1, node.y1 = y1;
-  //       nodes.push(node);
-  //     });
-  //     return nodes;
-  //   }
-  //
-  // }
-
   function bindQuadtreeData(quadtree,triggerPtFlag = false) {
 
     // data should all be points, whether representative of larger polygons/lines or otherwise
@@ -2541,15 +2296,9 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
              d0 = quadtree._x(d),
              d1 = quadtree._y(d)
 
-          // // for visualization purposes only
-          // g.selectAll(".quadtree-data").selectAll(`.quad-datum.${d.properties.id}`).classed("quad-datum--scanned",true)
-
           d.selected = (d0 >= x0) && (d0 < x3) && (d1 >= y0) && (d1 < y3);
 
           if (d.selected) {
-
-            // // for visualization purposes only
-            // g.selectAll(".quadtree-data").selectAll(`.quad-datum.${d.properties.id}`).classed("quad-datum--selected",true)
 
             // for flagged, en route trigger-pts only
             if ((g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).node()) && (g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).classed("trigger-pt"))) {
@@ -2650,26 +2399,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
 
     searchExtent = rotateExtent(translatedExtent,rotateDelta,currentTranslate)
 
-    // // TEMPORARY SEARCH/HEADLIGHT EXTENT VISUALIZATIONS
-    // let tempVis = g.select("#route").append("rect")
-    //   .datum(searchExtent)
-    //   .attr("x", d => { return d[0][0]; })
-    //   .attr("y", d => { return d[0][1]; })
-    //   .attr("width", d => { return Math.abs(d[1][0] - d[0][0]); })
-    //   .attr("height", d => { return Math.abs(d[1][1] - d[0][1]); })
-    //   .style("fill",chroma.random())
-    //   .style("stroke","whitesmoke")
-    //   .style("stroke-width","0.3px")
-    //   .style("opacity",0.4)
-    // d3.timeout(() => {
-    //   tempVis.transition().duration(600)
-    //          .style("opacity",0)
-    //          .on("end", () => {
-    //            tempVis.classed("none",true)
-    //            tempVis.remove()
-    //          })
-    // }, 600);
-
     // save newly determined values as previous values
     prevTranslate = currentTranslate;
        prevExtent = searchExtent;
@@ -2724,10 +2453,8 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     experience.manualPause = false;
     experience.pausedAt = null;
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
-    // zoomRender.restart(render); // ifcanvasbase
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, lastIdentity)
-      // .on("end", stopZoomRender) // ifcanvasbase
     // re-allow free zooming
     svg.call(zoom)
     // avoid slight tracker disconnects at end
@@ -2753,59 +2480,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
         i = d3.interpolateString(-l,"0");
     return function(t) { return i(t); };
   }
-
-  // // TRANSLATE ONLY
-  // function zoomAlong(path) {
-  //   let centerAdjust, i = 0;
-  //   var l = path.node().getTotalLength();
-  //   return function(d, i, a) {
-  //     return function(t) {
-  //       // KEEP NODE P IN CENTER OF FRAME @ CURRENT ZOOM LEVEL K
-  //       var p = path.node().getPointAtLength(t * l),
-  //           k = d3.select("label#zoom").attr("value");
-  //       // if user has manually zoomed (without wheel) or panned svg since animation start, offset zoomAlong center by translate values
-  //       if (panned.flag) {
-  //         // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
-  //         if (panned.i > i) {
-  //           let currentCenter = getCenterFromTransform(panned.transform);
-  //           centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
-  //           ++i;
-  //         }
-  //         p.x += centerAdjust[0],
-  //         p.y += centerAdjust[1];
-  //       }
-  //       // calculate translate necessary to center data within extent
-  //       let centered = centerTransform([p.x,p.y],k,zoomAlongOptions)
-  //       svg.call(zoom.transform, getIdentity(centered))
-  //       return "translate(" + centered.x + "," + centered.y + ") scale(" + centered.k + ")";
-  //     }
-  //   }
-  // }
-
-  // // function returns value for translating point along path
-  // function translateAlong(path) {
-  //   var l = path.node().getTotalLength(); // orig 'this'
-  //   return function(d, i, a) {
-  //     return function(t) {
-  //     	var p = path.node().getPointAtLength(t * l);
-  //       return "translate(" + p.x + "," + p.y + ")";
-	// 		}
-  //   }
-  // }
-
-  // function bearWithMe(path,azimuth0) {
-  //   var l = path.node().getTotalLength();
-  //   return function(d, i, a) {
-  //     let rotate = azimuth0,
-  //            pt0 = path.node().getPointAtLength(0);
-  //     return function(t) {
-  //       let pt1 = path.node().getPointAtLength(t * l);  // svg pt
-  //       if (!(pt0.x === pt1.x)) rotate = getRotate(pt0,pt1);
-  //       pt0 = pt1;  // shift pt values pt0 >> pt1
-  //       return transform = "translate(" + pt1.x + "," + pt1.y + ") rotate(" + rotate + ")";
-  //     }
-  //   }
-  // }
 
   function reverseSVGPath(pathStr) {
     return ["M",pathStr.split('M')[1].split('L').reverse().join('L')].join('');
@@ -3556,7 +3230,7 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
           symbolSet.add(symbolId)
 
           let newItem = d3.select(`#${parentDivId}`).append("div")
-            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item relative",true)
+            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item relative unstyled",true)
             .html(getLogHtml(group,symbolId,isParent))
             .style("opacity", 0)  // initially
 
@@ -3590,8 +3264,8 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
               <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
 
             if (isParent) {
-              html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle">
-                <summary class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash hmin24">
+              html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle unstyled">
+                <summary class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash hmin24 unstyled">
                   ${innerHtml}
                 </summary>
               </details>`
@@ -3606,7 +3280,7 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
           }
 
           function styleToSymbol(encountered,group,padLeft) {
-            // element will already be styled appropriately at this point; turn style to symbol
+            // element will already be styled appropriately at this point; turn style to symbol (not all will require textures!)
 
             let symbol = {
               styles: {
@@ -3614,6 +3288,10 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
                 color: encountered.attr("strokeStyle") || encountered.style("stroke"),
                 opacity: encountered.style("orig-opacity") || 1
               }
+            }
+
+            if (encountered.property("category") === "Ecoregion") {
+              return symbol;
             }
 
             if (["#000","#000000","rgb(0,0,0)","rgba(0,0,0,0.75)","rgb(0, 0, 0)","black","none"].includes(symbol.styles.background)) {
@@ -3873,7 +3551,7 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
 
 //// BUTTONS & FUNCTIONAL ICONS
 
-  function clickPause() {
+  function togglePause() {
     // singleClicks only; toggle pause
     if (experience.animating && !experience.manualPause) manualPause()
     else if (experience.manualPause) resumeAnimation()
@@ -3900,7 +3578,7 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
   }
 
   function resumeAnimation() {
-    d3.timerFlush();
+    // d3.timerFlush();
     console.log("resuming @ ",experience.pausedAt)
     // disable free zooming
     svg.on("wheel.zoom",null)
@@ -3939,12 +3617,8 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
 
     function resetConfirmed() {
 
-      // restore orig globalAlpha values of dimmed base
-
+      // restore orig opacity levels of dimmed base
       // work below into cohensive reset method attached to currentState obj
-
-      console.log('resetting..')
-      console.log(state0)
 
       resetZoom();
       collapse("dash", "down")
@@ -3953,10 +3627,10 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
       d3.select("#getOption0").html(state0.opt0)
       d3.select("#getOption1").html(state0.opt1)
 
-      simpPath = null;
+      zoomArc = null;
       experience = { initiated: false, animating: false, paused: false, manualPause: false, pausedAt: null }
       togglesOff = { info: false, select: false }
-      panned = { flag: false, i0: 0, i1: 0 }
+      panned = { flag: false, transform: null, centerAdjust: null, i0: 0, i1: 0 }
       logBackgrounds = {};
 
       // add fade transitions to content removal
@@ -3972,25 +3646,22 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
       // // optional? (would be reset programmatically before they are used anyway)
       // firstIdentity = null, lastIdentity = null;
       // fullPath = null, semiSimp = null
-      // tFull,fullLength,tPad,simpLength
+      // tFull,fullLength,tPad,zoomLength
       // routeDashInterpolator
       // data0, data1, data2, data3;
-
-       // map0? modal0? svg0? canvas0?
 
        // empty selections? d3.select("div.parent").html("");
 
        // https://stackoverflow.com/questions/7671965/how-to-reset-dom-after-manipulation#
-      // document.data("map0").replaceAll("#map-plus")
-      // document.data("dash0").replaceAll("#dash-plus")
-      // document.data("modal0").replaceAll("#modal-plus")
+       // document.data("map0").replaceAll("#map-plus")
+       // document.data("dash0").replaceAll("#dash-plus")
+       // document.data("modal0").replaceAll("#modal-plus")
 
     }
 
   }
 
 //// STYLES
-
   function getFill(d) {
     let fill,
       props = d.properties, // shorthand
@@ -4000,8 +3671,8 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
       // equivalent of texture.flag
       let key;
       if (props.subTag && props.subTag.divId) {
-        key = props.subTag.divId + "-" + geomType;
-      } else if (props.logGroup.divId) { // [geomType]) COMBAK ? {
+        key = props.logGroup.divId + "-" + props.subTag.divId + "-" + geomType;
+      } else if (props.logGroup.divId) {
         key = props.logGroup.divId + "-" + geomType;
       }
       fill = {key: key}
@@ -4040,16 +3711,22 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     } else if (props.subTag && props.subTag.color) {
       if (swatchFlag || geomType === "pt") {
         let textureOpts = {...textureProps, ...{background: props.subTag.color, stroke: "whitesmoke"}};
+        if (props.logGroup.textureType === "circles") {
+          textureOpts.radius = swatchFlag ? 1 : 2;
+          textureOpts.size = swatchFlag ? 8 : 5;
+          textureOpts.fill = "whitesmoke";
+        }
         texture = getTexture(props.logGroup.textureType,textureOpts)
-      } else {
-        let textureOpts = {...textureProps, ...{stroke: chroma(props.subTag.color).darken() }};
+      } else { // not a swatch or point;
+        let textureOpts = {...textureProps, ...{stroke: chroma(props.subTag.color).darken().hex() }};
         if (!textureProps.hasOwnProperty("d") && !textureProps.hasOwnProperty("orientation")) {  // circles
-          textureOpts.fill = props.subTag.color;
-          // textureOpts.background = "transparent";
+          // textureOpts.stroke = props.subTag.color;
+          // textureOpts.fill = chroma(props.subTag.color).darken().hex();
+          textureOpts.background = "transparent";
         }
         texture = getTexture(props.logGroup.textureType,textureOpts)
       }
-    } else {
+    } else { // mostly lakes
       texture = getTexture(props.logGroup.textureType,textureProps);
     }
     swatchFlag ? hiddenSvg.call(texture) : svg.call(texture);
@@ -4061,8 +3738,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     let pathSequence, s = (padLeft > 0) ? 18 : 24;
 
     if (d.property("category") === "Watershed") {
-
-      // if (watershedParent) s = 18;
 
       let arr = d.style("stroke-dasharray").split(', ').slice(0,4).map(d => +d),
         parts = arr.length * 2 + 1;
@@ -4080,8 +3755,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
           m ${2 * (s/parts)},-${2 * (s/parts)}
           L ${s},0
         `;
-
-      // watershedParent = true;
 
     } else if (d.property("category").startsWith("River")) {
 
@@ -4105,17 +3778,7 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
       url: swatchFlag ? "none" : texture.url()          // for svg use
     }
     return patterns[key];
-    // let img = await srcToImg(src);
-    // patterns[key].pattern = imgToPattern(img);
   }
-
-  // function imgToPattern(img, ctx = context) {
-  //   return ctx.createPattern(img,'repeat');
-  // }
-
-  // function retrievePattern(key) {
-  //   return patterns[key].pattern;
-  // }
 
   function textureToSrc(texture,type = "base64") {
     // called for swatch/canvas textures only
@@ -4141,21 +3804,6 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
       // reduced from https://jsfiddle.net/Wijmo5/h2L3gw88/
       return 'data:image/svg+xml;base64,' + btoa(xml);
     }
-
-    // ALT1:
-    // if ___ texture.flag = true;
-    // if texture.flag, this.classed(texture_class)
-
-    // ALT2: return path to strokeStyle; use for lines? could be fillStyle?
-    // let path = new Path2D(localSvg.select("defs").select("pattern").select("path").attr("d"))
-
-    // ALT3: return img as part of drawImage method: [img,0,0]
-
-    // possible uses:
-    // context.createPattern(img,'repeat')
-    // context.drawImage(img, 0, 0);
-    // store as css class (background-image), then apply class to querying element?
-    // return as .attr("background-image",`url(${uri})`)?
 
   }
 
@@ -4191,7 +3839,7 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     }
   }
 
-  function getTexture(type = "circles",props) {
+  function getTexture(type = "paths",props) {
     let texture = textures[type]()
     Object.keys(props).forEach(d => {
       texture[d](props[d])
@@ -4424,27 +4072,9 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     return array;
   }
 
-  function uniqueOn(array,prop = "properties",subProp = "id") {
-    // largely from https://reactgo.com/removeduplicateobjects/
-    let unique = array.map(d => d[prop][subProp])
-                      .map((d, i, final) => final.indexOf(d) === i && i)         // store the keys of the unique objects
-                      .filter(d => array[d])  // eliminate the dead keys
-                      .map(d => array[d])     // restore unique objects
-    return unique;
-  }
-
   function random(upper,lower = 0) {
     let randNum = Math.random();
     return (upper) ? lower + Math.round(randNum * (upper - lower)) : randNum;
-  }
-
-  function isEmpty(obj) {
-    for (var key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   // ERRORS
@@ -4452,9 +4082,7 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
     console.log(error);
   }
 
-
-
-// })
+})();
 
 //// OLD/ADDITIONAL NOTES: ////
 
@@ -4631,10 +4259,20 @@ console.log(getIdentity(getCenterTransform(centerPt,{scale:newScale})))
   // https://beta.observablehq.com/@mbostock/randomized-flood-fill
   // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
   // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
+  // https://www.datamake.io/blog/d3-zoom#geo-canvas!
 
-// https://www.datamake.io/blog/d3-zoom#geo-canvas!
-
-// BASE & ENRICH POLYGONS = CANVAS ELEMENTS?
-
-// undisable play/pause visual
-// pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
+// LATEST NOTES
+  // BASE & ENRICH POLYGONS = CANVAS ELEMENTS?
+  // background gradient N->S brightest mid continent
+  // undisable play/pause visual
+  // pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
+  // further order legend:
+    // hydrological
+    // geological
+    // ecoregions
+    // protected area
+    // remaining stations turn greyscale
+    // train = greyish, aerial?
+    // arrow-out to expand about section
+    // start/stop stations remain large and color-coded
+    // roadless areas being interpreted as pa-grp3; fix (nylon)
