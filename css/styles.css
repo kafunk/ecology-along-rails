@@ -18,6 +18,7 @@ p, span, a, li {
 a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
+
 svg path { stroke-linejoin: round; }
   /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
@@ -29,9 +30,6 @@ ul.show-bullets--square li { list-style: square; }
   position: absolute;
   top: 0.5; left: 8px;
 }
-svg#svg {
- z-index: 3; /* can z-index apply to */
-}
 
 /* hide details triangle marker until child content added */
 details.hide-triangle > summary {
@@ -39,7 +37,6 @@ details.hide-triangle > summary {
 }
 details.hide-triangle > summary::-webkit-details-marker {
   display: none;
-  list-style: none;
 }
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
 .legend-log-child-item {
@@ -155,34 +152,6 @@ details > summary > span {
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
-}
-
-/* TRIGGER PTS and other quadtree data */
-.quad-datum {
-  stroke-width: 0.1px;
-  opacity: 0.6;
-  fill: darkgoldenrod;
-  stroke: goldenrod;
-}
-.trigger-pt {
-  opacity: 0.8;
-  fill: darkmagenta;
-  stroke: lightgreen;
-}
-.quad-datum--scanned {
-  fill: lightgreen;
-  stroke: darkgoldenrod;
-  transition: 0.6s all;
-}
-.quad-datum--selected {
-  fill: tomato;
-  stroke: darksalmon;
-  transition: 0.6s all;
-}
-.quad-datum--removed {
-  fill: darksalmon;
-  stroke: dimgray;
-  transition: 0.6s all;
 }
 
 /* MEDIA QUERIES */

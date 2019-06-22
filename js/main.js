@@ -42,7 +42,7 @@
 //// KEEP ADJUSTABLE VARIABLES ACCESSIBLE: eventually some of these could be user-controlled via sliders and such
 
   var arcSteps = 500,  // how fine tuned SVG path animation
-    headlightRadius = 2.8,
+    headlightRadius = 2,
     trainPtRadius = 0.8,
     arcSpan = 0.16 * tau, // (in radians)
     tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower) *** I WANT THIS USER ADJUSTABLE BUT tFULL uses it to set animation length at very begin, so not sure I can make this dynamic given current structure
@@ -108,10 +108,9 @@
 
 //// READY MAP
 
-// SVG & SIZING
+// SVG + SIZING
 
-  var padX = 0,
-      padY = -18;
+  var padX = 0, padY = 0;
 
   var initial = calcSize();
 
@@ -143,9 +142,43 @@
     .classed("point-all opacity75 bg-lighten25 no-zoom",true)
     .on("dblclick", resetZoom)
 
-  // all rendered/zoomable content
   var g = svg.append("g")
-    .attr("id", "zoomable")
+
+  var defs = svg.append("defs");
+
+  var radialGradient = defs.append("radialGradient")
+		.attr("id", "radial-gradient")
+		.attr("cx", "50%")
+		.attr("cy", "50%")
+		.attr("r", "75%")
+
+ 	// define color scales
+	var numColors = 9,
+	radialGradientScale = d3.scaleLinear()
+	   .domain([0,(numColors-1)/2,numColors-1])
+	   .range(["lightyellow","goldenrod","darkgoldenrod"])
+
+  // bind specific color stops to radialGradient
+  radialGradient.selectAll("stop")
+    .data(d3.range(numColors))
+      .enter().append("stop")
+      .attr("offset", function(d,i) { return i/(numColors-1)*50 + 40 + "%"; })
+      .attr("stop-color", d => { return radialGradientScale(d) });
+
+  defs.append("image")
+    .attr("id", "station-icon")
+    .attr("xlink:href","./assets/station.svg")
+    .attr("width", 3.2)
+    .attr("height", 4)
+    .attr("x",-1.6)
+    .attr("y",-2)
+  defs.append("image")
+    .attr("id", "station-icon-sm")
+    .attr("xlink:href","./assets/station.svg")
+    .attr("width", 1.6)
+    .attr("height", 2)
+    .attr("x",-0.8)
+    .attr("y",-1)
 
   // define gradients & svg icons for later <use></use>
   var defs = svg.append("defs");
@@ -193,11 +226,15 @@
     .parallels([20,60])
     .clipExtent(paddedExtent0);
 
+  var path = d3.geoPath()
+    .projection(projection)
+    // .projection(identity) // stream) // minZ etc
+
   var reflectedY = d3.geoIdentity()
     .reflectY(true)
 
-  var path = d3.geoPath().projection(projection),
-      line = d3.line().curve(d3.curveCardinal.tension(0));
+  var line = d3.line()
+    .curve(d3.curveCardinal.tension(0))
 
   var reflectedPath = d3.geoPath()
     .projection(reflectedY)
@@ -219,21 +256,19 @@
   d3.select("button#zoomIn").on('click', zoomClick);
   d3.select("button#zoomOut").on('click', zoomClick);
 
-  var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0)
+  var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0);
 
   var active = d3.select(null);
 
+  var gTransform, gStroke;
+
   var zoom = d3.zoom()
-    .translateExtent(paddedExtent0)  // things eventually get wonky trying to combine these limits with responsive SVG
+    .translateExtent(paddedExtent0)
     .scaleExtent(scaleExtent)
     .on("zoom", zoomed)
-    .filter(() => {
-      // dbl-clicking on background does not trigger zoom (actually resets it)
-      return !(d3.event.type === "dblclick" && d3.event.path[0].classList.contains('no-zoom'))
-    })
+    .on("end", stopZoomRender)
 
-  svg.call(zoom.transform, zoom0) // keep this line first
-     .call(zoom)
+  svg.call(zoom)
 
 //// DASH LOG BACKGROUNDS
 
@@ -275,7 +310,7 @@
       20: { base: "#a1d7df" },
       30: { base: "#87CEEB" },
       40: { base: "#20B2AA" },
-      50: { base: "#2F4F4F" }
+      50: { base: "#8c99cd" } // "#2F4F4F" }
     },
     ecoregions: {
       // ecozone: { base: baseColor }
@@ -445,9 +480,9 @@
       getStroke(d) {
         let description = d.properties.DESCRIPTION.toUpperCase();
         if (description.match("NATIONAL")) {
-          return outline1;
+          return "rgba(76, 83, 91, .6)";
         } else if (description.match("STATE") || description.match("PROVINCIAL")) {
-          return outline2;
+          return "rgba(76, 83, 91, .3)"
         }
       }
     },
@@ -582,7 +617,6 @@
     .on("touchstart", nozoom)
     .on("touchmove", nozoom)
 
-
 /////////////////////////////
 ////// ACTION! FINALLY //////
 /////////////////////////////
@@ -591,11 +625,8 @@
 
   // SET BOUNDING BOX
   initBounds.then(data => {
-
     data0 = topojson.feature(data,data.objects.bounds);
-
     projection.fitExtent(extent0,data0);
-
   }, onError)
 
   // DRAW VECTOR BASE
@@ -687,40 +718,74 @@
     hydroBase.append("g")
       .attr("id", "rivers")
       .selectAll("path")
-      .data(sourceData.hydroUnits.gj.features.filter(d => { return d.properties.strokeweig !== null }))
-      .enter().append("path")
-        .attr("d", path)
-        .style("fill","none")
-        .style("stroke","teal")
-        .style("stroke-width", d => { return d.properties.strokeweig })
+      .data(sourceData.hydroUnits.gj.features.filter(d => d.properties.strokeweig !== null))
+      .enter().append("custom:path")
+        .classed("custom feature hydro begin-path path recalc",true)
+        .attr("r", d => d.properties.strokeweig * 2)
+        .attr("globalAlpha",0.9)
+        .attr("strokeStyle",`rgba(${chroma("teal").alpha(0.9).rgba().join(",")})`)
+        .attr("lineCap","round")
+        .attr("lineJoin","round")
+        .property("attrs", ['lineCap','lineJoin','lineWidth','strokeStyle','globalAlpha'])
+        .property("recalcAttrs", ["lineWidth"])
+        .property("attrRecalcFns", function(d) { return [
+          { fnStr:"getLineWidth", params:[this,[null,1.8]], getParamStrs:["getScale"] } // 3 == scale factor
+        ]})
+        .property("methods", ['stroke'])
 
-    railBase.append("g")
-      .attr("id", "railways")
-      .selectAll("path")
-      .data(sourceData.railways.gj.features)
-      .enter().append("path")
-        .attr("d", path)
-        .attr("stroke-width", d => { return (8/(d.properties.scalerank * 4)) }) // 10/(d.properties.scalerank ** 2)
-        .attr("stroke","lightslategray")
-        .style("fill", "none")
-        .style("opacity",1)
+    urbanBase.append("custom:footprint")
+      .datum(urbanMesh)
+      .classed("custom feature urban begin-path path recalc",true)
+      .attr("id","urban-mesh")
+      .attr("globalAlpha",0.8)
+      .attr("strokeStyle",`rgba(${chroma("silver").alpha(0.8).rgba().join(",")})`)
+      .attr("fillStyle",`rgba(${chroma("gainsboro").alpha(0.6).rgba().join(",")})`)
+      .property("attrs",['fillStyle','lineWidth','strokeStyle','globalAlpha'])
+      .property("recalcAttrs", ["lineWidth"])
+      .property("attrRecalcFns", function() { return [
+        { fnStr:"getLineWidth", params:[this,[null,0.4]], getParamStrs: ["getScale"] } // 0.4 = scale factor
+      ]})
+      .property("methods", ['fill','stroke'])
 
-    // POINT FEATURES
-    urbanBase.selectAll("circle")
+    urbanBase.append("custom:placepts")
+      .attr("id","urban-pts")
+      .selectAll("circle")
       .data(sourceData.places.gj.features)
-      .enter().append("circle")
-        .attr("r", d => d.properties.scalerank * 0.01)
-        .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
-        .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
+      .enter().append("custom:circle")
+        .classed("custom feature circle urban begin-path spread split recalc",true)
+        .attr("globalAlpha",0.8)
+        .attr("fillStyle",`rgba(${chroma("mediumseagreen").alpha(0.8).rgba().join(",")})`)
+        .attr("strokeStyle",`rgba(${chroma("yellowgreen").alpha(0.6).rgba().join(",")})`)
         .property("name", d => { return cityState(d.properties); })
         .property("orig-stroke-opacity",0.8)
-        .style("fill", "yellowgreen")
-        .style("stroke", "mediumseagreen")
-        // .style("stroke-width", d => d.properties.scalerank * 0.01)
-        .on("mouseenter", onMouseenter)
-        .on("mouseout", onMouseout)
+        .property("attrs", ['fillStyle','lineWidth','strokeStyle','globalAlpha'])
+        .property("recalcAttrs", [/*"setLineDash",*/"lineWidth","arc"])
+        .property("attrRecalcFns", function(d) { return [
+          // { fnStr:"getSetLineDash", params:[this,[null,1.4]], getParamStrs: ["getScale"] },
+          { fnStr:"getLineWidth", params:[this,[null,0.4]], getParamStrs:["getScale"] }, // 0.4 = scale factor
+          { fnStr:"getFullArc", params:[this,[d,0.8]], getParamStrs:["getScale","getProjCoords"] } // 0.8 = scale factor
+        ]}) // must be in same order as recalcAttrs!
+        .property("methods", [/*'setLineDash',*/ 'arc','fill','stroke'])
+        // .on("mouseenter", onMouseenter)
+        // .on("mouseout", onMouseout)
 
-    railBase.append("g")
+    railBase.append("custom:railways")
+      .attr("id","railways")
+      .selectAll("path")
+      .data(sourceData.railways.gj.features)
+      .enter().append("custom:path")
+        .classed("custom feature rail begin-path path recalc",true)
+        .attr("r", d => d.properties.scalerank)
+        .attr("strokeStyle",`rgba(${chroma("lightslategray").alpha(1).rgba().join(",")})`)
+        .attr("globalAlpha",0.8)
+        .property("attrs",['lineWidth','strokeStyle','globalAlpha'])
+        .property("recalcAttrs", ["lineWidth"])
+        .property("attrRecalcFns", function(d) { return [
+          { fnStr:"getLineWidth", params:[this,[null,0.2]], getParamStrs:["getScale"] } // 0.2 = scale factor
+        ]})
+        .property("methods", ['stroke'])
+
+    svgRailBase.append("g")
       .attr("id", "rail-stations")
       .selectAll("use")
       .data(sourceData.stations.gj.features)
@@ -733,15 +798,11 @@
         .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
-    // // sort stations by city name
-    // let sorted = sourceData.stations.gj.features.sort( (a,b) => {
+    // create new allStations array by extracting sorted, slimmed railStns properties
+    // var allStations = sourceData.stations.gj.features.sort( (a,b) => {
     //   return a.properties.city > b.properties.city;
     // });
-
-    let shuffled = shuffle(sourceData.stations.gj.features);
-
-    // create new allStations array by extracting sorted, slimmed railStns properties
-    var allStations = /*sourceData.stations.gj.features*/shuffled.map( (d,i) => {
+    var allStations = shuffle(sourceData.stations.gj.features).map( (d,i) => {
       let props = d.properties, // shorthand
         station = {
           id: i.toLocaleString().padStart(3,"0"),
@@ -954,14 +1015,14 @@
 
     d3.select("#veil")
       .transition().duration(600)
-        .style("opacity", 0)
+        .attr("opacity", 0)
         .on("end", function() {
           d3.select(this).classed("none", true)
         })
 
-    d3.select("#map-init-load").style("opacity",0).classed("none", false)
+    d3.select("#map-init-load").attr("opacity",0).classed("none", false)
       .transition().duration(300)
-        .style("opacity", 1)
+        .attr("opacity", 1)
 
   }
 
@@ -1008,7 +1069,7 @@
 
     function parseReceived(raw) {
 
-      // debugging rare error from turf.js
+      // determining which route returns lead to rare error from turf.js
       if (!Array.isArray(raw.routes[0].segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat()) || raw.routes[0].segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat().length < 2) {
         console.log("problem!")
         console.log(raw)
@@ -1239,15 +1300,13 @@
           .text(received.to.shortName)
         d3.select("#via").insert("div")
           .html(agencyHtml)
-          .style("stroke","dimgray")
+          .attr("strokeStyle","dimgray")
 
         // WIDGETS
         initElevation()
         initOdometer()
         initClock()
         initCompass()
-
-        // received.overallBearing
 
         // NARRATION
         // remove placeholder text from #encounters and change header text (for now)
@@ -1361,9 +1420,9 @@
         enrichLayer.append("g").attr("id","enrich-pts")
 
         return true;
-
+      
       }
-
+      
       function drawRoute(received) {
 
         var journey = g.append("g")
@@ -1458,6 +1517,33 @@
         return true;
 
       }
+
+    }
+
+    function transitionIn(t = tPause) {
+
+      d3.select("#map-init-load").transition()
+        .delay(t/2)
+        .duration(t/2 - 200)
+        .style("opacity", 0)
+        .on("end", function() {
+          d3.select(this).classed("none", true)
+        })
+
+      // remove all rail station points; fade opacity out as station-stops fade in
+      g.select("#rail-stations").selectAll("use")
+        .transition().duration(t)
+          // .attr("globalAlpha", 0)
+          .style("opacity", 0)
+          .on("end", function() {
+            d3.select(this).remove();
+          })
+
+      // simultaneous-ish
+      g.select("#station-stops").selectAll("use")
+        .transition().duration(t)
+          .style("opacity", 0.6)
+          // .attr("globalAlpha", 0.8) // 0.6
 
     }
 
@@ -1583,7 +1669,7 @@
 
     let t = zoomDuration;
 
-    // need to remain accessible for animate();
+    // need to remain accessible for animate():
     tFull = tpm * zoomFollow.fullDist;
     trainPt = g.select("#train-point");
     headlights = g.select("#headlights");
@@ -1625,7 +1711,7 @@
        lastIdentity = routeBoundsIdentity;
     }
 
-    // coordinate zoom to first frame, turning on headlights, dimming background, expanding dash, and ultimately (for real!) initiating train and route animation
+    // coordinate zoom to first frame, turning on headlights, dimming background, expanding dash, and ultimately initiating train and route animation
     svg.transition().duration(t).ease(zoomEase)
       .call(zoom.transform, firstIdentity)
       .on("start", () => {
@@ -1663,7 +1749,7 @@
       let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#urban-mesh"),d3.select("#country-mesh")],
           dimLess = [d3.select("#state-mesh")];
 
-       let dimGroup = dimMore.map(d => {
+      let dimGroup = dimMore.map(d => {
         return {
           selection: d,
           dimFactor: relativeDim
@@ -1795,37 +1881,11 @@
   d3.select("#get-options").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
                                 .on("blur", function (e) { e.target.style.background = "#fafafa" })
 
-
 //////////////////////////
 ///// MORE FUNCTIONS /////
 //////////////////////////
 
 //// LAYOUT
-
-  function adjustSize() {
-
-    // get updated dimensions
-    let updated = calcSize();
-
-    // update/apply new values
-    width = updated.width;
-    height = updated.height;
-    translate0 = [(width + padX)/2, (height + padY)/2],
-    extent0 = [[(-width - padX)/2, (-height - padY)/2],[(width + padX)/2, (height + padY)/2]],
-    paddedExtent0 = extent0.map(arr => arr.map(d => d * 1.2));
-
-    // apply as new svg attributes
-    svg.attr("width", updated.width)
-       .attr("height", updated.height)
-
-    projection.clipExtent(paddedExtent0);
-
-    // constrain zoom behavior (scale)
-    zoom.translateExtent(paddedExtent0)
-
-    // if (experience.animating && !experience.manualPause) resumeAnimation();
-
-  }
 
   function calcSize() {
 
@@ -1899,7 +1959,7 @@
       // map height calculation includes #aside
       calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#aside").node().clientHeight - d3.select("#footer").node().clientHeight;
 
-      calculated.width = d3.select("#about-plus").node().clientWidth
+      calculated.width = d3.select("#about-plus").node().clientWidth;
 
     }
 
@@ -1923,8 +1983,9 @@
     return result.img;
   }
 
-
-
+  function imgToPattern(img, ctx = context) {
+    return ctx.createPattern(img,'repeat');
+  }
 
 //// GEOJSON + TOPOJSON HELPERS
 
@@ -1983,6 +2044,8 @@
     // still not totally clear why this makes the difference, but it seems to. having to do with projection.rotate()?
     return (["NE","SE"].includes(quadrant)) ? 90 - degrees : -90 - degrees;
 
+    // still not totally clear why this makes the difference, but it seems to. having to do with projection.rotate()?
+    return (["NE","SE"].includes(quadrant)) ? 90 - degrees : -90 - degrees;
   }
 
   function getSector(radians,radius,span = arcSpan,scale = projection.scale(),r0 = 0) {
@@ -1993,10 +2056,6 @@
       .cornerRadius(r1/10)
       .startAngle(radians - span/2)
       .endAngle(radians + span/2);
-  }
-
-  function truncateCoords(coords) {
-    return coords.map(d => turf.truncate(turf.point(d),{precision:5,mutate:true}).geometry.coordinates);
   }
 
   function getSimpRoute(full,tolerance = 1) {
@@ -2010,7 +2069,18 @@
     return simplified;
   }
 
+  function truncateCoords(coords,precision = 5) {
+    return coords.map(d => turf.truncate(turf.point(d),{precision:precision,mutate:true}).geometry.coordinates);
+  }
+
 //// ZOOM BEHAVIOR
+  function togglePause() {
+    if (experience.animating && !experience.manualPause) {
+      manualPause()
+    } else if (experience.animating && experience.manualPause) {
+      resumeAnimation();
+    }
+  }
 
   function zoomed() {
 
@@ -2051,7 +2121,7 @@
     let oScale = +d3.select(this.parentNode).attr("value"),
          oStep = +zoomScales.invert(oScale).toFixed(2);
 
-    // if oStep already clamped at min/max, offer visual affordance (little shake) that zoom limit reached
+    // if oStep already clamped at min/max, offer visual feedback (little shake) that zoom limit reached
     if (oStep === zoomLevels[0] || oStep === zoomLevels[1]) {
 
       d3.select(this).classed("limit-reached",true)
@@ -2075,12 +2145,10 @@
       // get identity of centered transform at new zoom level
       let zoom1 = getIdentity(getCenterTransform(centerPt,{scale:newScale}));
 
-      // zoomRender.restart(render) // ifcanvasbase
       svg.transition().duration(400).ease(zoomEase)
          .call(zoom.transform, zoom1)
          .on("end", () => {
            g.attr("transform", zoom1.toString())
-           // stopZoomRender() // ifcanvasbase
          })
 
     }
@@ -2168,7 +2236,7 @@
     active.classed("active", false);
     active = d3.select(null);
 
-    svg.transition().duration(zoomDuration/4) // .ease(d3.easeLinear)
+    svg.transition().duration(800).ease(zoomEase)
       .call(zoom.transform, zoom0)
 
   }
@@ -2184,7 +2252,7 @@
     // Determine resizer position relative to resizable parent
     let y = this.parentNode.getBoundingClientRect().height - d3.event.y
 
-    // Ensure calculated height within bounds of grandparent SVG (plus padding) and, optionally, greater than minimum height
+    // Ensure calculated height within bounds of grandparent svg (plus padding) and, optionally, greater than minimum height
     y = Math.min(svg.node().clientHeight - 96 ,Math.max(72, y));
 
     // apply new sizing to relative parent (#resizable) of absolute content (.resizer)
@@ -2220,7 +2288,7 @@
   function makeQuadtree(data,options) {
     // search and nodes functions taken from https://bl.ocks.org/mbostock/4343214
 
-    opts = {...defaultOptions.quadtree,...options};
+    let opts = {...defaultOptions.quadtree,...options};
 
     // get projected bounding box of passed geoJSON
     let pathBox = path.bounds(opts.bounding),
@@ -2252,9 +2320,7 @@
         // .attr("r", 0.1) // toggle for visual
 
     if (triggerPtFlag) {
-      quadtreeData.selectAll(".quad-datum").nodes().forEach(d => {
-        d3.select(d).classed("trigger-pt",true)
-      })
+      quadtreeData.selectAll(".quad-datum").nodes().forEach(d => d3.select(d).classed("trigger-pt",true));
     }
 
   }
@@ -2289,11 +2355,11 @@
 
             selected.push(d)
 
-            // immediately remove triggerPt and all others associated with same feature ID from remaining search pool to avoid wasting energy on retriggers
-            let toRemove = quadtree.data().filter(q => {
-              return q.properties.id === d.properties.id;
-            })
-            quadtree.removeAll(toRemove)
+            // // immediately remove triggerPt and all others associated with same feature ID from remaining search pool to avoid wasting energy on retriggers // COMBAK omit this for reset()?
+            // let toRemove = quadtree.data().filter(q => {
+            //   return q.properties.id === d.properties.id;
+            // })
+            // quadtree.removeAll(toRemove)
 
           }
 
@@ -2387,7 +2453,8 @@
   }
 
   function getTrainTransformAt(t) { // INCL ROTATE
-    // // called with two selections because headlights rotate according to semi-simplified path for smoother interpolator, while translating along full path to ensure alignment with trainPt itself
+
+    // called with two selections because headlights rotate according to semi-simplified path for smoother interpolator, while translating along full path to ensure alignment with trainPt itself
     let l0 = eased(t) * fullLength,
         l1 = eased(t) * semiSimpLength;
 
@@ -2396,7 +2463,7 @@
 
     let rotate = (!(rotatePt0.x === rotatePt1.x)) ? getRotate(rotatePt0,rotatePt1) : prevRotate; // || rotate0?
 
-     // shift pt values pt0 >> pt1
+    // shift pt values pt0 >> pt1
     transPt0 = transPt1;
     rotatePt0 = rotatePt1;
 
@@ -2448,8 +2515,8 @@
 
   function tweenDash() {
     var l = this.getTotalLength(),
-        i = d3.interpolateString("0," + l, l + "," + l);
-    return function(t) { return i(t); };
+      interpolator = d3.interpolateString("0," + l, l + "," + l);
+    return function(t) { return interpolator(t); };
   }
 
   function drawDashed() {
@@ -2881,7 +2948,7 @@
 
   }
 
-  function revealPt(gj,baseT) {
+  function revealPt(gj) { // ,baseT) {
 
     let t = minT * 4; // Math.max(minT,baseT * tpm);
 
@@ -2898,12 +2965,12 @@
       .data(sortedPts, d => d.properties.id)
       .order()
       .join(
-        enter => enter.append("circle")
-          .classed("enrich-pt", true)
-          .attr("r", 0)
-          .attr("cx", d => projection(d.geometry.coordinates)[0])
-          .attr("cy", d => projection(d.geometry.coordinates)[1])
+        enter => enter.append("custom:circle")
+          .classed("enrich-pt custom feature circle enrich begin-path spread split recalc",true)
           .attr("id", d => d.properties.id)
+          .attr("r",0.1)
+          .attr("strokeStyle", "whitesmoke")
+          .attr("globalAlpha", 0.8)
           .property("name", formatName)
           .property("category", d => d.properties.CATEGORY)
           .property("description", d => d.properties.DESCRIPTION)
@@ -2953,6 +3020,15 @@
         })
       )
 
+    function rTween(d) {
+      let a = +d3.select(this).attr("r"),
+          b = d.properties.orig_area * 0.0000001 || 1; // final radius (/rank) is a factor of planar (why did i do it this way?) area of polygon the circle is representing, or 1 minimum}
+      let interpolator = d3.interpolate(a,b);
+      return function(t) {
+        return interpolator(t);
+      }
+    }
+
   }
 
   function revealLine(gj,baseT) {
@@ -2964,7 +3040,7 @@
     let newLine = d3.select("#enrich-lines").append("path")
                     .datum(gj)
                     .classed("enrich-line",true)
-                    .attr("d", path)
+                    .attr("d", svgPath)
                     .attr("id", d => d.properties.id)
                     .property("name", formatName)
                     .property("category", d => d.properties.CATEGORY)
@@ -2975,6 +3051,7 @@
                     .property("orig-stroke-opacity", lineOpacity)
                     .style("fill", "none") // default
                     .style("stroke", getStroke)
+                    .style("fill", "none") // default
                     .style("stroke-width", getStrokeWidth)
                     .style("stroke-dasharray", "none")
                     .style("stroke-linecap", "round")
@@ -3002,11 +3079,13 @@
 
       // reverse bound path to prepare for dashed line interpolation
       let initialPath = newLine.attr("d")
-      newLine.attr("d",reverseSVGPath(initialPath))
+
+      newLine.datum(reversePathStr(initialPath))
 
       let initArray = "0.1 0.2 0.4 0.2",
         length = newLine.node().getTotalLength(),
         dashStr = getDashStr(length, initArray);
+
       newLine.style("stroke-dasharray", dashStr)
              .style("stroke-dashoffset", -length)
 
@@ -3049,10 +3128,12 @@
       .data(sortedPolygons, d => d.properties.id)
       .order()  // is this an appropriate place to call this method?
       .join(
-        enter => enter.append("path")
-          .classed("enrich-polygon", true)
-          .attr("d", path)
+        enter => enter.append("custom:path")
+          .classed("custom feature enrich enrich-polygon begin-path path",true) // spread split recalc
           .attr("id", d => d.properties.id)
+          // .attr("strokeStyle", getStroke)
+          // .attr("lineWidth", getStrokeWidth)
+          .attr("globalAlpha", 0)
           .property("name", formatName)
           .property("category", d => d.properties.CATEGORY)
           .property("level", d => d.properties.LEVEL)
@@ -3152,7 +3233,7 @@
       function updateOutput(encounters,col) { // allEncounters) {
         // https://observablehq.com/@d3/selection-join
 
-        const t = d3.transition().duration(750);
+        const t = d3.transition().duration(750)
 
         // HOW TO SMOOTH OUT SCROLL?
         d3.select(`#encounters-${col}`).selectAll(".encounter")
@@ -3574,7 +3655,6 @@
   }
 
   function selectNew() {
-
     // if mid-animation, pause and confirm user intent
     if (experience.animating) pauseAnimation();
     let confirmed = confirm('Do you wish to select a new route?');
@@ -3880,8 +3960,8 @@
     // visual affordance for element itself
     d3.select(this) // .classed("hover", true) //.raise();
       .transition().duration(100)
-        .style("stroke-opacity", 1)
-        .style("opacity", 0.9)
+        // .attr("strokeStyle", 1) // dimrgba // adjustrgba
+        .attr("globalAlpha", 0.9)
 
     if (d3.select(this).property("name")) {
       // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
@@ -3890,13 +3970,13 @@
         .html(getHtml(d3.select(this)))
         .style("left", (d3.event.layerX + 10) + "px")
         .style("top", (d3.event.layerY - 30) + "px")
-        .style("fill", "honeydew")
-        .style("stroke", "dimgray")
-        .style("opacity", 0) // initially
+        .attr("fill", "honeydew")
+        .attr("stroke", "dimgray")
+        .attr("opacity", 0) // initially
 
       // bring tooltip into full opacity
       tooltip.transition().duration(100)
-        .style("opacity", 1)
+        .attr("opacity", 1)
     }
 
   }
@@ -3959,15 +4039,15 @@
 
     d3.select(this) // .classed("hover", false) // .lower();
       .transition().duration(750)
-        .style("stroke-opacity", resetStrokeOpacity)
-        .style("opacity", resetOpacity)
+        .attr("strokeStyle", resetStrokeOpacity) // adjustrgba
+        .attr("globalAlpha", resetOpacity)
 
     // access existing
     let tooltip = d3.select("body").selectAll(".tooltip") // don't bother matching by id; should only ever be one tooltip open at a time
 
     // transition tooltip away
     tooltip.transition().duration(300)
-      .style("opacity", 0)
+      .attr("opacity", 0)
 
     // remove tooltip from DOM
     tooltip.remove();
@@ -3977,7 +4057,8 @@
 //// OTHER HELPER FUNCTIONS
 
   // PARSE, CONVERT, ASSOCIATE
-  function getSubstr(string,i0 = 4) { // defaults for use in converting from textures.js url(); assume format "url(#12345)"
+
+   function getSubstr(string,i0 = 4) { // defaults for use in converting from textures.js url(); assume format "url(#12345)"
     let i1 = string.length - 1;
     return string.substring(i0,i1)
   }
