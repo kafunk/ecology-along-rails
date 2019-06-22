@@ -221,7 +221,7 @@
   var active = d3.select(null);
 
   var zoom = d3.zoom()
-    .translateExtent(paddedExtent0)
+    // .translateExtent(paddedExtent0)
     .scaleExtent(scaleExtent)
     .on("zoom", zoomed)
     .filter(() => {
@@ -386,7 +386,7 @@
       divId: "lakes",
       fullTxt: "Lakes",
       textureType: "paths",
-      textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 24, lighter: 8, shapeRendering: "crispEdges"},
+      textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 12, lighter: 8, shapeRendering: "crispEdges"},
       swatchAdjust: { thicker: 2, heavier: 6 }
       // no keywords, CATEGORY.startsWith("Lake")
     },
@@ -1810,7 +1810,7 @@
     projection.clipExtent(paddedExtent0);
 
     // constrain zoom behavior (scale)
-    zoom.translateExtent(paddedExtent0)
+    // zoom.translateExtent(paddedExtent0)
 
     // if (experience.animating && !experience.manualPause) resumeAnimation();
 
