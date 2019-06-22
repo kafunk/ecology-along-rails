@@ -18,7 +18,8 @@ p, span, a, li {
 a { color: darkmagenta; }
 a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
-svg path { stroke-linejoin: round; } /* pointer-events: visiblePainted; } */
+
+svg path { stroke-linejoin: round; }
   /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
 ul.show-bullets li { list-style: outside; }
@@ -29,6 +30,7 @@ ul.show-bullets--square li { list-style: square; }
   position: absolute;
   top: 0.5; left: 8px;
 }
+
 /* hide details triangle marker until child content added */
 details.hide-triangle > summary {
   list-style: none;
@@ -54,15 +56,8 @@ details > summary > span {
   color: rgba(0,0,0,0.75);
 }
 
-svg#svg {
-  z-index: 3; /* can z-index apply to svg element itself? */
-  pointer-events: none;
-}
-
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
-#veil { pointer-events: none; }
-/* #modal-about,#get-options,#modal-close { pointer-events: auto; } */
 
 #encounters {
   scroll-behavior: smooth;
@@ -84,14 +79,7 @@ svg#svg {
 #dash { overflow-y:hidden; }
 #resizable { height: 120px; }
 
-#dash .resizer { cursor: ns-resize; pointer-events: auto; }
-
-canvas#main { pointer-events: none; }
-
-#base {
-  height: 100%;
-  width: 100%;
-}
+#dash .resizer { cursor: ns-resize; }
 
 /* reverse triangle position and direction on data source details elements  */
 .reverse-order { direction: rtl; }
@@ -99,6 +87,9 @@ canvas#main { pointer-events: none; }
 .reverse-order li .nevermind-reverse {
   direction: ltr; unicode-bidi: embed;
 }
+
+.point-none { pointer-events: none }
+.point-all { pointer-events: all }
 
 .bg-base { background: #2A4C48; }
 /* .bg-main {} */
@@ -113,10 +104,6 @@ canvas#main { pointer-events: none; }
 .txt-fancy { font-family: 'Fredericka the Great', cursive; }
 .txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
-
-/* canvas#background { z-index: 1; } */
-canvas#main { z-index: 2; }
-/* canvas#hover { z-index: 3; } */
 
 .disappear-up {
   position: fixed; top: -600px; transition: 0.6s all;
@@ -139,7 +126,6 @@ canvas#main { z-index: 2; }
   text-align: center;
   padding: 12px 18px;
   border-radius: 2px;
-  pointer-events: none;
   background: honeydew;
   border: 2px;
 }
@@ -148,7 +134,11 @@ canvas#main { z-index: 2; }
 .hidden { visibility: hidden; }
 .txt-xxs { font-size: 0.5em; }
 .txt-compact { line-height: 1.2em; }
+.txt-compact2 { line-height: 0.8em; }
 
+.unstyled {
+ list-style: none;
+}
 .flex1 { order: 1; }
 .flex2 { order: 2; }
 .flex3 { order: 3; }

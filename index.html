@@ -6,7 +6,7 @@
   <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
   <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet' />
   <link href="https://fonts.googleapis.com/css?family=Mirza:400,500,600,700|Buda:300|Quattrocento+Sans:400,400i,700,700i|Fredericka+the+Great|Sirin+Stencil" rel="stylesheet" />
-  <link href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous" rel="stylesheet" />
+  <!-- <link href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous" rel="stylesheet" /> -->
   <link href='css/styles.css' rel='stylesheet' />
 </head>
 <body>
@@ -34,52 +34,44 @@
     <main id="main" class="flex-child flex-child--grow bg-main">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative h-full scroll-hidden">
+      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden"> <!--h-full-->
 
         <!-- map and dash pane -->
         <section id="section" class="flex-child flex-child--grow scroll-hidden bg-section">
 
           <!-- inner map and dash wrapper -->
-          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross h-full relative"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane-->
+          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane--> <!--h-full-->
 
             <!-- map and overlay pane -->
             <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-darken75">
 
-              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative h-full bg-map">
+              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-map"> <!--h-full-->
 
                 <!-- map overlay: buttons, legend, other ui -->
-                <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
+                <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl point-none"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
 
                   <!-- top left // Custom Data UI Elements -->
                   <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z3 none'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
-                    <button disabled id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl' onclick="selectNew()">Select New Route</button>
+                    <button disabled id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl point-all'>Select New Route</button>
                     <!-- keep route choice, reset counter, reset data reveal, begin again -->
                     <button disabled id="replay" class='btn round bg-lighten75 replay mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none'><del>Replay</del></button>
                     <!-- stop/init counter without data resets -->
-                    <button id="play-pause" class='btn round bg-lighten75 play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none'>Play // Pause</button>
+                    <button disabled id="play-pause" class='btn round bg-lighten75 play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none point-all'><del>Play // Pause</del></button>
                   </div>
 
                   <!-- top right // About/Info icon on small screens -->
                   <div id="info" class="absolute top right mr-neg6 z3 none-ml">
-                    <button class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round' onclick="toggleModal('modal-about')">
+                    <button id="info-btn" class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round point-all'>
                       <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
                     </button>
                   </div>
 
-                  <!-- bottom right // Basic/Expected Map Elements -->
-                  <!-- <div id="attribution" class='absolute bottom right mt-neg18 color-lighten50 bg-darken50 px6 round-tl round-bl px12-mm px18-mxl mr-neg3-mm mr-neg6-mxl txt-xs txt-s-mxl txt-shadow-lighten10 z1> -->
-                    <!-- Attribution * ALSO POSITIONED RELATIVE TO DASH PANEL * should be visualized here only when dash hidden -->
-                    <!-- <span>Visualized with D3.js</span>
-                    <span class="px3">||</span>
-                    <span>Routing via to Rome2Rio</span>
-                  </div> -->
-
                   <!-- also top right: zoom buttons -->
-                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column z3 mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
-                    <button id="zoomIn" class="btn btn--pill btn--pill-vt bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm">
+                  <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
+                    <button id="zoomIn" class="btn btn--pill btn--pill-vt bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm z3 point-all">
                       <svg class='icon w18 h18 w24-ml link color-darken50 px0'><use xlink:href='#icon-plus'></use></svg>
                     </button>
-                    <button id="zoomOut" class="btn btn--pill btn--pill-vb bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm">
+                    <button id="zoomOut" class="btn btn--pill btn--pill-vb bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm z3 point-all">
                       <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-minus'></use></svg>
                     </button>
                   </label>
@@ -87,15 +79,7 @@
                 </div> <!-- end of ui-overlay-group -->
 
                 <!-- map svg/canvas -->
-                <div id="stage" class="absolute top bottom right left flex-parent"><!-- flex-parent--center-main flex-parent--center-cross -->
-                  <div id="map" class="flex-child flex-child--grow relative"> <!-- bg-darken50 h-full w-full -->
-                    <svg id="base" class="absolute top left"></svg>
-                    <!-- <canvas id="background" class="absolute top left"></canvas> -->
-                    <canvas id="main" class="absolute top left"></canvas>
-                    <!-- <canvas id="hover" class="absolute top left"></canvas> -->
-                    <svg id="svg" class="absolute top left"></svg>
-                  </div>
-                </div>
+                <div id="map" class="flex-child flex-child--grow bg-darken50 mb-neg6"></div>
 
               </div>
 
@@ -114,14 +98,14 @@
                     <!-- dash expand triggers -->
                     <label id="dash-expand" class="flex-child h24 z2">
                       <!-- dash expand triangle--u -->
-                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full' onclick="expand('dash','up')">
+                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full'>
                         <span id="dash-up" class='icon triangle-l triangle-l--u mx-auto mt-neg18 mt-neg6-mxl'></span>
                       </button>
                     </label>
 
                     <label id="dash-collapse" class="flex-child h12 z2 none">
                       <!-- dash collapse triangle--d -->
-                      <button id="dash-collapse-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround w-full h18' onclick="collapse('dash','down')">
+                      <button id="dash-collapse-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround w-full h18'>
                         <span class='icon triangle-l triangle-l--d mx-auto mt0 mt12-mm'></span>
                       </button>
                     </label>
@@ -157,7 +141,7 @@
                         <div id="resizable" class="flex-child flex-child--grow bg-lighten50 txt-xs txt-s-mm txt-m-mxl round-bl-mm round-br-mm">
 
                           <!-- resizer -->
-                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full opacity50 ml-neg12-mm bg-yellow-light-on-hover z3"></div>
+                          <div class="flex-child resizer child-resizer absolute top mt12 mt24-mm h6 w-full opacity50 ml-neg12-mm bg-yellow-light-on-hover z3 point-all"></div>
 
                           <!-- main content inner wrapper -->
                           <div class='flex-parent flex-parent--space-between-main flex-parent--stretch-cross h-full grid'>
@@ -200,11 +184,11 @@
                                   </div>
 
                                   <!-- sibling resizer -->
-                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z3"></div>
+                                  <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z3 point-all"></div>
 
                                   <!-- main content / dynamically populated legend items  -->
                                   <div id="log-content-wrapper" class="flex-child flex-child--grow align-center w-full bg-lighten75 px12 py6 scroll-auto">
-                                    <div id="legend-log-content" class="flex-parent flex-parent--column flex-parent--center-main border-t border-b border--dash scroll-auto">
+                                    <div id="legend-log-content" class="flex-parent flex-parent--column flex-parent--center-main border-t border-b border--dash scroll-auto unstyled">
                                     </div>
                                   </div>
 
@@ -336,7 +320,7 @@
 
             </div> <!-- end of dash pane -->
 
-            <div id="veil" class="absolute top bottom right left h-full z4 opacity50 bg-lighten50"></div>
+            <div id="veil" class="absolute top bottom right left h-full z4 opacity50 bg-lighten50 point-none"></div>
 
             <!-- modal/loader group -->
             <div id="modal-plus" class="absolute left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none">
@@ -612,7 +596,7 @@
                         </div> <!-- end fieldset wrapper -->
                         <!-- GO button -->
                         <fieldset class="flex-child col col--12 h36">
-                          <button id="submit-btn" class="h-full w-full btn btn--darken50 unround txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main" onclick="onSubmit(this.form.getOption0.value,this.form.getOption1.value)">
+                          <button id="submit-btn" class="h-full w-full btn btn--darken50 unround txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main">
                             <span id="submit-btn-txt" class="txt-fancy2 flex-child txt-l mt-neg12 pt6 mb-neg3">LET'S GO</span>
                             <span id="submit-btn-load" class="flex-child loading loading--s loading--dark none"></span>
                           </button>
@@ -622,7 +606,7 @@
 
                     <!-- modal close button -->
                     <label id="modal-close">
-                      <button class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active round-full px3 py3 mt6 mr6 mt3-mm mr3-mm z5' onclick="toggleModal()">
+                      <button id="modal-close-btn" class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active round-full px3 py3 mt6 mr6 mt3-mm mr3-mm z5'>
                         <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-close'/></svg>
                       </button>
                     </label>
@@ -660,12 +644,12 @@
                     <label id="about-expand" class="flex-child h24 w24-mxl none">
 
                       <!-- about expand triangle--u -->
-                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround h24 w-full none-mxl' onclick="expand('about','up')">
+                      <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround h24 w-full none-mxl'>
                         <span id="about-up" class='icon triangle-l triangle-l--u mx-auto mt-neg6'></span>
                       </button>
 
                       <!-- about expand triangle--l -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z2' onclick="expand('about','left')">
+                      <button id="about-left-btn" class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround border-r px0 none block-mxl z2'>
                         <span class='icon triangle-l triangle-l--l'></span>
                       </button>
 
@@ -675,12 +659,12 @@
                     <label id="about-collapse" class="flex-child h12 w6-mxl z2">
 
                       <!-- about collapse triangle--d -->
-                      <button id="about-down" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl' onclick="collapse('about','down')">
+                      <button id="about-down-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl'>
                         <span class='icon triangle-l triangle-l--d mx-auto'></span>
                       </button>
 
                       <!-- about collapse triangle--r -->
-                      <button class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active border-l unround none block-mxl' onclick="collapse('about','right')">
+                      <button id="about-right-btn" class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active border-l unround none block-mxl'>
                         <span class='icon triangle-l triangle-l--r ml-neg3'></span>
                       </button>
 
