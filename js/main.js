@@ -167,20 +167,13 @@
       .attr("offset", function(d,i) { return i/(numColors-1)*50 + 40 + "%"; })
       .attr("stop-color", d => { return radialGradientScale(d) });
 
-  defs.append("image")
-    .attr("id", "station-icon")
-    .attr("xlink:href","./assets/station.svg")
-    .attr("width", 3.2)
-    .attr("height", 4)
-    .attr("x",-1.6)
-    .attr("y",-2)
-  defs.append("image")
-    .attr("id", "station-icon-sm")
-    .attr("xlink:href","./assets/station.svg")
-    .attr("width", 1.6)
-    .attr("height", 2)
-    .attr("x",-0.8)
-    .attr("y",-1)
+  // inject external SVG file into local svg element
+  d3.xml('./assets/station.svg')
+    .then(data => {
+      // if svg path group stored as symbol element, can be appended directly to SVG (won't render until <use>d as needed)
+      svg.node().append(d3.select(data).select("symbol").node())
+      // defs.node().append(d3.select(data).select("g").node())
+    })
 
 // PROJECTIONS & PATHS
 
@@ -712,16 +705,24 @@
         .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
-    railBase.append("g")
+    let stations = railBase.append("g")
       .attr("id", "rail-stations")
       .selectAll("use")
       .data(sourceData.stations.gj.features)
       .enter().append("use")
         .attr("xlink:href", "#station-icon")
-        .attr("x", d => { return projection(d.geometry.coordinates)[0]; })
-        .attr("y", d => { return projection(d.geometry.coordinates)[1]; })
+        .attr("x", d => { return projection(d.geometry.coordinates)[0] - 1.6; })
+        .attr("y", d => { return projection(d.geometry.coordinates)[1] - 2; })
+        .attr("width", 3.2)
+        .attr("height", 4)
         .property("name", d => { return cityState(d.properties); })
         .style("opacity", 0.8)
+        .style("stroke-opacity", 0.6)
+        .style("fill","lightsalmon")
+        .style("stroke","indianred")
+        .style("stroke-width","1px")
+        .property("orig-opacity",0.8)
+        .property("orig-stroke-opacity",0.6)
         .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
@@ -1165,6 +1166,19 @@
 
       let routeBoundsIdentity = getIdentity(getCenterTransform(path.centroid(data1),options));
 
+      console.log(routeBoundsIdentity)
+      console.log(width)
+      console.log(bottomPad)
+
+      // TOO MUCH ADJUST
+      // {k: 7, x: 1381.7677281068557, y: -322.12930394631417}
+      // 1331
+      // 94.66667
+
+      // TOO LITTLE ADJUST
+
+      // ABOUT RIGHT ADJUST
+
       // control timing with transition start/end events
       svg.transition().duration(zoomDuration).ease(zoomEase)
         .call(zoom.transform, routeBoundsIdentity)
@@ -1368,12 +1382,18 @@
           .selectAll("use")
           .data(received.allStops.slice(2))  // ignore first 2 elements, which are begin/end pts and represented elsewhere
           .enter().append("use")
-            .attr("xlink:href", "#station-icon-sm")
-            .attr("x", d => { return projection([d.lng,d.lat])[0]; })
-            .attr("y", d => { return projection([d.lng,d.lat])[1]; })
+            .attr("xlink:href", "#station-icon")
+            .attr("x", d => { return projection([d.lng,d.lat])[0] - 0.8; })
+            .attr("y", d => { return projection([d.lng,d.lat])[1] - 1; })
+            .attr("width", 1.6)
+            .attr("height", 2)
             .style("opacity", 0) // was 0.6
+            .style("fill","dimgray")
+            .style("stroke","black")
+            .style("stroke-width","0.4px")
             .property("name", d => d.shortName)
             .property("orig-opacity", 0.6)  // specified for mouseenter -> mouseout reset
+            .property("orig-stroke-opacity",0.6)
             .on("mouseenter", onMouseenter)
             .on("mouseout", onMouseout)
 
@@ -1792,6 +1812,8 @@
 //// LAYOUT
 
   function adjustSize() {
+
+console.log("adjusting size")
 
     // get updated dimensions
     let updated = calcSize();
@@ -3546,9 +3568,9 @@
     pauseAnimation();
   }
 
-  function resumeAnimation() {
-    // d3.timerFlush();
-    console.log("resuming @ ",experience.pausedAt)
+  function resumeAnimation(delay = 0, time = experience.pausedAt) {
+    console.log(delay)
+    console.log(time)
     // disable free zooming
     svg.on("wheel.zoom",null)
     svg.on("scroll.zoom",null)
@@ -3561,8 +3583,12 @@
     experience.animating = true;
     experience.paused = false;
     experience.manualPause = false;
+    experience.pausedAt = null;
     // restart timer(s) (at??)
-    timer.restart(animate)
+    console.log("resuming animation @",time)
+    // if (animatable)
+    // d3.timerFlush();
+    timer.restart(animate,delay); // ,time);
   }
 
   function selectNew() {
@@ -4053,7 +4079,7 @@
 //// OLD/ADDITIONAL NOTES: ////
 
 // STUMPING ME RIGHT NOW
-  // turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin) (*)
+  // effectively turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin) (*)
 
 // MEDIUM TASKS
   // automatically order legend log categories
@@ -4121,33 +4147,14 @@
 
 ////// NEWER NOTES /////
 
-// SOLICITING FEEDBACK
-  // Would appreciate general impressions, feedback, what works, what doesn't, the little things I am no longer seeing after all these months
-
-  // if i still can't stop, what of below would you be most interested in seeing?
-    // ability to select route visually, by clicking on city/rail stn locations from map
-    // visualizing all number data tracker within dashboard (compass, elevation grid)
-    // mousing over log/narration elements highlights all within map
-    // make polygon reveal more interesting/varied: https://beta.observablehq.com/@mbostock/randomized-flood-fill
-
 // CHANGES / HAVE DONE
-  // switch to using Canvas elements wherever possible
-    // all baselayer elements == canvas
-    // enrich lines = svg
-    // remaining enrich = canvas
-    // all toplayer and hidden elements == svg (full-route, semi-simp, zoomalong, headlights, trainpt, quadtree data)
-  // integrate canvas and svg seamlessly with one another
-  // restructure render/zoom/reveal appropriately
   // fixed legend-log symbol issue
   // textures.js svg textures => img srcs that can be rendered in canvas and other html divs
   // start of pause functionality (pause works; resuming the issue)
   // start of effective reset()
   // added categorical background-images to currently passing div (communicates differences without relying on intrusive column headings)
   // when select new route form not visible, select new route btn !== disabled (plus opposite)
-  // SIDE EFFECTS OF CHANGED:
-    // trainPt, headlights, and fullPath now animations (vs transitions) coordinated with d3.timer
-    // ZOOM changes projection itself, vs transforming drawn map
-    // arc pts no longer preprojected
+  // trainPt, headlights, and fullPath now animations (vs transitions) coordinated with d3.timer
 
 // CURRENTLY WORKING ON
   // debugging PAUSE functionality (how to pass and utilize pausedAt variable?)
@@ -4155,10 +4162,6 @@
     // ensure select new route btn in particular maintains original event listeners
 
 // PRIORITY FIXES (COMING ASAP)
-  // resolve stroke dash interpolation along route line now that using d3.timer vs prev transitions (https://bl.ocks.org/kafunk/91f7b870b79c2f104f1ebacf4197c9dc)
-  // make sure globalAlpha set on all dimmables to avoid momentary blackout at begin
-  // fixing a few non-rendering textures (pa-grp3: habitat & other-secondary)
-  // fix bottom zoom btn glitchiness
   // make form fields like responsive like butter
     // also:
       // origin !!= destination (!!= = cannot)
@@ -4172,11 +4175,9 @@
   // logBackground river should be taller than wide? interweave with mirrored dashed line?
   // station updates:
     // REMOVE: Port Kent, NY
-  // while animating, single click on map PAUSES (in addition to explicit button)
 
 // ADDITIONS (COMING SOON)
-  // * adding mouseover functionality * (see notes below) to Canvas elements to approximate visual affordances of SVG (https://kafunk.github.io/eco-rails/)
-  // integating any other things that were better about old version (layering of colors?)
+  // while animating, single click on map PAUSES (in addition to explicit button)
   // automatic ordering of legend-log category (so pa-grp3 does not appear above pa-grp1, even if that is the order in which features were encountered)
   // visual affordance/invitation: large transparent play btn simulates 'click' upon animation begin, then visually collapses into much smaller play/pause button in top left corner
   // double size of background-images that populate sections of "currently passing" by flipping down mirrored version of first, then set background-image to repeat for continuous coverage
@@ -4184,48 +4185,16 @@
 
 // MAYBE
   // more performance fixes
-    // add ids to all canvas data for faster pairing upon rerender
-    // Canvas => WebGL? (stardust library)
     // Setting up a server to store and provide requested route data (currently querying files only after importing all possible options)
     // Refactoring little areas of my script, eg:
-      // within zoomed: use context.translate() and .scale() instead of updating projection
       // using path.measure() or path.area() instead of turf.length() calculations to determine transition variables (mostly timing)
     // appropriately truncating coordinates and other values wherever possible
     // slim library imports / take only what I need
     // dynamically simplifying map geometries
   // more intricate styling
-    // something akin to https://observablehq.com/@mbostock/randomized-flood-fill
+    // if canvas: something akin to https://observablehq.com/@mbostock/randomized-flood-fill
     // plus interpolating between opacity, visibility, colors, location, size
-  // new riverBlue
 
-// NOTES
-  // STRUCTURE
-    // layerGroup order:
-      // background (separate canvas) (OR SVG?)
-      // baselayers (context)
-      // midlayers (enrich pool: polygons, lines, then pts)
-      // toplayers (journey/route) ==> SVG?
-      // hover elements (separate canvas)
-    // additionally possible canvas classes: line spread split background base mid over mesh map icon
-// NOTES
-  // RENDERING USING CANVAS VS SVG
-    // rotate values in radians vs degrees
-    // path, line etc make actual context call / return null vs returning path string
-    // background vs fill url
-// NOTES
-  // MOUSEOVER: get mouse coordinate via layerX,Y and/or offsetX,y
-  // query canvas state to return current feature at coords
-  // select and update feature with visual highlights / tooltip
-
-// RESOURCES
-  // Stardust.js: https://www.cs.ucsb.edu/~holl/pubs/Ren-2017-EuroVis.pdf
-  // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
-  //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
-  // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
-  // https://beta.observablehq.com/@mbostock/randomized-flood-fill
-  // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
-  // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
-  // https://www.datamake.io/blog/d3-zoom#geo-canvas!
 
 // LATEST NOTES
   // BASE & ENRICH POLYGONS = CANVAS ELEMENTS?
@@ -4242,3 +4211,36 @@
     // arrow-out to expand about section
     // start/stop stations remain large and color-coded
     // roadless areas being interpreted as pa-grp3; fix (nylon)
+
+// if Canvas:
+  // have done:
+    // all baselayer elements == canvas
+    // enrich lines = svg
+    // remaining enrich = canvas
+    // all toplayer and hidden elements == svg (full-route, semi-simp, zoomalong, headlights, trainpt, quadtree data)
+    // integrate canvas and svg seamlessly with one another
+    // restructure render/zoom/reveal appropriately
+    // STRUCTURE
+      // layerGroup order:
+        // background (separate canvas) (OR SVG?)
+        // baselayers (context)
+        // midlayers (enrich pool: polygons, lines, then pts)
+        // toplayers (journey/route) ==> SVG?
+        // hover elements (separate canvas)
+      // additionally possible canvas classes: line spread split background base mid over mesh map icon
+    // RENDERING USING CANVAS VS SVG
+      // rotate values in radians vs degrees
+      // path, line etc make actual context call / return null vs returning path string
+      // background vs fill url
+    // MOUSEOVER: get mouse coordinate via layerX,Y and/or offsetX,y
+    // query canvas state to return current feature at coords
+    // select and update feature with visual highlights / tooltip
+  // RESOURCES
+    // Stardust.js: https://www.cs.ucsb.edu/~holl/pubs/Ren-2017-EuroVis.pdf
+    // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
+    //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
+    // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
+    // https://beta.observablehq.com/@mbostock/randomized-flood-fill
+    // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
+    // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
+    // https://www.datamake.io/blog/d3-zoom#geo-canvas!
