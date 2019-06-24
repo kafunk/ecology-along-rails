@@ -1706,6 +1706,7 @@
   }
 
   function animate(elapsed) {
+    console.log(elapsed)
     // dispatch another move event
     // dispatch.call("move", trainPt)
     trainMove(elapsed)
@@ -2439,7 +2440,7 @@ console.log("adjusting size")
   }
 
   function arrived() {
-    // d3.timerFlush();
+    // stop animation
     timer.stop()
     let arrived = d3.now();
     // reset several state variables
@@ -3549,15 +3550,16 @@ console.log("adjusting size")
   }
 
   function pauseAnimation() {
-    timer.stop();
     // track state
     experience.animating = false;
     experience.paused = true;
-    experience.pausedAt = d3.now();
+    experience.pausedAt = d3.now() - timer._time;
+    // stop timer (after pausedAt stored)
+    timer.stop();
     // toggle play/pause
     d3.select("#play-pause")
       .text("Play")
-      .on("click.play",resumeAnimation) // (pausedAt))
+      .on("click.play",resumeAnimation)
       .on("click.pause",null)
     // allow free zooming while paused
     svg.call(zoom)
@@ -3568,27 +3570,24 @@ console.log("adjusting size")
     pauseAnimation();
   }
 
-  function resumeAnimation(delay = 0, time = experience.pausedAt) {
-    console.log(delay)
-    console.log(time)
+  function resumeAnimation(delay = 0, time = d3.now() - experience.pausedAt) {
     // disable free zooming
     svg.on("wheel.zoom",null)
     svg.on("scroll.zoom",null)
-    // toggle pause-play
-    d3.select("#play-pause")
-      .text("Pause")
-      .on("click.pause", manualPause)
-      .on("click.play", null)
     // track state
     experience.animating = true;
     experience.paused = false;
     experience.manualPause = false;
     experience.pausedAt = null;
-    // restart timer(s) (at??)
-    console.log("resuming animation @",time)
-    // if (animatable)
-    // d3.timerFlush();
-    timer.restart(animate,delay); // ,time);
+    // restart timer @ passed time
+    // if (animatable) ?
+    d3.timerFlush();
+    timer.restart(animate,delay,time);
+    // toggle pause-play
+    d3.select("#play-pause")
+      .text("Pause")
+      .on("click.pause", manualPause)
+      .on("click.play", null)
   }
 
   function selectNew() {
