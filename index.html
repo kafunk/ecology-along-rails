@@ -51,31 +51,30 @@
                 <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl point-none"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
 
                   <!-- top left // Custom Data UI Elements -->
-                  <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z3 none'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
-                    <button disabled id="select-new" class='btn round bg-lighten75 reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl point-all'>Select New Route</button>
+                  <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my6 py3 txt-xs txt-s-mm txt-m-mxl z3 none '><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
+                    <button disabled id="select-new" class='btn round reset-options mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active'>Select New Route</button>
                     <!-- keep route choice, reset counter, reset data reveal, begin again -->
-                    <button disabled id="replay" class='btn round bg-lighten75 replay mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none'><del>Replay</del></button>
+                    <!-- <button disabled id="replay" class='btn round replay mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active'><del>Replay</del></button> -->
                     <!-- stop/init counter without data resets -->
-                    <button disabled id="play-pause" class='btn round bg-lighten75 play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl none point-all'><del>Play // Pause</del></button>
+                    <button disabled id="play-pause" class='btn round play-pause mx3 mx6-mxl px6 py3 py6-ml px12-ml py3-mxl point-all none color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active'>Play // Pause</button>
                   </div>
 
                   <!-- top right // About/Info icon on small screens -->
                   <div id="info" class="absolute top right mr-neg6 z3 none-ml">
-                    <button id="info-btn" class='btn color-lighten75 bg-transparent color-darken25-on-hover color-darken50-active round point-all'>
+                    <button id="info-btn" class='btn color-lighten75 bg-transparent color-accent1-on-hover color-accent2-on-active round point-all'>
                       <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
                     </button>
                   </div>
 
                   <!-- also top right: zoom buttons -->
                   <label id="zoom" class="absolute top right flex-parent-inline flex-parent--column mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
-                    <button id="zoomIn" class="btn btn--pill btn--pill-vt bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm z3 point-all">
-                      <svg class='icon w18 h18 w24-ml link color-darken50 px0'><use xlink:href='#icon-plus'></use></svg>
+                    <button id="zoomIn" class="btn btn--pill btn--pill-vt round zoom-btn px3 py3 px6-mm px3-ml py6-mm z3 point-all bg-lighten75">
+                      <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-plus'></use></svg>
                     </button>
-                    <button id="zoomOut" class="btn btn--pill btn--pill-vb bg-lighten75 bg-darken25-on-hover bg-darken75-on-active round zoom-btn px3 py3 px6-mm px3-ml py6-mm z3 point-all">
+                    <button id="zoomOut" class="btn btn--pill btn--pill-vb round zoom-btn px3 py3 px6-mm py6-mm px3-ml z3 point-all bg-lighten75">
                       <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-minus'></use></svg>
                     </button>
                   </label>
-
                 </div> <!-- end of ui-overlay-group -->
 
                 <!-- map svg/canvas -->

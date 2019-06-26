@@ -5,6 +5,7 @@
   --bg-dark2: #472e37;
   --bg-accent1: #dbd99f;
   --bg-accent2: #5d7876;
+  --bg-accent3: darkmagenta;
 }
 
 body { margin:0; padding:0; }
@@ -99,11 +100,26 @@ details > summary > span {
 .bg-modal { background: #adbab8; }
 .bg-accent1 { background: var(--bg-accent1); }
 .bg-accent2 { background: var(--bg-accent2); }
+.bg-accent3 { background: var(--bg-accent3) !important; }
 .bg-dark1 { background: var(--bg-dark1); }
 .bg-dark2 { background: var(--bg-dark2); }
 .txt-fancy { font-family: 'Fredericka the Great', cursive; }
 .txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
+
+/* adding on to assembly styling structure */
+.bg-accent1-on-hover:hover {
+  background: var(--bg-accent3) !important;
+}
+.bg-accent2-on-active:active {
+  background: var(--bg-dark2) !important;
+}
+.color-accent1-on-hover:hover {
+  color: var(--bg-accent3) !important;
+}
+.color-accent2-on-active:active {
+  color: var(--bg-dark2) !important;
+}
 
 .disappear-up {
   position: fixed; top: -600px; transition: 0.6s all;
