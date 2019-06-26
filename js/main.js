@@ -33,6 +33,8 @@
   var experience = { initiated: false, animating: false, paused: false }
   var togglesOff = { info: false, select: false }
   var panned = { flag: false, transform: null, centerAdjust: null, i0: 0, i1: 0 }
+  var transitionResume = false;
+  var reversing = { flag: false, i: 0, t: null, tPad: null }
 
  // OTHER WORTHWHILE
 
@@ -206,8 +208,14 @@
      .clamp(true);
 
   d3.select("label#zoom").attr("value",scale0)
-  d3.select("button#zoomIn").on('click', zoomClick);
-  d3.select("button#zoomOut").on('click', zoomClick);
+  d3.select("button#zoomIn")
+    .on('click', zoomClick)
+    .on('mouseenter', highlightBtn)  // triggering mouseover style changes programmatically remedies bug of #zoomIn's hover state being triggered concurrent to #zoomOut's
+    .on('mouseleave', removeHighlight);
+  d3.select("button#zoomOut")
+    .on('click', zoomClick)
+    .on('mouseenter', highlightBtn)
+    .on('mouseleave', removeHighlight)
 
   var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0);
 
@@ -524,7 +532,7 @@
     },
     "general": {
       divId: "pa-gen",
-      fullTxt: "Other Primary",
+      fullTxt: "Other - Primary",
       keywords: ["national","state","provincial","park"].map(d => d.toUpperCase()),
       weight: 8,
       color: groupGreen,
@@ -544,11 +552,11 @@
 
 // CUSTOM DISPATCH BEHAVIOR
 
-  let dispatch = d3.dispatch("depart","move","encounter","arrive")
+  let dispatch = d3.dispatch("depart","encounter","arrive","reverse")
     .on("depart.train", departed)
-    .on("move.train", trainMove)
     .on("encounter.trigger", encountered)
     .on("arrive.train", arrived)
+    .on("reverse.train", reversed)
 
 // MAKE DASHBOARD RESIZABLE from http://jsfiddle.net/meetamit/e38bLdjk/1/
 
@@ -1166,9 +1174,9 @@
 
       let routeBoundsIdentity = getIdentity(getCenterTransform(path.centroid(data1),options));
 
-      console.log(routeBoundsIdentity)
-      console.log(width)
-      console.log(bottomPad)
+      // console.log(routeBoundsIdentity)
+      // console.log(width)
+      // console.log(bottomPad)
 
       // TOO MUCH ADJUST
       // {k: 7, x: 1381.7677281068557, y: -322.12930394631417}
@@ -1511,8 +1519,14 @@
     // get zoomFollow object including simplified zoomArc (if applicable) and first/last zoom frames
     let zoomFollow = getZoomFollow(routeObj);
 
-    // bind zoomArc to DOM for tracking only (not visible)
+    // need to remain accessible for animate():
+    tFull = tpm * zoomFollow.fullDist;
+    trainPt = g.select("#train-point");
+    headlights = g.select("#headlights");
+    fullPath = g.select("#full-route");
+    semiSimp = g.select("#semi-simp");
     if (zoomFollow.arc.length) {
+      // bind zoomArc to DOM for tracking only (not visible)
       zoomArc = g.append("path")
         .attr("id", "zoom-arc")
         .datum(projectArray(zoomFollow.arc))
@@ -1525,9 +1539,44 @@
       zoomLength = zoomArc.node().getTotalLength();
     }
 
+    if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
+
+      // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
+      let bounds2 = path.bounds(data2),
+          bounds3 = path.bounds(data3),
+          boundsHeight2 = bounds2[1][1] - bounds2[0][1],
+          boundsHeight3 = bounds3[1][1] - bounds3[0][1],
+          boundsHeightAvg = (boundsHeight2 + boundsHeight3)/2,
+          boundsTransform2 = getTransform(bounds2),
+          boundsTransform3 = getTransform(bounds3);
+
+      let zoomScale = Math.min(maxInitZoom,Math.ceil(Math.min(boundsTransform2.k,boundsTransform3.k))),
+          bottomPad = (width > 640) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3 : (d3.select("#dash").node().clientHeight + boundsHeightAvg)/2;
+          // bottomPad = (d3.select("#dash").node().clientHeight - boundsHeightAvg)/2.75;
+
+      // store for getCenterTransform called without zoomAlongOptions
+      defaultOptions.spec.center.padBottom = bottomPad;
+
+      zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale*2, padBottom: bottomPad }};
+
+      let p0 = zoomArc.node().getPointAtLength(0),
+          p1 = zoomArc.node().getPointAtLength(zoomLength);
+
+      // then calc final first/last frames at constant scale with center centered! (note diff fn call)
+      firstIdentity = getIdentity(getCenterTransform([p0.x,p0.y],zoomAlongOptions))
+
+      lastIdentity = getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
+
+      tPad = zoomFollow.tpsm * zoomFollow.focus;  // use tpsm to delay zoomFollow until train hits mm <zoomFollow.focus>; tps(implified)m because focusPt is calculated from simplified route
+
+    } else {
+      firstIdentity = routeBoundsIdentity,
+       lastIdentity = routeBoundsIdentity;
+    }
+
     // final user prompt/countdown??
     // if (confirm("Ready?")) {
-      getSet(zoomFollow,routeBoundsIdentity); // initiate movement!
+    getSet(); // initiate movement!
     // }
 
     function getZoomFollow(routeObj) {
@@ -1589,58 +1638,14 @@
 
   }
 
-  function getSet(zoomFollow,routeBoundsIdentity) {
-
-    let t = zoomDuration;
-
-    // need to remain accessible for animate():
-    tFull = tpm * zoomFollow.fullDist;
-    trainPt = g.select("#train-point");
-    headlights = g.select("#headlights");
-    fullPath = g.select("#full-route");
-    semiSimp = g.select("#semi-simp");
-
-    if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
-
-      // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
-      let bounds2 = path.bounds(data2),
-          bounds3 = path.bounds(data3),
-          boundsHeight2 = bounds2[1][1] - bounds2[0][1],
-          boundsHeight3 = bounds3[1][1] - bounds3[0][1],
-          boundsHeightAvg = (boundsHeight2 + boundsHeight3)/2,
-          boundsTransform2 = getTransform(bounds2),
-          boundsTransform3 = getTransform(bounds3);
-
-      let zoomScale = Math.min(maxInitZoom,Math.ceil(Math.min(boundsTransform2.k,boundsTransform3.k))),
-          bottomPad = (width > 640) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3 : (d3.select("#dash").node().clientHeight + boundsHeightAvg)/2;
-          // bottomPad = (d3.select("#dash").node().clientHeight - boundsHeightAvg)/2.75;
-
-      // store for getCenterTransform called without zoomAlongOptions
-      defaultOptions.spec.center.padBottom = bottomPad;
-
-      zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale*2, padBottom: bottomPad }};
-
-      let p0 = zoomArc.node().getPointAtLength(0),
-          p1 = zoomArc.node().getPointAtLength(zoomLength);
-
-      // then calc final first/last frames at constant scale with center centered! (note diff fn call)
-      firstIdentity = getIdentity(getCenterTransform([p0.x,p0.y],zoomAlongOptions))
-
-      lastIdentity = getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
-
-      tPad = zoomFollow.tpsm * zoomFollow.focus;  // use tpsm to delay zoomFollow until train hits mm <zoomFollow.focus>; tps(implified)m because focusPt is calculated from simplified route
-
-    } else {
-      firstIdentity = routeBoundsIdentity,
-       lastIdentity = routeBoundsIdentity;
-    }
-
+  function getSet(again = false) {
     // coordinate zoom to first frame, turning on headlights, dimming background, expanding dash, and ultimately initiating train and route animation
+    let t = zoomDuration;
     svg.transition().duration(t).ease(zoomEase)
       .call(zoom.transform, firstIdentity)
       .on("start", () => {
         // dim background layers
-        dimBackground(t/2)
+        if (reversing.i < 1) dimBackground(t/2)
         // turn on headlights
         headlights.transition().delay(t/2).duration(t/2).style("opacity",0.6)
         // schedule fade/removal of headlights upon train arrival
@@ -1706,52 +1711,81 @@
   }
 
   function animate(elapsed) {
-    console.log(elapsed)
-    // dispatch another move event
-    // dispatch.call("move", trainPt)
-    trainMove(elapsed)
-    // zoomFollow if necessary
-    if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) {
-      let transform = getZoomAlongTransform(elapsed);
-      svg.call(zoom.transform, getIdentity(transform))
+    if (reversing.flag) {
+      // timer countDOWN
+      elapsed = reversing.t - elapsed;
+      // zoomFollow if necessary
+      if (zoomArc && elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) zoomAlong(elapsed,reversing.t,reversing.tPad);
+      if (elapsed < 0) {
+        timer.stop();
+        reversing.flag = false;
+        getSet(true); // again = true; ensure quadtree encounters only triggering reveal, not readding to dom
+      }
+    } else {  // not reversing
+      // zoomFollow if necessary
+      if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) zoomAlong(elapsed);
+      // watch for animation end
+      if (elapsed > tFull) {
+        timer.stop();
+        // signal train arrival
+        dispatch.call("arrive"); // , this);
+      }
     }
+
+    // regardless of animation direction (forward/back)
+    // call another move event
+    trainMove(elapsed)
     // update dash trackers
     trackerUpdate(getMM(elapsed))
-    // watch for animation end // times must be spot on!
-    if (elapsed > tFull) {
-      timer.stop();
-      // signal train arrival
-      dispatch.call("arrive", this);
+
+    function zoomAlong(elapsed, t1 = tFull, tP = tPad) {
+      let transform = getZoomAlongTransform(elapsed,t1,tP);
+      svg.call(zoom.transform, getIdentity(transform))
     }
+
   }
 
-  function getZoomAlongTransform(elapsed) {
+  function getZoomAlongTransform(elapsed,t1,tP) {
     // KEEP TRAIN NODE IN CENTER-ISH OF FRAME @ CURRENT ZOOM LEVEL K
     // for zoomAong between t0,t1 to get eased t between 0,1
 
-    // DON'T FUCK WITH ME (HARD EARNED)
-    let simpT = d3.scaleLinear().domain([tPad,tFull-tPad]),
+    // get eased point at length
+    let simpT = d3.scaleLinear().domain([tP,t1-tP]),
         simpL = t => trainEase(t) * zoomLength,
             l = simpL(simpT(elapsed)),
-            p = zoomArc.node().getPointAtLength(l),
-            k = +d3.select("label#zoom").attr("value");
+            p = zoomArc.node().getPointAtLength(l);
 
     // if user has manually panned since animation start, offset zoomAlong center by translate values
     if (panned.flag) {
       // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
       if (panned.i1 > panned.i0) {
+
         panned.i0++;
+
+        pauseAnimation();
+
+        // get current transform?
+        // let translateMatrix = g.node().transform.animVal[0].matrix,
+        //         scaleMatrix = g.node().transform.animVal[1].matrix,
+        //    currentTransform = { k: scaleMatrix.a, x: translateMatrix.e, y: translateMatrix.f },
+        //       currentCenter = getCenterFromTransform(currentTransform);
+
         // get current center pt by working backwards through centerTransform() from stored panned.transform
         let currentCenter = getCenterFromTransform(panned.transform);
+
+        // get difference btween p and currentCenter
         panned.centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
-        // resume from here?
-        // if (!experience.manualPause) resumeAnimation();
+
+        // resume again!
+        if (!experience.manuallyPaused) resumeAnimation();
+
       }
+      // once any pan event on record, adjust center according
       p.x += panned.centerAdjust[0],
       p.y += panned.centerAdjust[1];
     }
 
-    zoomAlongOptions.scale = k;
+    zoomAlongOptions.scale = +d3.select("label#zoom").attr("value");
 
     // calculate translate necessary to center data within extent
     return getCenterTransform([p.x,p.y],zoomAlongOptions);
@@ -1816,6 +1850,8 @@
 
 console.log("adjusting size")
 
+    if (experience.animating && !experience.paused) pauseAnimation();
+
     // get updated dimensions
     let updated = calcSize();
 
@@ -1835,7 +1871,7 @@ console.log("adjusting size")
     // constrain zoom behavior (scale)
     // zoom.translateExtent(paddedExtent0)
 
-    // if (experience.animating && !experience.manualPause) resumeAnimation();
+    if (experience.animating && !experience.manuallyPaused) resumeAnimation();
 
   }
 
@@ -2027,9 +2063,9 @@ console.log("adjusting size")
 
 //// ZOOM BEHAVIOR
   function togglePause() {
-    if (experience.animating && !experience.manualPause) {
+    if (experience.animating && !experience.paused) {
       manualPause()
-    } else if (experience.animating && experience.manualPause) {
+    } else if (experience.animating && experience.manuallyPaused) {
       resumeAnimation();
     }
   }
@@ -2051,23 +2087,27 @@ console.log("adjusting size")
     // keep zoom buttons up to date
     d3.select("label#zoom").attr("value", tk)
 
-    if (d3.event.sourceEvent && experience.animating) {  // d3.event.sourceEvent specified for wheel and mouse events only; since wheel.zoom disabled while experience.animating, user must be panning
+    if (d3.event.sourceEvent && experience.animating && !experience.manuallyPaused) {
+      // if user pans while animation actively underway, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
 
-      pauseAnimation();
+      if (!experience.paused) pauseAnimation();
 
       panned.flag = true,
       panned.transform = transform;
       ++panned.i1;
 
-      if (!experience.manualPause) resumeAnimation();
+      if (!experience.manuallyPaused) resumeAnimation();
 
+    } else if (d3.event.sourceEvent && experience.initiated && d3.event.sourceEvent.type === "mousemove") {
+      // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame)
+      transitionResume = true;
     }
 
   }
 
   function zoomClick() {
 
-    // if (experience.animating) pauseAnimation();
+    if (experience.animating && !experience.paused) pauseAnimation();
 
     // this.parentNode holds stable zoom value shared by both zoomIn and zoomOut buttons
     let oScale = +d3.select(this.parentNode).attr("value"),
@@ -2105,19 +2145,24 @@ console.log("adjusting size")
 
     }
 
-    // if (experience.animating && !experience.manualPause) resumeAnimation();
+    if (experience.animating && !experience.manuallyPaused) resumeAnimation();
 
   }
 
   function getCenterFromTransform(transform,options) {
     // get current center by working backwards through centerTransform() from current transform
 
-    let opts = {...defaultOptions.centerTransform, ... options};
+    let opts = {...defaultOptions.centerTransform, ...options};
 
-    let pt0 = (transform.x - opts.translate0[0]) / -transform.k,
-        pt1 = (transform.y - opts.translate0[1]) / -transform.k;
+    // let x = (transform.x - opts.translate0[0]) / -transform.k,
+    //     y = (transform.y - opts.translate0[1]) / -transform.k;
 
-    return [pt0,pt1];
+    // return [x,y];
+
+    let x2 = ((transform.x - opts.translate0[0]) / -transform.k) - opts.padRight + opts.padLeft,
+        y2 = ((transform.y - opts.translate0[1]) / -transform.k) - opts.padBottom + opts.padTop;;
+
+    return [x2,y2];
 
   }
 
@@ -2364,6 +2409,40 @@ console.log("adjusting size")
 
   }
 
+  function prereverse() {
+
+    transPt0 = fullPath.node().getPointAtLength(fullLength);
+    rotatePt0 = semiSimp.node().getPointAtLength(semiSimpLength);
+
+    eased = (t, t1 = reversing.t) => trainEase(t/t1);
+    // routeDashInterpolator = d3.interpolateString("0," + fullLength, fullLength + "," + fullLength);
+
+    // // setup searchExtent for headlights intersecting quadtree reps
+    // let sectorBBox = headlights.node().getBBox(),
+    //       arcWidth = sectorBBox.width,
+    //      arcHeight = sectorBBox.height //, // ADJUSTABLE FOR NON-VISIBLE EXTENSION OF SEARCH EXTENT
+
+    let rotate0 = headlights.node().transform.animVal[1].angle || 0; // final rotate
+
+    // // calculate initial search extent for quadtree
+    // let sectorExtent = [[-arcWidth/2,-arcHeight],[arcWidth/2,0]],
+    // translatedExtent = translateExtent(sectorExtent,transPt0.x,transPt0.y);
+
+    // // searchExtent is sector (headlight) extent translatedThenRotated
+    // searchExtent = rotateExtent(translatedExtent,rotate0,[transPt0.x,transPt0.y]);
+
+console.log(prevTranslate)
+console.log([transPt0.x,transPt0.y])
+console.log(prevRotate)
+console.log(rotate0)
+console.log(rotatePt0)
+    // save newly determined values as previous values
+    // prevTranslate = [transPt0.x,transPt0.y];
+       // prevExtent = searchExtent;
+       // prevRotate = rotate0;
+
+  }
+
   function trainMove(t) { // called by animate() following dispatch
 
     // calculate new position
@@ -2374,16 +2453,16 @@ console.log("adjusting size")
 
     // train moves along route
     trainPt.attr("transform", transformString);
-    // translateAlong(fullPath,fullT,elapsedT) // goTrain
+    // was translateAlong(fullPath,fullT,elapsedT) // goTrain
 
     // headlights simulate search for triggerPts
     headlights.attr("transform",transformString);
-    // bearWithMe(fullPath,semiSimp,rotate0,fullT,elapsedT) // lightSearch
+    // was bearWithMe(fullPath,semiSimp,rotate0,fullT,elapsedT) // lightSearch
 
     // traversed path illuminated with color as train progresses
     fullPath.style("opacity",1)
     fullPath.style("stroke-dasharray",routeDashInterpolator(eased(t)))
-    // tweenDash2(fullPath,fullT,elapsedT) // unfurlPath
+    // was tweenDash2(fullPath,fullT,elapsedT) // unfurlPath
 
     // get adjusted quadtreeRep searchExtent on each trainMove
     let dx = currentTranslate[0] - prevTranslate[0],
@@ -2428,8 +2507,10 @@ console.log("adjusting size")
     // track state
     experience.animating = true;
     // show play-pause btn
-    d3.select("#play-pause").classed("none",false)
-      .text("Pause")
+    d3.select("#play-pause")
+      .classed("none",false)
+      .property("disabled", false)
+      .text("II")
       .on("click.pause", pauseAnimation)
       .on("click.play", null)
     // start global timers
@@ -2446,7 +2527,7 @@ console.log("adjusting size")
     // reset several state variables
     experience.animating = false;
     experience.paused = false;
-    experience.manualPause = false;
+    experience.manuallyPaused = false;
     experience.pausedAt = null;
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
@@ -2456,11 +2537,66 @@ console.log("adjusting size")
     // avoid slight tracker disconnects at end
     d3.select("#current-miles").text(totalMiles)
     d3.select("#current-time").text(totalTime)
-    // hide play-pause btn
-    d3.select("#play-pause").classed("none",true)
+    // update play-pause btn
+    d3.select("#play-pause")
+      .text('\u21BB')
+      .on("click.replay",replayAnimation)
+      .on("click.play",null)
+      .on("click.pause",null)
+      // .property("disabled", true); // no need to hide completely
     // output elsewhere?
     console.log("train arrived @ " + arrived)
     console.log("unique encounters",uniqueEncounters.size)
+  }
+
+  function replayAnimation() {
+    // update play-pause icon
+    d3.select("#play-pause")
+      .text('\u25BA') // Play
+      .on("click.play",resumeAnimation)
+      .on("click.pause",null)
+      .on("click.replay",null)
+    // confirm at final identity
+    svg.transition().duration(750).ease(zoomEase)
+      .call(zoom.transform, lastIdentity) // may already be here
+      .on("start", () => {
+        console.log("prereversing")
+        prereverse();
+      })
+      .on("end",() => {
+        console.log("dispatching reverse")
+        dispatch.call("reverse")
+      })
+  }
+
+  function reversed() {
+    console.log("reversing")
+    console.log("tfull!",tFull) // eg 110206
+    // console.log(timer) // Infinity
+    console.log(d3.now()) // eg 157372
+
+    // track state
+    reversing.flag = true;
+    reversing.i++;
+    reversing.t = tFull / 12; // reverse time = 1/12 of original?
+    reversing.tPad = zoomArc ? tPad / 12 : null;
+
+    console.log("reversing.t",reversing.t)
+
+    // start global timers
+    d3.timerFlush();
+    let delay = 0,
+         time = d3.now(); // tFull; // reversing.t // d3.now() - experience.pausedAt;
+    timer = d3.timer(animate, delay, time);
+    // output elsewhere?
+    console.log("departing for trip #" + (reversing.i + 1) + " @ " + time)
+
+    // timer countDOWN
+    // reverse train position, route fill, zoomAlongTransform using d3 timer with REVERSE ease (reverseFlag?)
+    // simultaneously reverse-order select from  allEncounters["A"],allEncounters["B"],& allEncounters["C"] arrays, transition => hide one by one
+    // also transition hide: currently passing-log out, legend-log counts (but not categories), widget counters
+    // make new hyperfocused quadtree?
+
   }
 
 //// TRANSITIONS AND TWEENS
@@ -2781,7 +2917,7 @@ console.log("adjusting size")
 
     }
 
-    function updateLogBackground(geomType,gj) {
+    async function updateLogBackground(geomType,gj) {
 
       let localDiv, localCanvas, localCtx, localImgSrc;
 
@@ -2803,7 +2939,7 @@ console.log("adjusting size")
           localImgSrc = polyImgSrc;
           break;
         case "ln":
-          if (gj.properties.CATEGORY !== "River") return; // only proceed with open lines, for clarity of symbol
+          if (gj.properties.CATEGORY !== "River") return; // only proceed with open lines (river group), for clarity of symbol
           localDiv = d3.select("#encounters-C");
           localCanvas = lineCanvas;
           localCtx = lineContext;
@@ -2812,7 +2948,7 @@ console.log("adjusting size")
       }
 
       let width = localDiv.node().clientWidth,
-         height = localDiv.node().clientHeight;
+         height = localDiv.node().clientHeight * 2;
 
       localCanvas
         .attr("width", width)
@@ -2821,15 +2957,23 @@ console.log("adjusting size")
       // update context (canvas itself unrendered)
       localCtx.strokeStlye = "gainsboro";
       localCtx.globalAlpha = 0.2;
-      execPathCommands(localCtx);
+
+      let allExecuted = new Promise(async (resolve, reject) => {
+        let executed = await execPathCommands(localCtx);
+        resolve({localCanvas, status: 'ok'});
+      });
+
+      // confirm finished with execPathCommands() incl. drawing flipped img before continuing
+      let canvasWithMirror = await allExecuted;
 
       // convert canvas iteration to img src
-      localImgSrc = localCanvas.node().toDataURL();
+      // localImgSrc = canvasWithMirror.localCanvas.node().toDataURL();
+      localImgSrc = localCanvas.node().toDataURL(); // make sure canvas is ready to pull from, incl drawn (flipped) image!
 
       // update background-image of localDiv
       localDiv
         .style("overflow-y","visible")
-        .style("background-repeat","no-repeat")
+        .style("background-repeat","repeat-y") // x | y
         .style("background-position","center")
         // .style("background-size", "cover")
         .style("background-image",`url(${localImgSrc})`)
@@ -2837,39 +2981,67 @@ console.log("adjusting size")
       // done; store final to flag against recalling this fn
       logBackgrounds[geomType] = localImgSrc;
 
-      function execPathCommands(ctx) {
+      async function execPathCommands(ctx) {
+
         switch (geomType) {
+
           case "pt":
             let numPts = 8;
             let ptSizes = new Array(numPts).fill(numPts).map(d => random(12,2));
             ctx.fillStyle = `rgba(${chroma("dimgray").alpha(0.4).rgba().join(",")})`;
             ptSizes.forEach(r => {
-              let coords = [random(width,r),random(height)];  // random pt within this canvas node
+              let coords = [random(width,r),random(height/2)];  // random pt within this canvas node
               ctx.lineWidth = r * 0.1;
               ctx.beginPath();
               ctx.arc(coords[0], coords[1], r, 0, tau)
               ctx.fill();
               ctx.stroke();
             })
+
             break;
+
           case "ln":
-            reflectedY.fitExtent([[0,0],[width,height]],gj.geometry)
+            reflectedY.fitExtent([[0,0],[width,height/2]],gj.geometry)
             reflectedPath.context(ctx)
             ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.15;
             ctx.beginPath();
             reflectedPath(gj.geometry)
             ctx.stroke();
+
             break;
+
           case "py":
-            reflectedY.fitExtent([[0,0],[width,height]],gj.geometry)
+            reflectedY.fitExtent([[0,0],[width,height/2]],gj.geometry)
             reflectedPath.context(ctx)
-            ctx.fillStyle = `rgba(${chroma("dimgray").alpha(0.2).rgba().join(",")})`;
+            ctx.fillStyle = `rgba(${chroma("dimgray").alpha(0.3).rgba().join(",")})`;
             ctx.beginPath();
             reflectedPath(gj.geometry)
             ctx.fill();
             ctx.stroke();
+
             break;
         }
+
+        let canvasWithMirror = await drawFlipped();
+        return canvasWithMirror; // need only be "true"?
+
+        async function drawFlipped() {
+          // GET FLIPPED IMG OF CURRENT CANVAS
+          let img = new Image;
+          img.src = localCanvas.node().toDataURL();
+          let promise = new Promise((resolve, reject) => {
+            img.onload = () => {
+              // ADD FLIPPED IMG TO ORIGINAL CTX WITHOUT CLEARING CANVAS
+              ctx.scale(1,-1)
+              ctx.drawImage(img, 0, -height);
+              resolve({localCanvas, status: 'ok'});
+            }
+          });
+          let canvasWithMirror = await promise;
+          return canvasWithMirror.localCanvas;
+        }
+
       }
 
     }
@@ -3543,22 +3715,32 @@ console.log("adjusting size")
 
 //// BUTTONS & FUNCTIONAL ICONS
 
+  function highlightBtn() {
+    d3.select(this).classed("bg-lighten75",false)
+    d3.select(this).classed("bg-accent3",true)
+  }
+
+  function removeHighlight() {
+    d3.select(this).classed("bg-accent3",false)
+    d3.select(this).classed("bg-lighten75",true)
+  }
+
   function togglePause() {
     // singleClicks only; toggle pause
-    if (experience.animating && !experience.manualPause) manualPause()
-    else if (experience.manualPause) resumeAnimation()
+    if (experience.animating && !experience.manuallyPaused) manualPause()
+    else if (experience.manuallyPaused) resumeAnimation()
   }
 
   function pauseAnimation() {
     // track state
-    experience.animating = false;
+    // experience.animating = false;
     experience.paused = true;
     experience.pausedAt = d3.now() - timer._time;
     // stop timer (after pausedAt stored)
     timer.stop();
     // toggle play/pause
     d3.select("#play-pause")
-      .text("Play")
+      .text('\u25BA') // Play
       .on("click.play",resumeAnimation)
       .on("click.pause",null)
     // allow free zooming while paused
@@ -3566,36 +3748,61 @@ console.log("adjusting size")
   }
 
   function manualPause() {
-    experience.manualPause = true;
+    experience.manuallyPaused = true;
     pauseAnimation();
   }
 
-  function resumeAnimation(delay = 0, time = d3.now() - experience.pausedAt) {
+  function resumeAnimation(delay = 0) {
+
     // disable free zooming
     svg.on("wheel.zoom",null)
     svg.on("scroll.zoom",null)
-    // track state
-    experience.animating = true;
-    experience.paused = false;
-    experience.manualPause = false;
-    experience.pausedAt = null;
-    // restart timer @ passed time
-    // if (animatable) ?
-    d3.timerFlush();
-    timer.restart(animate,delay,time);
-    // toggle pause-play
-    d3.select("#play-pause")
-      .text("Pause")
-      .on("click.pause", manualPause)
-      .on("click.play", null)
+
+    // realign to zoomAlong transform state if necessary; control timing of continueResume() tasks
+    if (transitionResume) {
+
+      // reset
+      transitionResume = false;
+
+      let t1 = (reversing.flag) ? reversing.t : tFull,
+          tP = (reversing.flag) ? reversing.tPad : tPad;
+
+      let transform = getZoomAlongTransform(experience.pausedAt,t1,tP)
+
+      svg.transition().duration(750).ease(zoomEase)
+        .call(zoom.transform, getIdentity(transform))
+        .on("end",continueResume)
+
+    } else {
+      continueResume();
+    }
+
+    function continueResume() {
+      // determine time since storing of pausedAt
+      let time = d3.now() - experience.pausedAt;
+      // track state
+      experience.paused = false;
+      experience.manuallyPaused = false;
+      experience.pausedAt = null;
+      // restart timer @ passed time
+      // if (animatable) ?
+      d3.timerFlush();
+      timer.restart(animate,delay,time);
+      // toggle pause-play
+      d3.select("#play-pause")
+        .text("II") // Pause
+        .on("click.pause", manualPause)
+        .on("click.play", null)
+    }
+
   }
 
   function selectNew() {
     // if mid-animation, pause and confirm user intent
-    if (experience.animating) pauseAnimation();
+    if (experience.animating && !experience.paused) pauseAnimation();
     let confirmed = confirm('Do you wish to select a new route?');
     if (!confirmed) {
-      if (experience.animating) resumeAnimation();
+      if (experience.paused && !experience.manuallyPaused) resumeAnimation();
       return;
     } else {
       resetConfirmed(); // RESET ALL to stored state0
@@ -3621,10 +3828,12 @@ console.log("adjusting size")
       d3.select("#getOption1").html(state0.opt1)
 
       zoomArc = null;
-      experience = { initiated: false, animating: false, paused: false, manualPause: false, pausedAt: null }
+      experience = { initiated: false, animating: false, paused: false, manuallyPaused: false, pausedAt: null }
       togglesOff = { info: false, select: false }
       panned = { flag: false, transform: null, centerAdjust: null, i0: 0, i1: 0 }
       logBackgrounds = {};
+      transitionResume = false;
+      reversing = { flag: false, i: 0, t: null, tPad: null }
 
       // add fade transitions to content removal
       d3.select("#journey").selectAll("*").remove()
