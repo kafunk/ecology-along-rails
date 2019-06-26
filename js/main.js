@@ -233,20 +233,6 @@
   svg.call(zoom.transform, zoom0) // keep this line first
      .call(zoom)
 
-//// DASH LOG BACKGROUNDS
-
-  let ptImgSrc = '',
-    polyImgSrc = '',
-    lineImgSrc = '';
-
-  let ptCanvas = d3.select("#encounters-A").select("canvas#pts")
-  let polyCanvas = d3.select("#encounters-B").select("canvas#polys")
-  let lineCanvas = d3.select("#encounters-C").select("canvas#lines")
-
-  let ptContext = ptCanvas.node().getContext("2d")
-  let polyContext = polyCanvas.node().getContext("2d")
-  let lineContext = lineCanvas.node().getContext("2d")
-
 //// COLORS
 
   const palette = ['#94417f','#CD5C5C','#fa8253','#ec934a','#c7993f','#dbd99f']
@@ -2919,36 +2905,34 @@ console.log(rotatePt0)
 
     async function updateLogBackground(geomType,gj) {
 
-      let localDiv, localCanvas, localCtx, localImgSrc;
+      let localDiv, localCanvas, localBounds;
+      if (gj) {
+        let localBounds = reflectedPath.bounds(gj.geometry);
+        let h = localBounds[1][1] - localBounds[0][1],
+            w = localBounds[1][0] - localBounds[0][0];
+        if (w > h) return; // only proceed if this particular line/polygon is taller than it is wide
+      }
 
       switch(geomType) {
         case "pt":
           localDiv = d3.select("#encounters-A");
-          localCanvas = ptCanvas;
-          localCtx = ptContext;
-          localImgSrc = ptImgSrc;
+          localCanvas = d3.select("#encounters-A").select("canvas#pts");
           break;
         case "py":
-          let localBounds = reflectedPath.bounds(gj.geometry);
-          let h = localBounds[1][1] - localBounds[0][1],
-              w = localBounds[1][0] - localBounds[0][0];
-          if (w > h) return; // only proceed if this particular polygon is taller than it is wide
           localDiv = d3.select("#encounters-B");
-          localCanvas = polyCanvas;
-          localCtx = polyContext;
-          localImgSrc = polyImgSrc;
+          localCanvas = d3.select("#encounters-B").select("canvas#polys");
           break;
         case "ln":
           if (gj.properties.CATEGORY !== "River") return; // only proceed with open lines (river group), for clarity of symbol
           localDiv = d3.select("#encounters-C");
-          localCanvas = lineCanvas;
-          localCtx = lineContext;
-          localImgSrc = lineImgSrc;
+          localCanvas = d3.select("#encounters-C").select("canvas#lines");
           break;
       }
 
+      let localCtx = localCanvas.node().getContext("2d");
+
       let width = localDiv.node().clientWidth,
-         height = localDiv.node().clientHeight * 2;
+         height = 240; // static ok given repeat-y; was localDiv.node().clientHeight * 2;
 
       localCanvas
         .attr("width", width)
@@ -2960,22 +2944,19 @@ console.log(rotatePt0)
 
       let allExecuted = new Promise(async (resolve, reject) => {
         let executed = await execPathCommands(localCtx);
-        resolve({localCanvas, status: 'ok'});
+        resolve({executed, status: 'ok'});
       });
 
       // confirm finished with execPathCommands() incl. drawing flipped img before continuing
       let canvasWithMirror = await allExecuted;
 
       // convert canvas iteration to img src
-      // localImgSrc = canvasWithMirror.localCanvas.node().toDataURL();
-      localImgSrc = localCanvas.node().toDataURL(); // make sure canvas is ready to pull from, incl drawn (flipped) image!
+      let localImgSrc = canvasWithMirror.executed.toDataURL();
 
       // update background-image of localDiv
       localDiv
         .style("overflow-y","visible")
         .style("background-repeat","repeat-y") // x | y
-        .style("background-position","center")
-        // .style("background-size", "cover")
         .style("background-image",`url(${localImgSrc})`)
 
       // done; store final to flag against recalling this fn
@@ -3034,12 +3015,13 @@ console.log(rotatePt0)
             img.onload = () => {
               // ADD FLIPPED IMG TO ORIGINAL CTX WITHOUT CLEARING CANVAS
               ctx.scale(1,-1)
+              ctx.globalAlpha = 1;
               ctx.drawImage(img, 0, -height);
               resolve({localCanvas, status: 'ok'});
             }
           });
           let canvasWithMirror = await promise;
-          return canvasWithMirror.localCanvas;
+          return canvasWithMirror.localCanvas.node();
         }
 
       }
