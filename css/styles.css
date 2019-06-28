@@ -89,8 +89,9 @@ details > summary > span {
   direction: ltr; unicode-bidi: embed;
 }
 
-.point-none { pointer-events: none }
-.point-all { pointer-events: all }
+.point-none { pointer-events: none; }
+.point-all { pointer-events: all; }
+.horz-flip { transform: scale(-1, 1); }
 
 .bg-base { background: #2A4C48; }
 /* .bg-main {} */
