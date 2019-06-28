@@ -47,7 +47,7 @@
     headlightRadius = 2,
     trainPtRadius = 0.8,
     arcSpan = 0.16 * tau, // (in radians)
-    tpm = 80,  // time per mile; hard-coded goal of animated ms per route mile (more == slower) *** I WANT THIS USER ADJUSTABLE BUT tFULL uses it to set animation length at very begin, so not sure I can make this dynamic given current structure
+    tpm = 20,  // time per mile; hard-coded goal of animated ms per route mile (more == slower) *** I WANT THIS USER ADJUSTABLE BUT tFull uses it to set animation length at very begin, so not sure I can make this dynamic within current structure
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
@@ -55,11 +55,12 @@
     zoomDuration = tPause *2,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     trainEase = d3.easeSinInOut,
-    relativeDim = 0.4;  // dimBackground level; lower values => greater dim
+    relativeDim = 0.4,  // dimBackground level; lower values => greater dim
+    reverseCut = 2 // 12;
 
 // AS YET EMPTY, ZERO, OR UNDEFINED
 
-  var timer;
+  var timer, reverseTimer;
 
   var patterns = {
     // eg "jupiter": CanvasPattern {}
@@ -95,7 +96,10 @@
   var routeDashInterpolator;
 
   var logBackgrounds = {
-    // geomType: finalImgSrc
+    // geomType: {
+    //   complete: true || false,
+    //   imgSrc: finalImgSrc
+    // }
   };
 
 // FUNCTION EXPRESSIONS
@@ -323,20 +327,44 @@
 
   let readyAndWaiting = {}; // IMPORTANT! will be populated with filtered enrich features and accessed as associated trigger pts encountered en route
 
-  let assocCols = {
-    "pt": "A",
-    "py": "B",
-    "ln": "C"
+  let geomAssoc = {
+    "pt": {
+      encounterCol: "A",
+      groupId: "#enrich-pts",
+      groupClass: ".enrich-pt",
+      get logDiv() { return d3.select("#encounters-A") },
+      get logCanvas() { return d3.select("#encounters-A").select("canvas#pts") },
+      get set() { return encounteredPts; }
+    },
+    "py": {
+      encounterCol: "B",
+      groupId: "#enrich-polygons",
+      groupClass: ".enrich-polygon",
+      get logDiv() { return d3.select("#encounters-B") },
+      get logCanvas() { return d3.select("#encounters-B").select("canvas#polys") },
+      get set() { return encounteredPolys; }
+    },
+    "ln": {
+      encounterCol: "C",
+      groupId: "#enrich-lines",
+      groupClass: ".enrich-line",
+      get logDiv() { return d3.select("#encounters-C") },
+      get logCanvas() { return d3.select("#encounters-C").select("canvas#lines") },
+      get set() { return encounteredLines; }
+    }
   }
-  let assocBtns = {
-    // contentId: btn
-    "modal-about": "info",
-    "get-options": "select"
+
+  let contentAssoc = {
+    "modal-about": {
+      btn: "info",
+      opp: "get-options"
+    },
+    "get-options": {
+      btn: "select",
+      opp: "modal-about"
+    }
   }
-  let oppContent = {
-    "modal-about": "get-options",
-    "get-options": "modal-about"
-  }
+
   let encounteredPts = new Set(),
     encounteredLines = new Set(),
     encounteredPolys = new Set(),
@@ -538,11 +566,13 @@
 
 // CUSTOM DISPATCH BEHAVIOR
 
-  let dispatch = d3.dispatch("depart","encounter","arrive","reverse")
+  let dispatch = d3.dispatch("depart","encounter","arrive","reverse","unencounter","reverseArrived")
     .on("depart.train", departed)
     .on("encounter.trigger", encountered)
     .on("arrive.train", arrived)
     .on("reverse.train", reversed)
+    .on("unencounter.trigger", unencountered)
+    .on("reverseArrived.train", reverseArrived)
 
 // MAKE DASHBOARD RESIZABLE from http://jsfiddle.net/meetamit/e38bLdjk/1/
 
@@ -1152,7 +1182,7 @@
 
       let bounds = path.bounds(data1),
         boundsHeight = bounds[1][1] - bounds[0][1],
-        boundsTransform = getTransform(bounds,{ scalePad: (width > 640) ? 0.4 : 0.1 });  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
+        boundsTransform = getTransform(bounds,{ scalePad: (width < 640) ? 0.4 : 0.1 });  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
 
       let scale1 = Math.min(maxInitZoom,Math.ceil(boundsTransform.k)),
        bottomPad = (width > 640) ? d3.select("#dash").node().clientHeight / 2.25 : d3.select("#dash").node().clientHeight/1.5,
@@ -1625,8 +1655,9 @@
   }
 
   function getSet(again = false) {
+    console.log('getting set -- again?:',again)
     // coordinate zoom to first frame, turning on headlights, dimming background, expanding dash, and ultimately initiating train and route animation
-    let t = zoomDuration;
+    let t = !again ? zoomDuration : zoomDuration/4;
     svg.transition().duration(t).ease(zoomEase)
       .call(zoom.transform, firstIdentity)
       .on("start", () => {
@@ -1635,13 +1666,10 @@
         // turn on headlights
         headlights.transition().delay(t/2).duration(t/2).style("opacity",0.6)
         // schedule fade/removal of headlights upon train arrival
-        dispatch.on("arrive", () => {
-          headlights.transition().duration(tPause)
-                    .style("opacity",0)
-                    .on("end", () => {
-                      headlights.remove()
-                    })
-        });
+        // dispatch.on("arrive", () => {
+        //   headlights.transition().duration(tPause)
+        //             .style("opacity",0)
+        // });
         // expand dash automatically
         expand("dash","up")
         // prepare global values for animation coordination
@@ -1697,25 +1725,34 @@
   }
 
   function animate(elapsed) {
+
     if (reversing.flag) {
       // timer countDOWN
       elapsed = reversing.t - elapsed;
+      // // watch for animation end
+      // if (elapsed < 0) {
+      //   reverseTimer.stop();
+      //   reversing.flag = false;
+      //   // reversing.stop = true;
+      //   // avoid slight tracker disconnects at end
+      //   d3.select("#current-miles").text("0")
+      //   d3.select("#current-time").text("0")
+      //   // prepare to restart animation from beginning
+      //   d3.timeout(getSet(true),tPause * 12); // again = true; ensure quadtree encounters only triggering reveal, not readding to dom
+      //   return;
+      // }
       // zoomFollow if necessary
       if (zoomArc && elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) zoomAlong(elapsed,reversing.t,reversing.tPad);
-      if (elapsed < 0) {
-        timer.stop();
-        reversing.flag = false;
-        getSet(true); // again = true; ensure quadtree encounters only triggering reveal, not readding to dom
-      }
     } else {  // not reversing
+      // // watch for animation end
+      // if (elapsed > tFull) {
+      //   timer.stop();
+      //   // signal train arrival
+      //   dispatch.call("arrive"); // , this);
+      //   return;
+      // }
       // zoomFollow if necessary
       if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) zoomAlong(elapsed);
-      // watch for animation end
-      if (elapsed > tFull) {
-        timer.stop();
-        // signal train arrival
-        dispatch.call("arrive"); // , this);
-      }
     }
 
     // regardless of animation direction (forward/back)
@@ -1723,6 +1760,13 @@
     trainMove(elapsed)
     // update dash trackers
     trackerUpdate(getMM(elapsed))
+
+    // watch for animation end
+    if (!reversing.flag && elapsed > tFull) {
+      dispatch.call("arrive");
+    } else if /* reversing && */ (elapsed < 0) {
+      dispatch.call("reverseArrived");
+    }
 
     function zoomAlong(elapsed, t1 = tFull, tP = tPad) {
       let transform = getZoomAlongTransform(elapsed,t1,tP);
@@ -1833,8 +1877,6 @@
 //// LAYOUT
 
   function adjustSize() {
-
-console.log("adjusting size")
 
     if (experience.animating && !experience.paused) pauseAnimation();
 
@@ -1947,19 +1989,19 @@ console.log("adjusting size")
 
 //// IMGS
 
-  async function srcToImg(src) {
-    let img = new Image();
-    img.src = src;
-    let promise = new Promise((resolve, reject) => {
-      img.onload = () => resolve({img, status: 'ok'});
-    });
-    let result = await promise;
-    return result.img;
-  }
+  // async function srcToImg(src) {
+  //   let img = new Image();
+  //   img.src = src;
+  //   let promise = new Promise((resolve, reject) => {
+  //     img.onload = () => resolve({img, status: 'ok'});
+  //   });
+  //   let result = await promise;
+  //   return result.img;
+  // }
 
-  function imgToPattern(img, ctx = context) {
-    return ctx.createPattern(img,'repeat');
-  }
+  // function imgToPattern(img, ctx = context) {
+  //   return ctx.createPattern(img,'repeat');
+  // }
 
 //// GEOJSON + TOPOJSON HELPERS
 
@@ -2140,15 +2182,10 @@ console.log("adjusting size")
 
     let opts = {...defaultOptions.centerTransform, ...options};
 
-    // let x = (transform.x - opts.translate0[0]) / -transform.k,
-    //     y = (transform.y - opts.translate0[1]) / -transform.k;
+    let x = ((transform.x - opts.translate0[0]) / -transform.k) - opts.padRight + opts.padLeft,
+        y = ((transform.y - opts.translate0[1]) / -transform.k) - opts.padBottom + opts.padTop;;
 
-    // return [x,y];
-
-    let x2 = ((transform.x - opts.translate0[0]) / -transform.k) - opts.padRight + opts.padLeft,
-        y2 = ((transform.y - opts.translate0[1]) / -transform.k) - opts.padBottom + opts.padTop;;
-
-    return [x2,y2];
+    return [x,y];
 
   }
 
@@ -2329,7 +2366,9 @@ console.log("adjusting size")
             // for flagged, en route trigger-pts only
             if ((g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).node()) && (g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).classed("trigger-pt"))) {
 
-              if (!uniqueEncounters.has(d.properties.id)) {
+              if (reversing.flag && uniqueEncounters.has(d.properties.id)) {
+                dispatch.call("unencounter", d)
+              } else if (!reversing.flag && !uniqueEncounters.has(d.properties.id)) {
                 uniqueEncounters.add(d.properties.id)
                 dispatch.call("encounter", d)
               }
@@ -2395,47 +2434,20 @@ console.log("adjusting size")
 
   }
 
-  function prereverse() {
-
-    transPt0 = fullPath.node().getPointAtLength(fullLength);
-    rotatePt0 = semiSimp.node().getPointAtLength(semiSimpLength);
-
-    eased = (t, t1 = reversing.t) => trainEase(t/t1);
-    // routeDashInterpolator = d3.interpolateString("0," + fullLength, fullLength + "," + fullLength);
-
-    // // setup searchExtent for headlights intersecting quadtree reps
-    // let sectorBBox = headlights.node().getBBox(),
-    //       arcWidth = sectorBBox.width,
-    //      arcHeight = sectorBBox.height //, // ADJUSTABLE FOR NON-VISIBLE EXTENSION OF SEARCH EXTENT
-
-    let rotate0 = headlights.node().transform.animVal[1].angle || 0; // final rotate
-
-    // // calculate initial search extent for quadtree
-    // let sectorExtent = [[-arcWidth/2,-arcHeight],[arcWidth/2,0]],
-    // translatedExtent = translateExtent(sectorExtent,transPt0.x,transPt0.y);
-
-    // // searchExtent is sector (headlight) extent translatedThenRotated
-    // searchExtent = rotateExtent(translatedExtent,rotate0,[transPt0.x,transPt0.y]);
-
-console.log(prevTranslate)
-console.log([transPt0.x,transPt0.y])
-console.log(prevRotate)
-console.log(rotate0)
-console.log(rotatePt0)
-    // save newly determined values as previous values
-    // prevTranslate = [transPt0.x,transPt0.y];
-       // prevExtent = searchExtent;
-       // prevRotate = rotate0;
-
-  }
-
   function trainMove(t) { // called by animate() following dispatch
+
+    if (t < 0 || t > tFull) return;
 
     // calculate new position
     let trainTransform = getTrainTransformAt(t),
       currentTranslate = [trainTransform.x, trainTransform.y],
-         currentRotate = trainTransform.r,
-       transformString = "translate(" + currentTranslate[0] + "," + currentTranslate[1] + ") rotate(" + currentRotate + ")";
+         currentRotate = trainTransform.r;
+
+    if (reversing.flag && t !== reversing.t) {  // keep train/headlights rotated toward destination when reversing in progress
+      currentRotate = (currentRotate < 180) ? currentRotate + 180 : currentRotate - 180;
+    }
+
+    let transformString = "translate(" + currentTranslate[0] + "," + currentTranslate[1] + ") rotate(" + currentRotate + ")";
 
     // train moves along route
     trainPt.attr("transform", transformString);
@@ -2459,6 +2471,17 @@ console.log(rotatePt0)
 
     searchExtent = rotateExtent(translatedExtent,rotateDelta,currentTranslate)
 
+    // SEARCH EXTENT VIS
+    // g.append("rect")
+    //   .attr("x", searchExtent[0][0])
+    //   .attr("y", searchExtent[0][1])
+    //   .attr("width", searchExtent[1][0] - searchExtent[0][0])
+    //   .attr("height", searchExtent[1][1] - searchExtent[0][1])
+    //   .style("fill","tomato")
+    //   .style("opacity", 0.6)
+    //   .transition().delay(800).duration(400)
+    //     .style("opacity", 0)
+
     // save newly determined values as previous values
     prevTranslate = currentTranslate;
        prevExtent = searchExtent;
@@ -2478,7 +2501,7 @@ console.log(rotatePt0)
     let transPt1 = fullPath.node().getPointAtLength(l0),
        rotatePt1 = semiSimp.node().getPointAtLength(l1);
 
-    let rotate = (!(rotatePt0.x === rotatePt1.x)) ? getRotate(rotatePt0,rotatePt1) : prevRotate; // || rotate0?
+    let rotate = (rotatePt0.x !== rotatePt1.x) ? getRotate(rotatePt0,rotatePt1) : prevRotate; // || rotate0?
 
     // shift pt values pt0 >> pt1
     transPt0 = transPt1;
@@ -2489,7 +2512,6 @@ console.log(rotatePt0)
   }
 
   function departed() {
-    d3.timerFlush();
     // track state
     experience.animating = true;
     // show play-pause btn
@@ -2500,29 +2522,41 @@ console.log(rotatePt0)
       .on("click.pause", pauseAnimation)
       .on("click.play", null)
     // start global timers
+    d3.timerFlush();
     timer = d3.timer(animate);
     // output elsewhere?
-    let departed = d3.now();
-    console.log("train departing @ " + departed)
+    console.log("train departing @ " + d3.now())
   }
 
   function arrived() {
+
     // stop animation
     timer.stop()
-    let arrived = d3.now();
+
     // reset several state variables
     experience.animating = false;
     experience.paused = false;
     experience.manuallyPaused = false;
     experience.pausedAt = null;
+
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, lastIdentity)
     // re-allow free zooming
     svg.call(zoom)
+
     // avoid slight tracker disconnects at end
+    let finalCoords = geoMM[geoMM.length - 1];
+    getElevation(finalCoords).then(elevation => {
+      d3.select("#current-feet").text(elevation)
+    });
+    let finalAzimuth = getAzimuth(geoMM.length - 1);
+    d3.select("#current-bearing").text(finalAzimuth)
+    d3.select("#current-quadrant").text(getQuadrant(finalAzimuth))
+    // miles and clock too
     d3.select("#current-miles").text(totalMiles)
     d3.select("#current-time").text(totalTime)
+
     // update play-pause btn
     d3.select("#play-pause")
       .text('\u21BB')
@@ -2530,58 +2564,87 @@ console.log(rotatePt0)
       .on("click.play",null)
       .on("click.pause",null)
       // .property("disabled", true); // no need to hide completely
+
     // output elsewhere?
-    console.log("train arrived @ " + arrived)
+    console.log("train arrived @ " + d3.now())
     console.log("unique encounters",uniqueEncounters.size)
+
+  }
+
+  function reverseArrived() {
+
+    // stop animation
+    reverseTimer.stop();
+    reversing.flag = false;
+
+    // avoid slight tracker disconnects at end
+    d3.select("#current-miles").text("0")
+    d3.select("#current-time").text("0")
+
+    // reenable and update play-pause btn
+    d3.select("#play-pause")
+      .html("")
+      .text('\u25BA') // Play
+      .on("click.replay",null)
+      .on("click.play",getSet)
+      .on("click.pause",null)
+      .classed("px6 px12-ml",true)
+      .classed("px3 px6-ml",false)
+      .property("disabled",false)
+
+    // automatically restart animation from beginning?
+    d3.timeout(getSet(true),tPause * 12); // again = true; ensure quadtree encounters only triggering reveal, not readding to dom
+
   }
 
   function replayAnimation() {
     // update play-pause icon
     d3.select("#play-pause")
-      .text('\u25BA') // Play
-      .on("click.play",resumeAnimation)
+      .text('')
+      .on("click.play",null)
       .on("click.pause",null)
       .on("click.replay",null)
+      .property("disabled",true)
+      .classed("px6 px12-ml",false)
+      .classed("px3 px6-ml",true)
+      .html(`
+        <div id="testid" class="h-full w-full flex-parent flex-parent--center-cross flex-parent--center-main">
+          <span class="flex-child loading loading--s point-none horz-flip"></span>
+        </div>
+      `)
+
     // confirm at final identity
     svg.transition().duration(750).ease(zoomEase)
       .call(zoom.transform, lastIdentity) // may already be here
       .on("start", () => {
-        console.log("prereversing")
-        prereverse();
+        // prereverse() to adjust select values stored during preanimate();
+        eased = (t, t1 = reversing.t) => trainEase(t/t1);
+        prevExtent = [[prevExtent[0][0]-2,prevExtent[0][1]-2],[prevExtent[1][0]+2,prevExtent[1][1]+2]];
       })
       .on("end",() => {
-        console.log("dispatching reverse")
         dispatch.call("reverse")
       })
   }
 
   function reversed() {
-    console.log("reversing")
-    console.log("tfull!",tFull) // eg 110206
-    // console.log(timer) // Infinity
-    console.log(d3.now()) // eg 157372
 
     // track state
     reversing.flag = true;
     reversing.i++;
-    reversing.t = tFull / 12; // reverse time = 1/12 of original?
-    reversing.tPad = zoomArc ? tPad / 12 : null;
+    reversing.t = Math.ceil(tFull / reverseCut);
+    reversing.tPad = zoomArc ? tPad / reverseCut : null;
 
-    console.log("reversing.t",reversing.t)
+    for (var geomType in geomAssoc) {
+      geomAssoc[geomType].reverseT = Math.floor(reversing.t /  geomAssoc[geomType].set.size);
+    }
 
     // start global timers
-    d3.timerFlush();
+    // d3.timerFlush();
     let delay = 0,
-         time = d3.now(); // tFull; // reversing.t // d3.now() - experience.pausedAt;
-    timer = d3.timer(animate, delay, time);
-    // output elsewhere?
-    console.log("departing for trip #" + (reversing.i + 1) + " @ " + time)
+         time = d3.now();
+    reverseTimer = d3.timer(animate, delay, time);
 
-    // timer countDOWN
-    // reverse train position, route fill, zoomAlongTransform using d3 timer with REVERSE ease (reverseFlag?)
-    // simultaneously reverse-order select from  allEncounters["A"],allEncounters["B"],& allEncounters["C"] arrays, transition => hide one by one
-    // also transition hide: currently passing-log out, legend-log counts (but not categories), widget counters
-    // make new hyperfocused quadtree?
+    // quadtree with trigger appropriate 'unreveal' action via dispatch to unencountered() while reversing.flag
 
   }
 
@@ -2596,6 +2659,18 @@ console.log(rotatePt0)
   function drawDashed() {
     var l = this.getTotalLength(),
         i = d3.interpolateString(-l,"0");
+    return function(t) { return i(t); };
+  }
+
+  function clearDashed() {
+    var l = this.getTotalLength(),
+        i = d3.interpolateString("0", -l);
+    return function(t) { return i(t); };
+  }
+
+  function clearSolid() {
+    var l = this.getTotalLength(),
+        i = d3.interpolateString(l,"0");
     return function(t) { return i(t); };
   }
 
@@ -2683,6 +2758,8 @@ console.log(rotatePt0)
       gj.properties.subTag = subTag;
 
     if (!logBackgrounds[geomType]) updateLogBackground(geomType,gj);  // called here to draw background-image from actually encountered line and polygon geometries
+    else if (!logBackgrounds[geomType].complete || !logBackgrounds[geomType].imgSrc) d3.timeout
+    (srcCheck, 3000); // wait a few seconds, then try again
 
     if (id.startsWith('pt')) {
 
@@ -2903,33 +2980,30 @@ console.log(rotatePt0)
 
     }
 
+    function srcCheck() {
+      // if still nothing saved, go fix it
+      if (!logBackgrounds[geomType].imgSrc) updateLogBackground(geomType,gj);
+    }
+
     async function updateLogBackground(geomType,gj) {
 
-      let localDiv, localCanvas, localBounds;
+      if (geomType === "ln" && gj.properties.CATEGORY !== "River") return; // only proceed with open lines (river group), for clarity of symbol
+
       if (gj) {
+
         let localBounds = reflectedPath.bounds(gj.geometry);
         let h = localBounds[1][1] - localBounds[0][1],
             w = localBounds[1][0] - localBounds[0][0];
         if (w > h) return; // only proceed if this particular line/polygon is taller than it is wide
+
       }
 
-      switch(geomType) {
-        case "pt":
-          localDiv = d3.select("#encounters-A");
-          localCanvas = d3.select("#encounters-A").select("canvas#pts");
-          break;
-        case "py":
-          localDiv = d3.select("#encounters-B");
-          localCanvas = d3.select("#encounters-B").select("canvas#polys");
-          break;
-        case "ln":
-          if (gj.properties.CATEGORY !== "River") return; // only proceed with open lines (river group), for clarity of symbol
-          localDiv = d3.select("#encounters-C");
-          localCanvas = d3.select("#encounters-C").select("canvas#lines");
-          break;
-      }
+      // if still here, store final to flag against recalling this fn
+      logBackgrounds[geomType] = { complete: true };
 
-      let localCtx = localCanvas.node().getContext("2d");
+      let localDiv = geomAssoc[geomType].logDiv,
+       localCanvas = geomAssoc[geomType].logCanvas,
+          localCtx = localCanvas.node().getContext("2d");
 
       let width = localDiv.node().clientWidth,
          height = 240; // static ok given repeat-y; was localDiv.node().clientHeight * 2;
@@ -2959,8 +3033,8 @@ console.log(rotatePt0)
         .style("background-repeat","repeat-y") // x | y
         .style("background-image",`url(${localImgSrc})`)
 
-      // done; store final to flag against recalling this fn
-      logBackgrounds[geomType] = localImgSrc;
+      // done; store final img
+      logBackgrounds[geomType].imgSrc = localImgSrc;
 
       async function execPathCommands(ctx) {
 
@@ -2995,7 +3069,7 @@ console.log(rotatePt0)
           case "py":
             reflectedY.fitExtent([[0,0],[width,height/2]],gj.geometry)
             reflectedPath.context(ctx)
-            ctx.fillStyle = `rgba(${chroma("dimgray").alpha(0.3).rgba().join(",")})`;
+            ctx.fillStyle = `rgba(${chroma("dimgray").alpha(0.2).rgba().join(",")})`;
             ctx.beginPath();
             reflectedPath(gj.geometry)
             ctx.fill();
@@ -3141,6 +3215,8 @@ console.log(rotatePt0)
     let t = Math.max(minT,baseT * tpm),
       lineOpacity = 0.8;
 
+    encounteredLines.add(gj)
+
     // have to add these one at a time (rather than as a group join) to avoid recalculated dashArrays getting mixed up within group (esp as queue of entering elements get longer); ok because order of lines not essential for proper viewing
     let newLine = d3.select("#enrich-lines").append("path")
                     .datum(gj)
@@ -3206,7 +3282,7 @@ console.log(rotatePt0)
     }
 
     let ecoregions = [...encounteredPolys].filter(d => d.properties.LEVEL),
-         remaining = [...encounteredPolys].filter(d => !d.properties.LEVEL)
+         remaining = [...encounteredPolys].filter(d => !d.properties.LEVEL);
 
     let sortedPolygons = ecoregions.sort(byLevel).concat(remaining);
 
@@ -3270,6 +3346,62 @@ console.log(rotatePt0)
 
   }
 
+  function unencountered() {
+
+    let featureId = this.properties.id,
+         geomType = featureId.slice(0,2),
+              col = geomAssoc[geomType].encounterCol,
+               gj = readyAndWaiting[featureId],
+                t = geomAssoc[geomType].reverseT;
+
+    uniqueEncounters.delete(featureId);
+    geomAssoc[geomType].set.delete(gj);
+
+    let feature = d3.select(geomAssoc[geomType].groupId).select(`#${featureId}`)
+
+    if (feature && feature.node()) {
+
+      switch(geomType) {
+        case "pt":
+          feature.transition().duration(t)
+          .attr("r",0.1)
+          .on("end", () => {
+            feature.remove();
+          })
+          break;
+        case "ln":
+          if (feature.property("category") === "Watershed") {
+            feature.transition().duration(t).ease(d3.easeCubicIn)
+              .styleTween("stroke-dashoffset", clearDashed)
+              .on("end", () => {
+                feature.remove();
+              })
+          } else {
+            feature.transition().duration(t).ease(d3.easeCubicIn)
+              .styleTween("stroke-dasharray", clearSolid)
+              .on("end", () => {
+                feature.remove();
+              })
+          }
+          break;
+        case "py":
+          feature.transition().duration(t)
+            .style("opacity", 0)
+            .on("end", () => {
+              feature.remove();
+            })
+          break;
+      }
+
+    }
+
+    // UNOUTPUT (if anything was outputted in the first place)
+    let outputted = allEncounters[col][allEncounters[col].findIndex(s => s.attr("id") === featureId)];
+
+    if (outputted) unoutput(outputted,col);
+
+  }
+
   function getIndex1(index0,length) {
     let limit = length - 1,
        index1 = index0 + Math.floor(length/2);
@@ -3310,7 +3442,7 @@ console.log(rotatePt0)
     if (encountered.property("name")) {
 
       // get encountered group A, B, or C
-      let col = assocCols[encountered.property("id").slice(0,2)];
+      let col = geomAssoc[encountered.property("id").slice(0,2)].encounterCol;
 
       allEncounters[col].unshift(encountered) // array of selections
 
@@ -3468,9 +3600,64 @@ console.log(rotatePt0)
 
   }
 
+  function unoutput(unencountered,col) {
+
+    // remove feature from associated allEncounters array
+    let i = allEncounters[col].indexOf(unencountered);
+    allEncounters[col].splice(i,1)
+
+    unupdateOutput(allEncounters[col].slice(),col)
+
+    unlog(unencountered)
+
+    function unupdateOutput(unencounters,col) { // allEncounters) {
+      // https://observablehq.com/@d3/selection-join
+
+      const t = d3.transition().duration(750)
+
+      // HOW TO SMOOTH OUT SCROLL?
+      d3.select(`#encounters-${col}`).selectAll(".encounter")
+        .data(unencounters, d => d.property("id"))
+        .join(
+          enter => enter,
+          update => update,
+          exit => exit
+            .call(exit => exit.transition(t)
+              .style("opacity", 0))
+            .remove()
+        );
+
+    }
+
+    function unlog(unencountered) {
+
+      let group = unencountered.property("log-group"),
+            tag = unencountered.property("sub-tag");
+
+      if (logGroups.has(group.divId)) subtractFromCount(group.divId);
+
+      if (tag) {
+        if (tagTypes.has(tag.divId)) subtractFromCount(tag.divId);
+      }
+
+      function subtractFromCount(id) {
+
+        // access current
+        let logCount = d3.select(`#${id}-count`),
+             current = logCount.text();
+
+        // add one & update
+        logCount.text(+current-1)
+
+      }
+
+    }
+
+  }
+
   function trackerUpdate(i) {
 
-    let coordsNow = geoMM[i],
+    let coordsNow = geoMM[i], // || geoMM[i-1] || geoMM[i-2],
             miles = i + 1,
              // pace = getPace();
              time = Math.round(miles * minPerMile);
@@ -3672,7 +3859,7 @@ console.log(rotatePt0)
         // user wants to switch modal subContent with modal open
         if (d3.select(`#${subContent}`).classed("none")) {
           // open user selected subContent via switch
-          let nowOpen = oppContent[subContent]
+          let nowOpen = contentAssoc[subContent].opp
           d3.select(`#${subContent}`).classed("none",false)
           d3.select(`#${nowOpen}`).classed("none",true)
           isTogglable(subContent,true)
@@ -3690,7 +3877,7 @@ console.log(rotatePt0)
   }
 
   function isTogglable(content,set) {
-    let btn = assocBtns[content];
+    let btn = contentAssoc[content].btn;
     if (set !== undefined) togglesOff[btn] = set;
     return togglesOff[btn];
   }
@@ -3768,7 +3955,7 @@ console.log(rotatePt0)
       experience.pausedAt = null;
       // restart timer @ passed time
       // if (animatable) ?
-      d3.timerFlush();
+      // d3.timerFlush();
       timer.restart(animate,delay,time);
       // toggle pause-play
       d3.select("#play-pause")
@@ -3815,7 +4002,7 @@ console.log(rotatePt0)
       panned = { flag: false, transform: null, centerAdjust: null, i0: 0, i1: 0 }
       logBackgrounds = {};
       transitionResume = false;
-      reversing = { flag: false, i: 0, t: null, tPad: null }
+      reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
 
       // add fade transitions to content removal
       d3.select("#journey").selectAll("*").remove()
