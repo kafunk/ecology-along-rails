@@ -1182,26 +1182,15 @@
 
       let bounds = path.bounds(data1),
         boundsHeight = bounds[1][1] - bounds[0][1],
-        boundsTransform = getTransform(bounds,{ scalePad: (width < 640) ? 0.4 : 0.1 });  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
+        boundsTransform = getTransform(bounds);
+          // { scalePad: (width < 640) ? 0.4 : 0.1 });
+          // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
 
       let scale1 = Math.min(maxInitZoom,Math.ceil(boundsTransform.k)),
-       bottomPad = (width > 640) ? d3.select("#dash").node().clientHeight / 2.25 : d3.select("#dash").node().clientHeight/1.5,
+       bottomPad = (width < 640) ? d3.select("#dash").node().clientHeight/1.5 : (width >= 1200) ? d3.select("#dash").node().clientHeight / 3 : d3.select("#dash").node().clientHeight / 2.25,
          options = { scale: scale1, padBottom: bottomPad };
 
       let routeBoundsIdentity = getIdentity(getCenterTransform(path.centroid(data1),options));
-
-      // console.log(routeBoundsIdentity)
-      // console.log(width)
-      // console.log(bottomPad)
-
-      // TOO MUCH ADJUST
-      // {k: 7, x: 1381.7677281068557, y: -322.12930394631417}
-      // 1331
-      // 94.66667
-
-      // TOO LITTLE ADJUST
-
-      // ABOUT RIGHT ADJUST
 
       // control timing with transition start/end events
       svg.transition().duration(zoomDuration).ease(zoomEase)
@@ -1567,8 +1556,7 @@
           boundsTransform3 = getTransform(bounds3);
 
       let zoomScale = Math.min(maxInitZoom,Math.ceil(Math.min(boundsTransform2.k,boundsTransform3.k))),
-          bottomPad = (width > 640) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3 : (d3.select("#dash").node().clientHeight + boundsHeightAvg)/2;
-          // bottomPad = (d3.select("#dash").node().clientHeight - boundsHeightAvg)/2.75;
+          bottomPad = (width < 640) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/2 : (width >= 1200) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3.25 : (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3;
 
       // store for getCenterTransform called without zoomAlongOptions
       defaultOptions.spec.center.padBottom = bottomPad;
@@ -1918,8 +1906,8 @@
         // if #about was hidden on smaller window size
         if (d3.select("#about").classed("disappear-down")) {
           // change disappear-direction for aligment in case of reopen
-          d3.select("#about").classed("disappear-right",true)
-                             .classed("disappear-down",false)
+          d3.select("#about").classed("disappear-down",false)
+                             .classed("disappear-right",true)
           // make sure section-wrapper not "relative"
           d3.select("#section-wrapper").classed("relative",false)
           // adjust dash (& associated) padding so long as #about collapsed on mxl
@@ -1940,6 +1928,15 @@
       calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight;
 
       calculated.width = window.innerWidth - d3.select("#aside").node().clientWidth;
+
+      if (calculated.width > width) {
+        // console.log(d3.select("#header").node())
+        // console.log(d3.select("#dash-plus").node())
+        console.log(d3.select("#map").node())
+        console.log(d3.select("#section-wrapper").node())
+        console.log(d3.select("#map-plus").node())
+      }
+      // mb-neg, padY -18
 
       // update #about-wrapper to align with full map height
       d3.select("#about-wrapper").style("height", calculated.height + "px");
