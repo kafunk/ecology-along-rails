@@ -173,8 +173,14 @@
       .attr("offset", function(d,i) { return i/(numColors-1)*50 + 40 + "%"; })
       .attr("stop-color", d => { return radialGradientScale(d) });
 
-  // inject external SVG file into local svg element
+  // inject external SVG files into local svg element
   d3.xml('./assets/station.svg')
+    .then(data => {
+      // if svg path group stored as symbol element, can be appended directly to SVG (won't render until <use>d as needed)
+      svg.node().append(d3.select(data).select("symbol").node())
+      // defs.node().append(d3.select(data).select("g").node())
+    })
+  d3.xml('./assets/noun_train.svg')
     .then(data => {
       // if svg path group stored as symbol element, can be appended directly to SVG (won't render until <use>d as needed)
       svg.node().append(d3.select(data).select("symbol").node())
@@ -1458,15 +1464,17 @@
           .property("rotate0", rotate0)
 
         // BIG GUY: TRAIN POINT IN MOTION
-        var point = journey.append("circle")
+        var point = train.append("use")
+          .attr("xlink:href", "#train-icon")
           .attr("id","train-point")
-          .attr("r", 1.6)
-          .style("fill","url(#radial-gradient)")
-        	.style("stroke-width", 0.4)
-          .style("stroke","brown")
-          .style("stroke-opacity",0.6)
-          .style("stroke-dasharray","0.05 0.1")
-          .attr("transform", "translate(" + arcPts[0] + ")")
+          .attr("x", 0 - 3)
+          .attr("y", 0 - 2)
+          .attr("width", 6)
+          .attr("height", 6)
+          .style("fill","#222834")
+        	.style("stroke-width", 1)
+          .style("stroke","#682039")
+          .attr("transform", "translate(" + arcPts[0] + ") rotate(" + rotate0 + ")")
 
         // UNDERLYING TICKS/TIES
         let rrTies = route.append("g")
