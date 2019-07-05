@@ -756,15 +756,20 @@
         .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
-    // // sort stations by city name
-    // let sorted = sourceData.stations.gj.features.sort( (a,b) => {
-    //   return a.properties.city > b.properties.city;
-    // });
+    // sort stations by city name
+    let sorted = sourceData.stations.gj.features.sort((a, b) => {
+      var localA = a.properties.city.toLowerCase(),
+          localB = b.properties.city.toLowerCase();
+      if (localA < localB) return -1;
+      if (localA > localB) return 1;
+      return 0; // default return value (no sorting)
+    });
 
-    let shuffled = shuffle(sourceData.stations.gj.features);
+    // let shuffled = shuffle(sourceData.stations.gj.features);
 
     // create new allStations array by extracting sorted, slimmed railStns properties
-    var allStations = /*sourceData.stations.gj.features*/shuffled.map( (d,i) => {
+    // var allStations = shuffled.map( (d,i) => {
+    var allStations = sorted.map((d,i) => {
       let props = d.properties, // shorthand
         station = {
           id: i.toLocaleString().padStart(3,"0"),
@@ -1058,6 +1063,20 @@
         lineString: mergedGJ,
         segments: route.segments.map(storeSegmentDetails),
         allStops: raw.places,
+        get relStops() {
+          let stopSet = new Set();
+          let toFromStns = this.allStops.filter(d => d.shortName.startsWith(this.from.shortName) && d.kind === "station" || d.shortName.startsWith(this.to.shortName) && d.kind === "station")
+          toFromStns.forEach(d => {
+            d.flagged = true;
+            d.toFrom = (d.shortName.startsWith(this.to.shortName)) ? "to" : "from";
+            stopSet.add(d);
+          })
+          this.segments.forEach(d => {
+            stopSet.add(d.departing);
+            stopSet.add(d.arriving);
+          });
+          return [...stopSet];
+        },
         overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
         arcPts: projectArray(truncateCoords(getSteps(arcSteps))),
         geoMM: getSteps(Math.round(inMiles))
@@ -1188,9 +1207,7 @@
 
       let bounds = path.bounds(data1),
         boundsHeight = bounds[1][1] - bounds[0][1],
-        boundsTransform = getTransform(bounds);
-          // { scalePad: (width < 640) ? 0.4 : 0.1 });
-          // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
+        boundsTransform = getTransform(bounds);  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
 
       let scale1 = Math.min(maxInitZoom,Math.ceil(boundsTransform.k)),
        bottomPad = (width < 640) ? d3.select("#dash").node().clientHeight/1.5 : (width >= 1200) ? d3.select("#dash").node().clientHeight / 3 : d3.select("#dash").node().clientHeight / 2.25,
@@ -1396,26 +1413,6 @@
         var train = journey.append("g")
           .attr("id", "train")
 
-        // separately add relevant station points (those with stops) using R2R return data
-        journey.append("g").attr("id", "station-stops")
-          .selectAll("use")
-          .data(received.allStops.slice(2))  // ignore first 2 elements, which are begin/end pts and represented elsewhere
-          .enter().append("use")
-            .attr("xlink:href", "#station-icon")
-            .attr("x", d => { return projection([d.lng,d.lat])[0] - 0.8; })
-            .attr("y", d => { return projection([d.lng,d.lat])[1] - 1; })
-            .attr("width", 1.6)
-            .attr("height", 2)
-            .style("opacity", 0) // was 0.6
-            .style("fill","dimgray")
-            .style("stroke","black")
-            .style("stroke-width","0.4px")
-            .property("name", d => d.shortName)
-            .property("orig-opacity", 0.6)  // specified for mouseenter -> mouseout reset
-            .property("orig-stroke-opacity",0.6)
-            .on("mouseenter", onMouseenter)
-            .on("mouseout", onMouseout)
-
         let arcPts = received.arcPts; // shorthand; currently projected(?)
 
         // LINE/ROUTE
@@ -1448,6 +1445,36 @@
           .style("fill","none")
           // .style("stroke","slateblue")
           // .style("stroke-width","1px")
+
+        // separately add relevant station points (those with stops) using R2R return data
+        journey.append("g").attr("id", "station-stops")
+          .selectAll("use")
+          .data(received.relStops)  // ignore first 2 elements, which are begin/end pts and represented elsewhere
+          // .data(received.allStops.slice(2))  // ignore first 2 elements, which are begin/end pts and represented elsewhere
+          .enter().append("use")
+            .attr("xlink:href", "#station-icon")
+            .attr("x", d => {
+              let halfWidth = (d.flagged) ? 1.6 : 0.8;
+              return projection([d.lng,d.lat])[0] - halfWidth;
+            })
+            .attr("y", d => {
+              let halfHeight = (d.flagged) ? 2 : 1;
+              return projection([d.lng,d.lat])[1] - halfHeight;
+            })
+            .attr("width", d => {
+              let width = d.flagged ? 3.2 : 1.6;
+              return width;
+            })
+            .attr("height", d => d.flagged ? 4 : 2)
+            .style("opacity", 0) // initially
+            .style("fill", d => !d.flagged ? "black" : (d.toFrom === "from") ? "green" : "red")
+            .style("stroke", d => !d.flagged ? "dimgray" : "black")
+            .style("stroke-width","0.4px")
+            .property("name", d => d.shortName)
+            .property("orig-opacity", 0.6)  // specified for mouseenter -> mouseout reset
+            .property("orig-stroke-opacity",0.6)
+            .on("mouseenter", onMouseenter)
+            .on("mouseout", onMouseout)
 
         // make headlights!
         let radians0 = 0, // start with unrotated sector
@@ -1513,7 +1540,7 @@
       // simultaneous-ish
       g.select("#station-stops").selectAll("use")
         .transition().duration(t)
-          .style("opacity", 0.6)
+          .style("opacity", d => d.flagged ? 1 : 0.6)
 
     }
 
@@ -1651,7 +1678,6 @@
   }
 
   function getSet(again = false) {
-    console.log('getting set -- again?:',again)
     // coordinate zoom to first frame, turning on headlights, dimming background, expanding dash, and ultimately initiating train and route animation
     let t = !again ? zoomDuration : zoomDuration/4;
     svg.transition().duration(t).ease(zoomEase)
@@ -1662,10 +1688,10 @@
         // turn on headlights
         headlights.transition().delay(t/2).duration(t/2).style("opacity",0.6)
         // schedule fade/removal of headlights upon train arrival
-        // dispatch.on("arrive", () => {
-        //   headlights.transition().duration(tPause)
-        //             .style("opacity",0)
-        // });
+        dispatch.on("arrive", () => {
+          headlights.transition().duration(tPause)
+                    .style("opacity",0)
+        });
         // expand dash automatically
         expand("dash","up")
         // prepare global values for animation coordination
@@ -2668,14 +2694,18 @@
   }
 
   function clearDashed() {
+    console.log(this)
     var l = this.getTotalLength(),
         i = d3.interpolateString("0", -l);
+    console.log(l)
     return function(t) { return i(t); };
   }
 
   function clearSolid() {
+    console.log(this)
     var l = this.getTotalLength(),
         i = d3.interpolateString(l,"0");
+    console.log(l)
     return function(t) { return i(t); };
   }
 
