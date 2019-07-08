@@ -315,7 +315,7 @@
     get centerTransform() { return {...this.init, ...this.spec.center} },
     get zoomFollow() { return {...this.init, ...this.spec.zoom} },
     spec: {
-      bounds: { scalePad: 0.1 },
+      bounds: { scalePad: 0 }, // 0.1 },
       center: {
         _padBottom: d3.select("#dash").node().clientHeight/4,
         get padBottom() { return this._padBottom },
@@ -1065,7 +1065,7 @@
         allStops: raw.places,
         get relStops() {
           let stopSet = new Set();
-          let toFromStns = this.allStops.filter(d => d.shortName.startsWith(this.from.shortName) && d.kind === "station" || d.shortName.startsWith(this.to.shortName) && d.kind === "station")
+          let toFromStns = this.allStops.filter(d => d.shortName.startsWith(this.from.shortName) && d.kind === "station" || d.shortName.startsWith(this.to.shortName) && d.kind === "station");
           toFromStns.forEach(d => {
             d.flagged = true;
             d.toFrom = (d.shortName.startsWith(this.to.shortName)) ? "to" : "from";
@@ -1416,6 +1416,19 @@
         let arcPts = received.arcPts; // shorthand; currently projected(?)
 
         // LINE/ROUTE
+
+        // semiSimp path for headlights/eventual compass to follow
+        semiSimp = getSimpRoute(turf.lineString(arcPts),0.5);
+        let simpCoords = semiSimp.geometry.coordinates; // shorthand
+
+        // bind (and optionally render) semiSimp line (currently using for later DOM access to path nodes within bearWithMe())
+        journey.append("path")
+          .attr("id", "semi-simp")
+          .attr("d", line(simpCoords))
+          .style("fill","none")
+          // .style("stroke","slateblue")
+          // .style("stroke-width","1px")
+
         // faint underlying solid
         route.append("path")
           .attr("d", line(arcPts))
@@ -1434,20 +1447,19 @@
           .style("opacity",0)
           .style("stroke-dasharray", "0.8 1.6")
 
-        // semiSimp path for headlights/eventual compass to follow
-        semiSimp = getSimpRoute(turf.lineString(arcPts),0.5);
-        let simpCoords = semiSimp.geometry.coordinates; // shorthand
-
-        // bind (and optionally render) semiSimp line (currently using for later DOM access to path nodes within bearWithMe())
-        journey.append("path")
-          .attr("id", "semi-simp")
-          .attr("d", line(simpCoords))
-          .style("fill","none")
-          // .style("stroke","slateblue")
-          // .style("stroke-width","1px")
+        // UNDERLYING TICKS/TIES
+        let rrTies = route.append("g")
+          .attr("id","rr-ties")
+          .append("path")
+          .attr("d", line(arcPts))
+          .style("fill", "none")
+          .style("stroke","gainsboro")
+          .style("stroke-width",0.6)
+          .style("stroke-dasharray", "0.1 0.2")
 
         // separately add relevant station points (those with stops) using R2R return data
-        journey.append("g").attr("id", "station-stops")
+        // journey.append("g")
+        route.append("g").attr("id", "station-stops")
           .selectAll("use")
           .data(received.relStops)  // ignore first 2 elements, which are begin/end pts and represented elsewhere
           // .data(received.allStops.slice(2))  // ignore first 2 elements, which are begin/end pts and represented elsewhere
@@ -1501,17 +1513,8 @@
           .style("fill","#222834")
         	.style("stroke-width", 1)
           .style("stroke","#682039")
+          .style("opacity", 0) // initially
           .attr("transform", "translate(" + arcPts[0] + ") rotate(" + rotate0 + ")")
-
-        // UNDERLYING TICKS/TIES
-        let rrTies = route.append("g")
-          .attr("id","rr-ties")
-          .append("path")
-          .attr("d", line(arcPts))
-          .style("fill", "none")
-          .style("stroke","gainsboro")
-          .style("stroke-width",0.6)
-          .style("stroke-dasharray", "0.1 0.2")
 
         return true;
 
@@ -1537,7 +1540,7 @@
             d3.select(this).remove();
           })
 
-      // simultaneous-ish
+      // simultaneous-ish; cannot append as callback to a "start" listener above b/c then EACH use element would trigger new selectAll transition ( => crash)
       g.select("#station-stops").selectAll("use")
         .transition().duration(t)
           .style("opacity", d => d.flagged ? 1 : 0.6)
@@ -1685,13 +1688,6 @@
       .on("start", () => {
         // dim background layers
         if (reversing.i < 1) dimBackground(t/2)
-        // turn on headlights
-        headlights.transition().delay(t/2).duration(t/2).style("opacity",0.6)
-        // schedule fade/removal of headlights upon train arrival
-        dispatch.on("arrive", () => {
-          headlights.transition().duration(tPause)
-                    .style("opacity",0)
-        });
         // expand dash automatically
         expand("dash","up")
         // prepare global values for animation coordination
@@ -1705,8 +1701,24 @@
         d3.select("label#zoom").attr("value",firstIdentity.k)
         // confirm g exactly in alignment for next transition
         g.attr("transform",firstIdentity.toString())
-        // final pause, then go!
-        d3.timeout(go, tPause);
+        // reveal train
+        g.select("#train-point") // .raise()
+          .transition().duration(t/2)
+            .style("opacity", 1)
+            .on("start", () => {
+              // turn on headlights
+              headlights.transition().delay(t/2).duration(t/2)
+                .style("opacity",0.6)
+              // schedule fade/removal of headlights upon train arrival
+              dispatch.on("arrive", () => {
+                headlights.transition().duration(tPause)
+                          .style("opacity",0)
+              });
+            })
+            .on("end", () => {
+              // final pause, then go!
+              d3.timeout(go, tPause);
+            })
       })
 
     function dimBackground(t) {
@@ -1962,15 +1974,6 @@
       calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight;
 
       calculated.width = window.innerWidth - d3.select("#aside").node().clientWidth;
-
-      if (calculated.width > width) {
-        // console.log(d3.select("#header").node())
-        // console.log(d3.select("#dash-plus").node())
-        console.log(d3.select("#map").node())
-        console.log(d3.select("#section-wrapper").node())
-        console.log(d3.select("#map-plus").node())
-      }
-      // mb-neg, padY -18
 
       // update #about-wrapper to align with full map height
       d3.select("#about-wrapper").style("height", calculated.height + "px");
@@ -2683,8 +2686,8 @@
 
   function tweenDash() {
     var l = this.getTotalLength(),
-      interpolator = d3.interpolateString("0," + l, l + "," + l);
-    return function(t) { return interpolator(t); };
+        i = d3.interpolateString("0," + l, l + "," + l);
+    return function(t) { return i(t); };
   }
 
   function drawDashed() {
@@ -2694,18 +2697,14 @@
   }
 
   function clearDashed() {
-    console.log(this)
     var l = this.getTotalLength(),
         i = d3.interpolateString("0", -l);
-    console.log(l)
     return function(t) { return i(t); };
   }
 
   function clearSolid() {
-    console.log(this)
     var l = this.getTotalLength(),
-        i = d3.interpolateString(l,"0");
-    console.log(l)
+        i = d3.interpolateString(l + ",0", "0," + l);
     return function(t) { return i(t); };
   }
 
@@ -3408,23 +3407,17 @@
           if (feature.property("category") === "Watershed") {
             feature.transition().duration(t).ease(d3.easeCubicIn)
               .styleTween("stroke-dashoffset", clearDashed)
-              .on("end", () => {
-                feature.remove();
-              })
+              .on("end", () => feature.remove())
           } else {
             feature.transition().duration(t).ease(d3.easeCubicIn)
               .styleTween("stroke-dasharray", clearSolid)
-              .on("end", () => {
-                feature.remove();
-              })
+              .on("end", () => feature.remove())
           }
           break;
         case "py":
           feature.transition().duration(t)
             .style("opacity", 0)
-            .on("end", () => {
-              feature.remove();
-            })
+            .on("end", () => feature.remove())
           break;
       }
 
