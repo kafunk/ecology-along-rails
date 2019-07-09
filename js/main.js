@@ -149,42 +149,10 @@
 
   var g = svg.append("g")
 
-  // define gradients & svg icons for later <use></use>
-  var defs = svg.append("defs");
-
-  // used for current train point
-  var radialGradient = defs.append("radialGradient")
-    .attr("id", "radial-gradient")
-    .attr("cx", "50%")
-    .attr("cy", "50%")
-    .attr("r", "75%")
-
-  // define color scales
-  var numColors = 9,
-  radialGradientScale = d3.scaleLinear()
-     .domain([0,(numColors-1)/2,numColors-1])
-     .range(["lightyellow","goldenrod","darkgoldenrod"])
-
-  // bind specific color stops to radialGradient
-  radialGradient.selectAll("stop")
-    .data(d3.range(numColors))
-      .enter().append("stop")
-      .attr("offset", function(d,i) { return i/(numColors-1)*50 + 40 + "%"; })
-      .attr("stop-color", d => { return radialGradientScale(d) });
-
   // inject external SVG files into local svg element
-  d3.xml('./assets/station.svg')
-    .then(data => {
-      // if svg path group stored as symbol element, can be appended directly to SVG (won't render until <use>d as needed)
-      svg.node().append(d3.select(data).select("symbol").node())
-      // defs.node().append(d3.select(data).select("g").node())
-    })
-  d3.xml('./assets/noun_train.svg')
-    .then(data => {
-      // if svg path group stored as symbol element, can be appended directly to SVG (won't render until <use>d as needed)
-      svg.node().append(d3.select(data).select("symbol").node())
-      // defs.node().append(d3.select(data).select("g").node())
-    })
+  d3.xml('./assets/station.svg').then(data => svg.node().append(d3.select(data).select("symbol").node()))
+
+  d3.xml('./assets/noun_train.svg').then(data => svg.node().append(d3.select(data).select("symbol").node()))
 
 // PROJECTIONS & PATHS
 
@@ -3911,7 +3879,7 @@
       experience.paused = false;
       experience.manuallyPaused = false;
       experience.pausedAt = null;
-      // restart timer @ passed time
+      // restart timer @ stored time
       // if (animatable) ?
       timer.restart(animate,delay,time);
       // toggle pause-play
@@ -3970,6 +3938,8 @@
       // add fade transitions to content removal
       d3.select("#journey").selectAll("*").remove()
       g.select("#enrich-layer").selectAll("*").remove();
+
+      // reset main quadtree.... such that node.selected === none!
 
       // d3.select("#get-options").node().innerHTML = form0;
       // d3.select("#dash-plus").node().innerHTML = dash0;
