@@ -305,27 +305,15 @@
       get paddedExtent0() { return this.extent0.map(arr => arr.map(d => d * 1.2)) },
       get scale() { return scale0; },
       padTop: 24,
-      // padRight: 0,
       get padRight() { return (width >= 1200) ? d3.select("#about").node().clientWidth : 0 },
-      // get padBottom() { return (width >= 1200) ? 0 : d3.select("#dash").node().clientHeight + d3.select("#about-up-btn").node().clientHeight },
       get padBottom() { return (width >= 1200) ? d3.select("#dash").node().clientHeight / 4 : (width < 640) ? d3.select("#dash").node().clientHeight * 2 : d3.select("#dash").node().clientHeight },
       padLeft: 24
     },
     get boundsTransform() { return {...this.init, ...this.spec.bounds} },
     get centerTransform() { return {...this.init, ...this.spec.center} },
-    // get zoomFollow() { return {...this.init, ...this.spec.zoom} },
-    // get zoomFollow() { return {...this.spec.zoom} },
     spec: {
-      bounds: {
-        scalePad: 0 // .1
-        // get scalePad() { return width >= 1200 ? 0.1 : 0 }
-      },
-      center: { } //,
-      //   _padBottom: d3.select("#dash").node().clientHeight/4,
-      //   get padBottom() { return this._padBottom },
-      //   set padBottom(value) { this._padBottom = value; }
-      // },
-      // zoom: { scale: maxInitZoom }
+      bounds: { scalePad: 0 },
+      center: { }
     },
     quadtree: {
       projectX: d => projection(d.geometry.coordinates)[0],
@@ -1226,29 +1214,9 @@
     Promise.resolve(prepareEnvironment(receivedData)).then(() => { // proceed
 
       let bounds = path.bounds(data1).slice(),
-        // boundsHeight = bounds[1][1] - bounds[0][1],
-        bottomPad = (width >= 1200) ? 0 : defaultOptions.init.padBottom;
-       // adjust for routeBounds only
-// console.log(bottomPad) // 0 // 0 // 0
-// console.log(boundsHeight) // 216 // not enough //133 ok 49 // good //
-        // bottomPad0 = defaultOptions.init.padBottom + d3.select("#dash").node().clientHeight + d3.select("#about-up-btn").node().clientHeight,
-        // bottomPad = (width >= 1200) ? 0 : (width < 640) ? bottomPad0 * 2 : bottomPad0;
+        bottomPad = (width >= 1200) ? 0 : defaultOptions.init.padBottom;  // adjust for routeBounds only
 
-        // if (width < 640) defaultOptions.init.padBottom *= 2;
-
-        // bottomPad = (width >= 1200) ? 0 : (width < 640) ? defaultOptions.init.bottomPad * 2 : bottomPad0;
-        // rightPad = (width >= 1200) ? defaultOptions.init.padRight + d3.select("#about").node().clientWidth :  0;
-
-        // console.log(defaultOptions.init.padTop)
-        // console.log(defaultOptions.init.padRight)
-        // console.log(defaultOptions.init.padBottom)
-        // console.log(defaultOptions.init.padLeft)
-
-// sm || md || lg
-//    || 237 ||
-        // bottomPad = (width < 640) ? d3.select("#dash").node().clientHeight/1.5 : (width >= 1200) ? d3.select("#dash").node().clientHeight / 3 : d3.select("#dash").node().clientHeight / 2.25,
-        // boundsTransform = getTransform(bounds,{ padBottom: bottomPad }), // { padBottom: bottomPad }), // THROWAWAY for some reason first call to getTransform always overzooms.... COMBAK // DEBUG
-      let k0 = getTransform(bounds).k //,{ padBottom: bottomPad }).k; // get scale @ framed full route (used to confirm not overzooming)
+      let k0 = getTransform(bounds).k;  // get scale @ framed full route (used to confirm not overzooming)
 
       let scale1 = Math.min(maxInitZoom,k0),
          options = { scale: scale1, padBottom: bottomPad };
@@ -1626,23 +1594,13 @@
 
       // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
       let bounds2 = path.bounds(data2),
-          bounds3 = path.bounds(data3);
-          // boundsHeight2 = bounds2[1][1] - bounds2[0][1],
-          // boundsHeight3 = bounds3[1][1] - bounds3[0][1],
-          // boundsHeightAvg = (boundsHeight2 + boundsHeight3)/2;
-
-      // bottomPad *= 1.5;
-
-      let k2 = getTransform(bounds2).k, //, { padBottom: bottomPad }).k,
-          k3 = getTransform(bounds3).k //, { padBottom: bottomPad }).k;
+          bounds3 = path.bounds(data3),
+          k2 = getTransform(bounds2).k,
+          k3 = getTransform(bounds3).k;
 
       let zoomScale = Math.min(maxInitZoom,((maxInitZoom + k2 + k3)/3));
 
-      // // store for getCenterTransform called without zoomAlongOptions
-      // defaultOptions.spec.center.padBottom = bottomPad;
-
-      // zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale }} // , padBottom: bottomPad }};
-      zoomAlongOptions = { scale: zoomScale } // , padBottom: bottomPad }};
+      zoomAlongOptions = { scale: zoomScale };
 
       let p0 = zoomArc.node().getPointAtLength(0),
           p1 = zoomArc.node().getPointAtLength(zoomLength);
@@ -1806,28 +1764,9 @@
     if (reversing.flag) {
       // timer countDOWN
       elapsed = reversing.t - elapsed;
-      // // watch for animation end
-      // if (elapsed < 0) {
-      //   reverseTimer.stop();
-      //   reversing.flag = false;
-      //   // reversing.stop = true;
-      //   // avoid slight tracker disconnects at end
-      //   d3.select("#current-miles").text("0")
-      //   d3.select("#current-time").text("0")
-      //   // prepare to restart animation from beginning
-      //   d3.timeout(getSet(true),tPause * 12); // again = true; ensure quadtree encounters only triggering reveal, not readding to dom
-      //   return;
-      // }
       // zoomFollow if necessary
       if (zoomArc && elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) zoomAlong(elapsed,reversing.t,reversing.tPad);
     } else {  // not reversing
-      // // watch for animation end
-      // if (elapsed > tFull) {
-      //   timer.stop();
-      //   // signal train arrival
-      //   dispatch.call("arrive"); // , this);
-      //   return;
-      // }
       // zoomFollow if necessary
       if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) zoomAlong(elapsed);
     }
@@ -2059,22 +1998,6 @@
     return (width >= 1200) ? "right" : "down";
   }
 
-//// IMGS
-
-  // async function srcToImg(src) {
-  //   let img = new Image();
-  //   img.src = src;
-  //   let promise = new Promise((resolve, reject) => {
-  //     img.onload = () => resolve({img, status: 'ok'});
-  //   });
-  //   let result = await promise;
-  //   return result.img;
-  // }
-
-  // function imgToPattern(img, ctx = context) {
-  //   return ctx.createPattern(img,'repeat');
-  // }
-
 //// GEOJSON + TOPOJSON HELPERS
 
   function getMesh(source,key,meshFx) {
@@ -2182,8 +2105,6 @@
 
     if (d3.event.sourceEvent && experience.initiated && d3.event.sourceEvent.type === "mousemove") {
       // if user pans after animation has started, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
-
-      console.log("panning")
 
       // if (!experience.paused) pauseAnimation();
 
@@ -2445,12 +2366,6 @@
 
             selected.push(d)
 
-            // // immediately remove triggerPt and all others associated with same feature ID from remaining search pool to avoid wasting energy on retriggers // COMBAK omit this for reset()?
-            // let toRemove = quadtree.data().filter(q => {
-            //   return q.properties.id === d.properties.id;
-            // })
-            // quadtree.removeAll(toRemove)
-
           }
 
         } while (node = node.next);
@@ -2519,16 +2434,13 @@
 
     // train moves along route
     trainPt.attr("transform", transformString);
-    // was translateAlong(fullPath,fullT,elapsedT) // goTrain
 
     // headlights simulate search for triggerPts
     headlights.attr("transform",transformString);
-    // was bearWithMe(fullPath,semiSimp,rotate0,fullT,elapsedT) // lightSearch
 
     // traversed path illuminated with color as train progresses
     fullPath.style("opacity",1)
     fullPath.style("stroke-dasharray",routeDashInterpolator(eased(t)))
-    // was tweenDash2(fullPath,fullT,elapsedT) // unfurlPath
 
     // get adjusted quadtreeRep searchExtent on each trainMove
     let dx = currentTranslate[0] - prevTranslate[0],
@@ -2538,17 +2450,6 @@
              rotateDelta = currentRotate - prevRotate;
 
     searchExtent = rotateExtent(translatedExtent,rotateDelta,currentTranslate)
-
-    // SEARCH EXTENT VIS
-    // g.append("rect")
-    //   .attr("x", searchExtent[0][0])
-    //   .attr("y", searchExtent[0][1])
-    //   .attr("width", searchExtent[1][0] - searchExtent[0][0])
-    //   .attr("height", searchExtent[1][1] - searchExtent[0][1])
-    //   .style("fill","tomato")
-    //   .style("opacity", 0.6)
-    //   .transition().delay(800).duration(400)
-    //     .style("opacity", 0)
 
     // save newly determined values as previous values
     prevTranslate = currentTranslate;
@@ -2591,9 +2492,7 @@
       .on("click.play", null)
     svg.on("click", togglePause)
     // start global timers
-    // d3.timerFlush();
     timer = d3.timer(animate);
-    // output elsewhere?
     console.log("train departing @ " + d3.now())
   }
 
@@ -2640,7 +2539,6 @@
     svg.on("click", null)
     // spacebar?
 
-    // output elsewhere?
     console.log("train arrived @ " + d3.now())
     console.log("unique encounters",uniqueEncounters.size)
 
@@ -2714,7 +2612,6 @@
     }
 
     // start global timers
-    // d3.timerFlush();
     let delay = 0,
          time = d3.now();
     reverseTimer = d3.timer(animate, delay, time);
@@ -4008,7 +3905,6 @@
     }
 
     function continueResume() {
-
       // determine time since storing of pausedAt
       let time = d3.now() - experience.pausedAt;
       // track state
@@ -4017,14 +3913,12 @@
       experience.pausedAt = null;
       // restart timer @ passed time
       // if (animatable) ?
-      // d3.timerFlush();
       timer.restart(animate,delay,time);
       // toggle pause-play
       d3.select("#play-pause")
         .text("II") // Pause
         .on("click.pause", manualPause)
         .on("click.play", null)
-
     }
 
   }
@@ -4601,9 +4495,17 @@
   // added categorical background-images to currently passing div (communicates differences without relying on intrusive column headings)
   // when select new route form not visible, select new route btn !== disabled (plus opposite)
   // trainPt, headlights, and fullPath now animations (vs transitions) coordinated with d3.timer
+  // more improvements to zoom bx and user panning responsivity
+  // pause functionality
+  // basic reset functionality
+  // reverse/replay functionality!
+  // keep state lines subtly visible through polygon feature reveal
+  // while animating, single click on map PAUSES (in addition to explicit button)
+  // double size of background-images that populate sections of "currently passing" by flipping down mirrored version of first, then set background-image to repeat for continuous coverage
+  // fixed: undisable play/pause visual
+  // fixed: pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
 
-// CURRENTLY WORKING ON
-  // debugging PAUSE functionality (how to pass and utilize pausedAt variable?)
+// WORKING ON
   // debugging RESET functionality (how to clone without rendering, including bound event listeners and data at select state?) and making less hacksome
     // ensure select new route btn in particular maintains original event listeners
 
@@ -4615,7 +4517,6 @@
   // integrate R2R autocomplete API or otherwise resolve big but error-returning cities (Denver, Atlanta, etc)
 
 // MINOR FIXES (COMING SOON)
-  // keep state lines subtly visible through polygon feature reveal
   // have textured backgrounds recalculate from group up on each render
   // grossly pair down accompanying text (esp all that "overly dramatic" stuff)
   // logBackground river should be taller than wide? interweave with mirrored dashed line?
@@ -4623,10 +4524,8 @@
     // REMOVE: Port Kent, NY
 
 // ADDITIONS (COMING SOON)
-  // while animating, single click on map PAUSES (in addition to explicit button)
   // automatic ordering of legend-log category (so pa-grp3 does not appear above pa-grp1, even if that is the order in which features were encountered)
   // visual affordance/invitation: large transparent play btn simulates 'click' upon animation begin, then visually collapses into much smaller play/pause button in top left corner
-  // double size of background-images that populate sections of "currently passing" by flipping down mirrored version of first, then set background-image to repeat for continuous coverage
   // add automatic highlighting or otherwise improve visual linking of currently passing list with actual rendered features (temporarily align color? thumbnail of shape => dash background?)
 
 // MAYBE
@@ -4641,12 +4540,9 @@
     // if canvas: something akin to https://observablehq.com/@mbostock/randomized-flood-fill
     // plus interpolating between opacity, visibility, colors, location, size
 
-
 // LATEST NOTES
   // BASE & ENRICH POLYGONS = CANVAS ELEMENTS?
   // background gradient N->S brightest mid continent
-  // undisable play/pause visual
-  // pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
   // further order legend:
     // hydrological
     // geological
