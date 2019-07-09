@@ -32,7 +32,7 @@
   var state0 = {}; // restorable?
   var experience = { initiated: false, animating: false, paused: false }
   var togglesOff = { info: false, select: false }
-  var panned = { flag: false, transform: null, centerAdjust: null, i0: 0, i1: 0 }
+  var panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
   var transitionResume = false;
   var reversing = { flag: false, i: 0, t: null, tPad: null }
 
@@ -52,7 +52,7 @@
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
     maxInitZoom = 18,  // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
-    zoomDuration = tPause *2,  // zoom to frame transition duration
+    zoomDuration = tPause,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     trainEase = d3.easeSinInOut,
     relativeDim = 0.4,  // dimBackground level; lower values => greater dim
@@ -116,7 +116,7 @@
 
 // SVG + SIZING
 
-  var padX = 0, padY = -18;
+  var padX = 18, padY = -18;
 
   var initial = calcSize();
 
@@ -125,7 +125,7 @@
     translate0 = [(width + padX)/2, (height + padY)/2],
     extent0 = [[(-width - padX)/2, (-height - padY)/2],[(width + padX)/2, (height + padY)/2]],
     paddedExtent0 = extent0.map(arr => arr.map(d => d * 1.2)),
-    scale0 = 0.9;
+    scale0 = 0.95;
 
   var svg = d3.select("#map").append("svg")
     .attr("id", "svg")
@@ -133,7 +133,6 @@
     .attr("height", height)
     .attr("preserveAspectRatio", "xMidYMid meet") // slice")
     .attr("viewBox", `0 0 ${width} ${height}`)
-    .on("click", togglePause)
 
   var hiddenSvg = d3.select("#map").append("svg")
     .attr("id", "hidden-svg")
@@ -305,23 +304,28 @@
       get extent0() { return [[-(width + padX)/2, -(height + padY)/2],[(width + padX)/2, (height + padY)/2]]; },
       get paddedExtent0() { return this.extent0.map(arr => arr.map(d => d * 1.2)) },
       get scale() { return scale0; },
-      get translate0() { return translate0; },
-      padTop: 60,
-      padRight: 60,
-      padBottom: 60,
-      padLeft: 60
+      padTop: 24,
+      // padRight: 0,
+      get padRight() { return (width >= 1200) ? d3.select("#about").node().clientWidth : 0 },
+      // get padBottom() { return (width >= 1200) ? 0 : d3.select("#dash").node().clientHeight + d3.select("#about-up-btn").node().clientHeight },
+      get padBottom() { return (width >= 1200) ? d3.select("#dash").node().clientHeight / 4 : (width < 640) ? d3.select("#dash").node().clientHeight * 2 : d3.select("#dash").node().clientHeight },
+      padLeft: 24
     },
     get boundsTransform() { return {...this.init, ...this.spec.bounds} },
     get centerTransform() { return {...this.init, ...this.spec.center} },
-    get zoomFollow() { return {...this.init, ...this.spec.zoom} },
+    // get zoomFollow() { return {...this.init, ...this.spec.zoom} },
+    // get zoomFollow() { return {...this.spec.zoom} },
     spec: {
-      bounds: { scalePad: 0 }, // 0.1 },
-      center: {
-        _padBottom: d3.select("#dash").node().clientHeight/4,
-        get padBottom() { return this._padBottom },
-        set padBottom(value) { this._padBottom = value; }
+      bounds: {
+        scalePad: 0 // .1
+        // get scalePad() { return width >= 1200 ? 0.1 : 0 }
       },
-      zoom: { scale: maxInitZoom }
+      center: { } //,
+      //   _padBottom: d3.select("#dash").node().clientHeight/4,
+      //   get padBottom() { return this._padBottom },
+      //   set padBottom(value) { this._padBottom = value; }
+      // },
+      // zoom: { scale: maxInitZoom }
     },
     quadtree: {
       projectX: d => projection(d.geometry.coordinates)[0],
@@ -368,6 +372,12 @@
     "get-options": {
       btn: "select",
       opp: "modal-about"
+    },
+    opposites: {
+      up: "down",
+      down: "up",
+      right: "left",
+      left: "right"
     }
   }
 
@@ -787,7 +797,7 @@
 //// ON INITIAL LOAD
 
   function initPrompt() {
-    adjustSize();
+    // adjustSize();
     d3.select("#modal-plus").classed("none",false)
   }
 
@@ -957,17 +967,7 @@
         toggleLoading();
         let processed = processReceived(returned[0]);
         Promise.all([processed]).then(function(received) {
-
-           // collapse about pane // COMBAK: anyway to have svg preserveAspectRatio be "slice" in this moment only?
-          collapse("about", collapseDirection(window.innerWidth))
-
-          // readjust size since no "click" event fired on this particular #about collapse
-          adjustSize()
-
-          if (!experience.initiated) {
-            initExp(received[0])
-          }
-
+          if (!experience.initiated) initExp(received[0]);
         }, onError);
       }
 
@@ -979,6 +979,8 @@
   function toggleLoading() {
 
     toggleModal()
+
+    collapse("about");
 
     d3.select("#veil")
       .transition().duration(600)
@@ -1064,18 +1066,36 @@
         segments: route.segments.map(storeSegmentDetails),
         allStops: raw.places,
         get relStops() {
+
           let stopSet = new Set();
+
           let toFromStns = this.allStops.filter(d => d.shortName.startsWith(this.from.shortName) && d.kind === "station" || d.shortName.startsWith(this.to.shortName) && d.kind === "station");
+
+          if (toFromStns.length < 2) {
+
+            let missing = [];
+
+            if (!toFromStns.some(d => d.shortName.startsWith(this.from.shortName))) missing.push(this.from)
+
+            if (!toFromStns.some(d => d.shortName.startsWith(this.to.shortName))) missing.push(this.to)
+
+            missing.forEach(d => toFromStns.push(d));
+
+          }
+
           toFromStns.forEach(d => {
             d.flagged = true;
             d.toFrom = (d.shortName.startsWith(this.to.shortName)) ? "to" : "from";
             stopSet.add(d);
           })
+
           this.segments.forEach(d => {
             stopSet.add(d.departing);
             stopSet.add(d.arriving);
           });
+
           return [...stopSet];
+
         },
         overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
         arcPts: projectArray(truncateCoords(getSteps(arcSteps))),
@@ -1205,12 +1225,32 @@
 
     Promise.resolve(prepareEnvironment(receivedData)).then(() => { // proceed
 
-      let bounds = path.bounds(data1),
-        boundsHeight = bounds[1][1] - bounds[0][1],
-        boundsTransform = getTransform(bounds);  // first iteration used to get scale @ framed full route (k used to confirm not overzooming)
+      let bounds = path.bounds(data1).slice(),
+        // boundsHeight = bounds[1][1] - bounds[0][1],
+        bottomPad = (width >= 1200) ? 0 : defaultOptions.init.padBottom;
+       // adjust for routeBounds only
+// console.log(bottomPad) // 0 // 0 // 0
+// console.log(boundsHeight) // 216 // not enough //133 ok 49 // good //
+        // bottomPad0 = defaultOptions.init.padBottom + d3.select("#dash").node().clientHeight + d3.select("#about-up-btn").node().clientHeight,
+        // bottomPad = (width >= 1200) ? 0 : (width < 640) ? bottomPad0 * 2 : bottomPad0;
 
-      let scale1 = Math.min(maxInitZoom,Math.ceil(boundsTransform.k)),
-       bottomPad = (width < 640) ? d3.select("#dash").node().clientHeight/1.5 : (width >= 1200) ? d3.select("#dash").node().clientHeight / 3 : d3.select("#dash").node().clientHeight / 2.25,
+        // if (width < 640) defaultOptions.init.padBottom *= 2;
+
+        // bottomPad = (width >= 1200) ? 0 : (width < 640) ? defaultOptions.init.bottomPad * 2 : bottomPad0;
+        // rightPad = (width >= 1200) ? defaultOptions.init.padRight + d3.select("#about").node().clientWidth :  0;
+
+        // console.log(defaultOptions.init.padTop)
+        // console.log(defaultOptions.init.padRight)
+        // console.log(defaultOptions.init.padBottom)
+        // console.log(defaultOptions.init.padLeft)
+
+// sm || md || lg
+//    || 237 ||
+        // bottomPad = (width < 640) ? d3.select("#dash").node().clientHeight/1.5 : (width >= 1200) ? d3.select("#dash").node().clientHeight / 3 : d3.select("#dash").node().clientHeight / 2.25,
+        // boundsTransform = getTransform(bounds,{ padBottom: bottomPad }), // { padBottom: bottomPad }), // THROWAWAY for some reason first call to getTransform always overzooms.... COMBAK // DEBUG
+      let k0 = getTransform(bounds).k //,{ padBottom: bottomPad }).k; // get scale @ framed full route (used to confirm not overzooming)
+
+      let scale1 = Math.min(maxInitZoom,k0),
          options = { scale: scale1, padBottom: bottomPad };
 
       let routeBoundsIdentity = getIdentity(getCenterTransform(path.centroid(data1),options));
@@ -1227,7 +1267,7 @@
           // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
           prepareUser();
           d3.timeout(() => {
-            onYourMarks(receivedData,routeBoundsIdentity);
+            onYourMarks(receivedData,routeBoundsIdentity); //,bottomPad);
           }, tPause);
         })
 
@@ -1557,7 +1597,7 @@
 
   }
 
-  function onYourMarks(routeObj,routeBoundsIdentity) {  // initAnimation
+  function onYourMarks(routeObj,routeBoundsIdentity) { //,bottomPad) {  // initAnimation
 
     // get zoomFollow object including simplified zoomArc (if applicable) and first/last zoom frames
     let zoomFollow = getZoomFollow(routeObj);
@@ -1586,20 +1626,23 @@
 
       // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
       let bounds2 = path.bounds(data2),
-          bounds3 = path.bounds(data3),
-          boundsHeight2 = bounds2[1][1] - bounds2[0][1],
-          boundsHeight3 = bounds3[1][1] - bounds3[0][1],
-          boundsHeightAvg = (boundsHeight2 + boundsHeight3)/2,
-          boundsTransform2 = getTransform(bounds2),
-          boundsTransform3 = getTransform(bounds3);
+          bounds3 = path.bounds(data3);
+          // boundsHeight2 = bounds2[1][1] - bounds2[0][1],
+          // boundsHeight3 = bounds3[1][1] - bounds3[0][1],
+          // boundsHeightAvg = (boundsHeight2 + boundsHeight3)/2;
 
-      let zoomScale = Math.min(maxInitZoom,Math.ceil(Math.min(boundsTransform2.k,boundsTransform3.k))),
-          bottomPad = (width < 640) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/2 : (width >= 1200) ? (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3.25 : (d3.select("#dash").node().clientHeight + boundsHeightAvg)/3;
+      // bottomPad *= 1.5;
 
-      // store for getCenterTransform called without zoomAlongOptions
-      defaultOptions.spec.center.padBottom = bottomPad;
+      let k2 = getTransform(bounds2).k, //, { padBottom: bottomPad }).k,
+          k3 = getTransform(bounds3).k //, { padBottom: bottomPad }).k;
 
-      zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale*2, padBottom: bottomPad }};
+      let zoomScale = Math.min(maxInitZoom,((maxInitZoom + k2 + k3)/3));
+
+      // // store for getCenterTransform called without zoomAlongOptions
+      // defaultOptions.spec.center.padBottom = bottomPad;
+
+      // zoomAlongOptions = { ...defaultOptions.zoomFollow, ...{ scale: zoomScale }} // , padBottom: bottomPad }};
+      zoomAlongOptions = { scale: zoomScale } // , padBottom: bottomPad }};
 
       let p0 = zoomArc.node().getPointAtLength(0),
           p1 = zoomArc.node().getPointAtLength(zoomLength);
@@ -1689,7 +1732,7 @@
         // dim background layers
         if (reversing.i < 1) dimBackground(t/2)
         // expand dash automatically
-        expand("dash","up")
+        expand("dash")
         // prepare global values for animation coordination
         preanimate()
         // disable wheel-/mouse-related zooming while retaining manual pan ability
@@ -1734,7 +1777,7 @@
       }).concat(dimLess.map(d => {
         return {
           selection: d,
-          dimFactor: relativeDim * 2
+          dimFactor: relativeDim * 4
         };
       }));
 
@@ -1811,7 +1854,7 @@
 
   function getZoomAlongTransform(elapsed,t1,tP) {
     // KEEP TRAIN NODE IN CENTER-ISH OF FRAME @ CURRENT ZOOM LEVEL K
-    // for zoomAong between t0,t1 to get eased t between 0,1
+    // for zoomAlong between t0,t1 to get eased t between 0,1
 
     // get eased point at length
     let simpT = d3.scaleLinear().domain([tP,t1-tP]),
@@ -1821,24 +1864,21 @@
 
     // if user has manually panned since animation start, offset zoomAlong center by translate values
     if (panned.flag) {
+
       // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
-      if (panned.i1 > panned.i0) {
+      if (panned.updateFlag) {
 
-        panned.i0++;
+        if (!experience.paused) pauseAnimation();
 
-        pauseAnimation();
-
-        // get current transform?
-        // let translateMatrix = g.node().transform.animVal[0].matrix,
-        //         scaleMatrix = g.node().transform.animVal[1].matrix,
-        //    currentTransform = { k: scaleMatrix.a, x: translateMatrix.e, y: translateMatrix.f },
-        //       currentCenter = getCenterFromTransform(currentTransform);
+        // reset
+        panned.updateFlag = false;
 
         // get current center pt by working backwards through centerTransform() from stored panned.transform
         let currentCenter = getCenterFromTransform(panned.transform);
 
         // get difference btween p and currentCenter
         panned.centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
+        // console.log([p.x - currentCenter[0], p.y - currentCenter[1]])
 
         // resume again!
         if (!experience.manuallyPaused) resumeAnimation();
@@ -1874,7 +1914,7 @@
   })
   d3.select("#select-new").on("click", () => selectNew())
   d3.select("#info-btn").on("click", () => toggleModal("modal-about"))
-  d3.select("#dash-expand-btn").on("click", () =>  expand("dash","up"))
+  d3.select("#dash-expand-btn").on("click", () =>  expand("dash"))
   d3.select("#dash-collapse-btn").on("click", () =>  collapse('dash','down'))
   d3.select("#modal-close-btn").on("click", () =>  toggleModal())
   d3.select("#about-up-btn").on("click", () => expand('about','up'))
@@ -1897,8 +1937,6 @@
 
 // RESIZE EVENTS
   d3.select(window).on("resize.map", adjustSize)
-  d3.select("#about-expand").on("click", adjustSize)
-  d3.select("#about-collapse").on("click", adjustSize)
 
 // FORMS & FIELDS
   d3.select("#get-options").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
@@ -1912,7 +1950,7 @@
 
   function adjustSize() {
 
-    if (experience.animating && !experience.paused) pauseAnimation();
+    // if (experience.animating && !experience.paused) pauseAnimation();
 
     // get updated dimensions
     let updated = calcSize();
@@ -1933,7 +1971,7 @@
     // constrain zoom behavior (scale)
     // zoom.translateExtent(paddedExtent0)
 
-    if (experience.animating && !experience.manuallyPaused) resumeAnimation();
+    // if (experience.animating && !experience.manuallyPaused) resumeAnimation();
 
   }
 
@@ -2004,7 +2042,7 @@
       }
 
       // if window too short to show #about content, collapse automatically
-      if (window.innerHeight < 500) collapse("about","down");
+      if (window.innerHeight < 500 && !d3.select("#about").classed("disappear-down")) collapse("about","down");
 
       // map height calculation includes #aside
       calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#aside").node().clientHeight - d3.select("#footer").node().clientHeight;
@@ -2017,8 +2055,8 @@
 
   }
 
-  function collapseDirection(width) {
-    return (width > 1199) ? "right" : "down";
+  function collapseDirection(width = window.innerWidth) {
+    return (width >= 1200) ? "right" : "down";
   }
 
 //// IMGS
@@ -2124,13 +2162,6 @@
   }
 
 //// ZOOM BEHAVIOR
-  function togglePause() {
-    if (experience.animating && !experience.paused) {
-      manualPause()
-    } else if (experience.animating && experience.manuallyPaused) {
-      resumeAnimation();
-    }
-  }
 
   function zoomed() {
 
@@ -2149,20 +2180,21 @@
     // keep zoom buttons up to date
     d3.select("label#zoom").attr("value", tk)
 
-    if (d3.event.sourceEvent && experience.animating && !experience.manuallyPaused) {
-      // if user pans while animation actively underway, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
+    if (d3.event.sourceEvent && experience.initiated && d3.event.sourceEvent.type === "mousemove") {
+      // if user pans after animation has started, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
 
-      if (!experience.paused) pauseAnimation();
+      console.log("panning")
 
-      panned.flag = true,
+      // if (!experience.paused) pauseAnimation();
+
+      panned.flag = true;
+      panned.updateFlag = true;
       panned.transform = transform;
-      ++panned.i1;
 
-      if (!experience.manuallyPaused) resumeAnimation();
+      // if (!experience.manuallyPaused) resumeAnimation();
 
-    } else if (d3.event.sourceEvent && experience.initiated && d3.event.sourceEvent.type === "mousemove") {
-      // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame)
-      transitionResume = true;
+      if (experience.manuallyPaused) transitionResume = true;  // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame) before resuming animation
+
     }
 
   }
@@ -2216,8 +2248,12 @@
 
     let opts = {...defaultOptions.centerTransform, ...options};
 
-    let x = ((transform.x - opts.translate0[0]) / -transform.k) - opts.padRight + opts.padLeft,
-        y = ((transform.y - opts.translate0[1]) / -transform.k) - opts.padBottom + opts.padTop;;
+    // account for any padding
+    opts.width -= (opts.padLeft + opts.padRight);
+    opts.height -= (opts.padTop + opts.padBottom);
+
+    let x = ((transform.x - opts.width/2) / -transform.k), // - opts.padRight + opts.padLeft,
+        y = ((transform.y - opts.height/2) / -transform.k) // - opts.padBottom + opts.padTop;
 
     return [x,y];
 
@@ -2238,23 +2274,20 @@
       b1 = bounds[1] || [bounds.width,bounds.height]
     }
 
-    // account for any padding
-    b0[0] -= opts.padLeft,
-    b0[1] -= opts.padTop,
-    b1[0] += opts.padRight,
-    b1[1] += opts.padBottom;
-
     let dx = b1[0] - b0[0],  // domain x (input)
         dy = b1[1] - b0[1];  // domain y (input)
 
-    // let k = (1 - opts.scalePad) / Math.max(dx / width, dy / height),  // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
-    let k = +((1 - opts.scalePad) * Math.max(width/dx, height/dy)).toFixed(4),
-        x = b1[0] + b0[0], // xMax (b1[0]) + xOffset (b0[0])
-        y = b1[1] + b0[1]; // yMax (b1[1]) + yOffset (b0[1])
+    // account for any padding
+    opts.width -= (opts.padLeft + opts.padRight);
+    opts.height -= (opts.padTop + opts.padBottom);
+
+    let k = +((1 - opts.scalePad) * Math.min(opts.width/dx, opts.height/dy)).toFixed(4),  // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
+        x = b1[0] + b0[0],  // xMax (b1[0]) + xOffset (b0[0])
+        y = b1[1] + b0[1];  // yMax (b1[1]) + yOffset (b0[1])
 
     // calculate translate necessary to center data within extent
-    let tx = (width - k * x) / 2,
-        ty = (height - k * y) / 2;
+    let tx = (opts.width - k * x) / 2,
+        ty = (opts.height - k * y) / 2;
 
     let transform = { k: k, x: tx, y: ty };
 
@@ -2270,18 +2303,19 @@
   }
 
   function getCenterTransform([x,y],options) {
-    // returns transform centering point at predetermined scale
+    // returns transform centering (preprojected) point at predetermined scale
 
     let opts = {...defaultOptions.centerTransform, ...options};
 
-    x = x + opts.padRight - opts.padLeft
-    y = y + opts.padBottom - opts.padTop
+    // account for any padding
+    opts.width -= (opts.padLeft + opts.padRight);
+    opts.height -= (opts.padTop + opts.padBottom);
 
-    let tk = opts.scale,
-        tx = -tk * x + opts.translate0[0],
-        ty = -tk * y + opts.translate0[1];
+    let k = opts.scale,
+       tx = -k * x + opts.width/2,  // no need to divide -k * x by 2 since given as center
+       ty = -k * y + opts.height/2; // no need to divide -k * y by 2 since given as center
 
-    return {x: tx, y: ty, k: tk};
+    return {x: tx, y: ty, k: k};
 
   }
 
@@ -2548,15 +2582,16 @@
   function departed() {
     // track state
     experience.animating = true;
-    // show play-pause btn
+    // show play-pause btn & activate listeners
     d3.select("#play-pause")
       .classed("none",false)
       .property("disabled", false)
       .text("II")
       .on("click.pause", pauseAnimation)
       .on("click.play", null)
+    svg.on("click", togglePause)
     // start global timers
-    d3.timerFlush();
+    // d3.timerFlush();
     timer = d3.timer(animate);
     // output elsewhere?
     console.log("train departing @ " + d3.now())
@@ -2576,8 +2611,12 @@
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, lastIdentity)
-    // re-allow free zooming
-    svg.call(zoom)
+      .on("end", () => {
+        // reset manual pan tracking
+        panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
+        // re-allow free zooming
+        svg.call(zoom)
+      })
 
     // avoid slight tracker disconnects at end
     let finalCoords = geoMM[geoMM.length - 1];
@@ -2591,13 +2630,15 @@
     d3.select("#current-miles").text(totalMiles)
     d3.select("#current-time").text(totalTime)
 
-    // update play-pause btn
+    // update play-pause btn and listeners
     d3.select("#play-pause")
       .text('\u21BB')
       .on("click.replay",replayAnimation)
       .on("click.play",null)
       .on("click.pause",null)
       // .property("disabled", true); // no need to hide completely
+    svg.on("click", null)
+    // spacebar?
 
     // output elsewhere?
     console.log("train arrived @ " + d3.now())
@@ -2653,7 +2694,7 @@
       .on("start", () => {
         // prereverse() to adjust select values stored during preanimate();
         eased = (t, t1 = reversing.t) => trainEase(t/t1);
-        prevExtent = [[prevExtent[0][0]-2,prevExtent[0][1]-2],[prevExtent[1][0]+2,prevExtent[1][1]+2]];
+        prevExtent = [[prevExtent[0][0]-2.5,prevExtent[0][1]-2.5],[prevExtent[1][0]+2.5,prevExtent[1][1]+2.5]];
       })
       .on("end",() => {
         dispatch.call("reverse")
@@ -3406,7 +3447,8 @@
         case "ln":
           if (feature.property("category") === "Watershed") {
             feature.transition().duration(t).ease(d3.easeCubicIn)
-              .styleTween("stroke-dashoffset", clearDashed)
+              .style("opacity",0)
+              // .styleTween("stroke-dashoffset", clearDashed)
               .on("end", () => feature.remove())
           } else {
             feature.transition().duration(t).ease(d3.easeCubicIn)
@@ -3768,7 +3810,7 @@
 
 //// HTML/CSS VISIBILITY MANAGEMENT
 
-  function expand(elementStr,direction = ["up"]) {
+  function expand(elementStr,direction = "up") {
 
     if (d3.event && d3.event.defaultPrevented) return; // dragged
 
@@ -3781,13 +3823,13 @@
 
     } else {
 
-      d3.select(`#${elementStr}`).classed(`disappear-${opposite(direction)}`, false)
+      d3.select(`#${elementStr}`).classed(`disappear-${contentAssoc.opposites[direction]}`, false)
       d3.select(`#${elementStr}-collapse`).classed("none", false);
       d3.select(`#${elementStr}-expand`).classed("none", true);
 
       // size- and element-specific toggles upon expand/collapse of various elements
       if (elementStr === "about") {
-        if (window.innerWidth > 1199) {
+        if (window.innerWidth >= 1200) {
           d3.select("#section-wrapper").classed("relative", true);
           d3.select("#attribution").classed("mr24-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
@@ -3806,20 +3848,12 @@
         d3.select("#attribution").classed("mt-neg18 mt-neg24 mt-neg24-mxl", false)
       }
 
-      function opposite(direction) {
-        const opposites = {
-          up: "down",
-          down: "up",
-          right: "left",
-          left: "right"
-        };
-        return opposites[direction];
-      }
+      adjustSize();
 
     }
   }
 
-  function collapse(elementStr, direction = "down") {
+  function collapse(elementStr, direction = collapseDirection()) {
 
     if (d3.event && d3.event.defaultPrevented) return; // dragged
 
@@ -3829,7 +3863,7 @@
 
     // size- and element-specific toggles upon expand/collapse of various elements
     if (elementStr === "about") {
-      if (window.innerWidth > 1199) {
+      if (window.innerWidth >= 1200) {
         d3.select("#section-wrapper").classed("relative", false)
         d3.select("#attribution").classed("mr24-mxl", true)
         d3.select("#dash-content").classed("px30-mxl",true)
@@ -3854,6 +3888,8 @@
       }
     }
 
+    adjustSize();
+
   }
 
   function toggleModal(subContent) {
@@ -3862,8 +3898,7 @@
       if (subContent) {
         d3.select(`#${subContent}`).classed("none", false);
         if (subContent === "modal-about") {
-          collapse("about", collapseDirection(window.innerWidth))
-          adjustSize()
+          collapse("about")
           isTogglable(subContent,true) // only info btn toggles modal open and closed
         } else {  // subContent === "getOptions"
           d3.select("#select-new").property("disabled", true); // disable select-new btn while getOptions form is open
@@ -3923,14 +3958,12 @@
   }
 
   function togglePause() {
-    // singleClicks only; toggle pause
-    if (experience.animating && !experience.manuallyPaused) manualPause()
-    else if (experience.manuallyPaused) resumeAnimation()
+    if (experience.animating && !experience.manuallyPaused) manualPause();
+    else if (experience.animating) resumeAnimation();
   }
 
   function pauseAnimation() {
     // track state
-    // experience.animating = false;
     experience.paused = true;
     experience.pausedAt = d3.now() - timer._time;
     // stop timer (after pausedAt stored)
@@ -3966,7 +3999,7 @@
 
       let transform = getZoomAlongTransform(experience.pausedAt,t1,tP)
 
-      svg.transition().duration(750).ease(zoomEase)
+      svg.transition().duration(400).ease(zoomEase)
         .call(zoom.transform, getIdentity(transform))
         .on("end",continueResume)
 
@@ -3975,6 +4008,7 @@
     }
 
     function continueResume() {
+
       // determine time since storing of pausedAt
       let time = d3.now() - experience.pausedAt;
       // track state
@@ -3990,6 +4024,7 @@
         .text("II") // Pause
         .on("click.pause", manualPause)
         .on("click.play", null)
+
     }
 
   }
@@ -3997,7 +4032,7 @@
   function selectNew() {
     // if mid-animation, pause and confirm user intent
     if (experience.animating && !experience.paused) pauseAnimation();
-    let confirmed = confirm('Do you wish to select a new route?');
+    let confirmed = experience.initiated ? confirm('Do you wish to select a new route?') : true;
     if (!confirmed) {
       if (experience.paused && !experience.manuallyPaused) resumeAnimation();
       return;
@@ -4017,6 +4052,12 @@
       // restore orig opacity levels of dimmed base
       // work below into cohensive reset method attached to currentState obj
 
+      // reset listeners..?
+      svg.on("click", null)
+
+      if (experience.animating) manualPause(); // CANCEL?
+
+      adjustSize();
       resetZoom();
       collapse("dash", "down")
 
@@ -4027,7 +4068,7 @@
       zoomArc = null;
       experience = { initiated: false, animating: false, paused: false, manuallyPaused: false, pausedAt: null }
       togglesOff = { info: false, select: false }
-      panned = { flag: false, transform: null, centerAdjust: null, i0: 0, i1: 0 }
+      panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
       logBackgrounds = {};
       transitionResume = false;
       reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
