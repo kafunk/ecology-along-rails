@@ -408,8 +408,8 @@
       // no keywords; CATEGORY.startsWith("Volcano")
     },
     "GEOTHERMAL": {
-      divId: "geothermal-areas",
-      fullTxt: "Other Geothermal Areas",
+      divId: "np-geothermal-areas",
+      fullTxt: "Non-protected Geothermal Areas",
       textureType: "lines",
       textureProps: {thicker: 24, lighter: 24, orientation: "6/8"},
       swatchAdjust: { thicker: 2, heavier: 6  }
@@ -461,7 +461,7 @@
 
   let paTags = {  // protected area tags; not mutually exclusive with protected area categories, but mutually exclusive amongst each other; catalogued in order of first preference / weight
     "geo": {
-      divId: "pa-geo",
+      divId: "geo",
       fullTxt: "Geothermal",  // or likely so
       keywords: ["geothermal", "geologic", "geological", "volcano", "volcanoes", "volcanic", "stratovolcano", "stratovolanic", "stratovolcanoes", "lava", "lavas", "dome", "domes", "cone", "cones", "cinder", "cinders", "maar", "maars", "caldera", "calderas", "tuff ring", "tuff rings", "pyroclastic", "geyser", "geysers", "hot spring", "hot springs", "hot well", "hot wells", "sulphur", "sulphuric", "boiling", "mount", "mt"].map(d => d.toUpperCase()),
       // kwSlimmed: [geo*, volcan*, strato*, lava*, dome*, cone*, cinder*, maar*, caldera*, tuff*, geyser*, pyro*, sulphur*, /^(hot)\s+/, /\s+(cone)\s*/],  // these regexes don't necessarily work yet!
@@ -469,7 +469,7 @@
       color: orangeRed
     },
     "hab": {
-      divId: "pa-hab",
+      divId: "hab",
       fullTxt: "Habitat",
       keywords: ["habitat", "habitats", "wildlife", "den", "dens", "breeding", "migratory", "migration", "critical", "gathering", "species", "sccc", "fish", "fauna", "range", "ranges", "nest", "nesting", "pupping", "grounds"].map(d => d.toUpperCase()), // ALSO, HABITAT FLAG!
       // kwSlimmed: [habitat*, den*, migrat*, nest*, range*],
@@ -477,7 +477,7 @@
       color: goldGreen
     },
     "water": {
-      divId: "pa-water",
+      divId: "water",
       fullTxt: "Water-Related",
       keywords: ["wetland", "wetlands", "sea", "seashore", "seashores", "lake", "lakeshore", "lakeshores", "beach", "beaches", "coast", "coasts", "coastal", "marine", "estuary", "estuarine", "estuaries", "riparian", "spring", "springs", "water", "waters", "waterway", "waterways", "creek", "creeks", "stream", "streams", "river", "rivers", "confluence", "lake", "lakes", "bog", "bogs", "marsh", "marshes", "delta", "deltas", "tributary", "tributaries", "rapid", "rapids", "cove", "coves", "rio", "río"].map(d => d.toUpperCase()),
       // kwSlimmed: [water*, wetland*, sea*, stream*, creek*, bog*, lake*, beach*, coast*, estuar*, spring*, river*, lake*, delta*, tributar*, rapid*, marsh*, cove*],
@@ -485,7 +485,7 @@
       color: groupBlue
     },
     "wild": {
-      divId: "pa-wild",
+      divId: "wild",
       fullTxt: "Other Wildlands",
       keywords: ["wild", "wilds", "wildland", "wildlands", "wilderness", "ecology", "ecological", "grassland", "grasslands", "biodiverse", "biodiversity", "refuge", "refuges", "botanical"].map(d => d.toUpperCase()),
       // kwSlimmed: [wild*, ecolog*, grass*, biodivers*, refuge*],
@@ -493,7 +493,7 @@
       color: yellowGold
     },
     "sci": {
-      divId: "pa-sci",
+      divId: "sci",
       fullTxt: "Science & Research",
       keywords: ["experiment", "experimental", "study", "studies", "station", "stations", "research", "science", "scientific", "school", "schools"].map(d => d.toUpperCase()),
       // kwSlimmed: [experiment*, stud*, station*, scien*, school*],
@@ -501,7 +501,7 @@
       color: peachOrange
     },
     "rec": {
-      divId: "pa-rec",
+      divId: "rec",
       fullTxt: "Recreational",
       keywords: ["recreation", "recreational", "trail", "trails", "greenway", "greenways"].map(d => d.toUpperCase()),
       // kwSlimmed: [recreat*, trail*, greenway*],
@@ -509,7 +509,7 @@
       color: purpleRed
     },
     "rpc": {
-      divId: "pa-rpc",
+      divId: "rpc",
       fullTxt: "Otherwise Reserved/Preserved/Conserved",
       keywords: ["reserve", "reserves", "preserve", "preserves", "conservation", "conservancy", "conservancies", "easement", "easements"].map(d => d.toUpperCase()),
       // kwSlimmed: [reserve*, preserve*, conserv*, easement*],
@@ -517,14 +517,14 @@
       color: yellowPeach
     },
     "general": {
-      divId: "pa-gen",
+      divId: "gen",
       fullTxt: "Other - Primary",
       keywords: ["national","state","provincial","park"].map(d => d.toUpperCase()),
       weight: 8,
       color: groupGreen,
     },
     "other": {
-      divId: "pa-other",
+      divId: "other",
       fullTxt: "Other - Secondary",  // vaguest
       keywords: ["nature", "natural", "open", "scenic", "historic", "blm", "land", "lands", "area", "areas", "protection", "protected"].map(d => d.toUpperCase()),  // only match if no better fit
       // kwSlimmed: [natur*, land*, area*, protect*],
@@ -2894,20 +2894,19 @@
 
       } else if (logGroup.fullTxt && logGroup.fullTxt.startsWith("Protected Area")) {
 
-        if (gj.properties.flag === "habitat") return paTags["hab"];
-
-        // else
         let paDescr = gj.properties.DESCRIPTION.toUpperCase(),
-           tagIndex = tagWords.findIndex(someMatch,paDescr);
+           tagIndex = (gj.properties.flag === "habitat") ? 1 : tagWords.findIndex(someMatch,paDescr); // 1 === hardcoded index of "hab" info under paTags
 
         if (tagIndex < 0) {
           // try with name
           let name = gj.properties.NAME.toUpperCase();
           tagIndex = tagWords.findIndex(someMatch,name);
-          if (tagIndex < 0) /*STILL*/ console.log(gj.properties)
+          if (tagIndex < 0) /*STILL*/ console.log("none match?",gj.properties)
         }
 
-        return paTags[paKeys[tagIndex]];
+        let tagId = paTags[paKeys[tagIndex]].divId;
+
+        return { ...paTags[paKeys[tagIndex]], ...{ divId: logGroup.divId + "-" + tagId }};
 
         function someMatch(arr) {
           return arr.some(match,this);
@@ -3086,10 +3085,10 @@
       .order()
       .join(
         enter => enter.append("circle")
-          .classed("enrich-pt",true)
           .attr("id", d => d.properties.id)
           .attr("r",0.1)
           .attr("cx", d => projection(d.geometry.coordinates)[0])	          .attr("cy", d => projection(d.geometry.coordinates)[1])
+          .attr("class", d => `enrich-pt ${d.properties.logGroup.divId}`)
           .property("name", formatName)
           .property("category", d => d.properties.CATEGORY)
           .property("description", d => d.properties.DESCRIPTION)
@@ -3111,6 +3110,7 @@
             } else {
               enter.style("fill", fill)
             }
+            if (enter.property("sub-tag")) enter.classed(enter.property("sub-tag").divId,true);
             enter.transition().duration(t)
               .attr("r", d => d.properties.orig_area * 0.00000002 || 0.1)
                 // size of circle is a factor of planar (why did i do it this way?) area of polygon the circle is representing, or 0.1 minimum
@@ -3160,9 +3160,9 @@
     // have to add these one at a time (rather than as a group join) to avoid recalculated dashArrays getting mixed up within group (esp as queue of entering elements get longer); ok because order of lines not essential for proper viewing
     let newLine = d3.select("#enrich-lines").append("path")
                     .datum(gj)
-                    .classed("enrich-line",true)
                     .attr("d", path)
                     .attr("id", d => d.properties.id)
+                    .attr("class", d => `enrich-line ${d.properties.logGroup.divId}`)
                     .property("name", formatName)
                     .property("category", d => d.properties.CATEGORY)
                     .property("level", d => d.properties.LEVEL)
@@ -3179,6 +3179,8 @@
                     .style("opacity", lineOpacity)
                     .on("mouseenter", onMouseenter)
                     .on("mouseout", onMouseout)
+
+    if (newLine.property("sub-tag")) newLine.classed(newLine.property("sub-tag").divId,true);
 
     if (newLine.property("category") === "Watershed") {
 
@@ -3234,9 +3236,9 @@
       .order()  // is this an appropriate place to call this method?
       .join(
         enter => enter.append("path")
-          .classed("enrich-polygon",true)
           .attr("d", path)
           .attr("id", d => d.properties.id)
+          .attr("class", d => `enrich-polygon ${d.properties.logGroup.divId}`)
           .property("name", formatName)
           .property("category", d => d.properties.CATEGORY)
           .property("level", d => d.properties.LEVEL)
@@ -3260,6 +3262,7 @@
             } else {
               enter.style("fill", fill)
             }
+            if (enter.property("sub-tag")) enter.classed(enter.property("sub-tag").divId,true);
             enter.transition().duration(t).ease(d3.easeLinear)
               .style("opacity", polyOpacity)
               .on("end", function() {
@@ -3310,6 +3313,7 @@
           })
           break;
         case "ln":
+          console.log(feature.node())
           if (feature.property("category") === "Watershed") {
             feature.transition().duration(t).ease(d3.easeCubicIn)
               .style("opacity",0)
@@ -3442,29 +3446,109 @@
 
           symbolSet.add(symbolId)
 
-          let newItem = d3.select(`#${parentDivId}`).append("div")
-            .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item relative",true)
-            .html(getLogHtml(group,symbolId,isParent))
-            .style("opacity", 0)  // initially
+          let itemClass = (parentSet === logGroups) ? "legend-log-item" : "legend-log-child-item";
+
+          // TEMP, COMBAK // REFINE
+          let sortedDivIds = [...parentSet].sort((a,b) => {
+            return (a < b) ? -1 : 1; // alphabetical; b/c data spread from set of unique items, no need to address a === b
+          })
+
+          // for child items, slim sorted div set appropriately to ensure 1:1 join (data includes no excessive/unmatchable items)
+          if (parentSet !== logGroups) sortedDivIds = sortedDivIds.filter(d => d.match(/.*(?=-)/)[0] === group.divId.match(/.*(?=-)/)[0])
+
+          d3.select(`#${parentDivId}`).selectAll(`.${itemClass}`)
+            .data(sortedDivIds, d => d)
+            .order()
+            .join(
+              enter => enter.append("div")
+                .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm ${itemClass} relative`,true)
+                .html(getLogHtml(group,symbolId,isParent))
+                .property("groupId",group.divId)
+                .property("symbolId",symbolId)
+                .style("opacity", 0)  // initially
+                .on("mouseover", function() {
+                  let hoverNode = (d3.select(this).classed("legend-log-child-item")) ? this : d3.select(this).select("details").select("summary").node();
+                  d3.select(hoverNode).classed("bg-darken25",true)
+                  // highlight all within group
+                  let symbolId = d3.select(this).property("symbolId").match(/.*(?=-)/)[0],
+                       groupId = d3.select(this).property("groupId");
+                  let toHighlight = (d3.select(this).classed("legend-log-child-item")) ? [symbolId, g.select("#enrich-layer").selectAll(`.${symbolId}`).nodes()] : [groupId, g.select("#enrich-layer").selectAll(`.${groupId}`).nodes()];
+                  // highlight toHighlight! RETURN HERE
+                })
+                .on("mouseout", function() {
+                  let hoverNode = (d3.select(this).classed("legend-log-child-item")) ? this : d3.select(this).select("details").select("summary").node();
+                  d3.select(hoverNode).classed("bg-darken25",false)
+                })
+                .call(enter => enter.transition().duration(300)
+                  .style("opacity", 1)
+                )
+              ,
+              update => update,
+              exit => exit
+            )
+
+
+          // // TEMP, COMBAK // REFINE
+          // if (parentSet === logGroups) {
+          //   let sortedDivIds = [...parentSet].sort((a,b) => {
+          //     return (a < b) ? -1 : 1; // alphabetical; b/c data spread from set of unique items, no need to address a === b
+          //   })
+          //   d3.select(`#${parentDivId}`).selectAll(".legend-log-item-top")
+          //     .data(sortedDivIds, d => d)
+          //     .order()
+          //     .join(
+          //       enter => enter.append("div")
+          //         .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item-top relative",true)
+          //         .html(getLogHtml(group,symbolId,isParent))
+          //         .property("groupId",group)
+          //         .property("symbolId",symbolId)
+          //         .style("opacity", 0)  // initially
+          //         .on("mouseover", function() {
+          //           console.log(this)
+          //           // console.log()
+          //           // highlight all
+          //           console.log(d3.select(this).property("groupId"))
+          //
+          //           console.log(d3.select(this).property("symbolId"))
+          //         })
+          //         .call(enter => enter.transition().duration(300)
+          //           .style("opacity", 1)
+          //         )
+          //       ,
+          //       update => update,
+          //       exit => exit
+          //     )
+          // } else {
+          //   let newItem = d3.select(`#${parentDivId}`).append("div")
+          //     .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item relative",true)
+          //     .html(getLogHtml(group,symbolId,isParent))
+          //     .property("groupId",group.divId)
+          //     .property("symbolId",symbolId)
+          //     .style("opacity", 0)  // initially
+          //     .on("mouseover", function() {
+          //       console.log(this)
+          //       // console.log()
+          //       // highlight all
+          //       console.log(d3.select(this).property("groupId"))
+          //
+          //       console.log(d3.select(this).property("symbolId"))
+          //     })
+          //     .transition().duration(300)
+          //       .style("opacity", 1)
+          // }
 
           // when child element, ensure caret-toggle of parent group is visible
           if (!isParent) d3.select(`#${parentDivId}`).classed("hide-triangle",false).classed("show-triangle",true)
 
-          // transition whole item into full opacity
-          newItem.transition().duration(300)
-            .style("opacity", 1)
-
           // add fill to new HTML element within newItem
-          let swatch = newItem.select(`#${symbolId}`)
+          let swatch = d3.select(`#${parentDivId}`).select(`#${group.divId}`).select(`#${symbolId}`)
 
           // then iterate through keys
           Object.keys(symbol.styles).forEach(key => {
             swatch.style(key, symbol.styles[key]);
           })
 
-          if (symbol.src) {
-            swatch.style("background-image", `url(${symbol.src})`) // avoids [object Object]
-          }
+          if (symbol.src) swatch.style("background-image", `url(${symbol.src})`) // avoids [object Object]
 
           function getLogHtml(group,fillId,isParent) {
 
@@ -3483,7 +3567,7 @@
                 </summary>
               </details>`
             } else {
-              html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross legend-log-child-item border-l py3">
+              html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-l py3">
                 ${innerHtml}
               </div>`
             }
