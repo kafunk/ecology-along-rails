@@ -3362,8 +3362,8 @@
 
   function output(encountered) {
 
-    let darkText = "#333",
-       lightText = "#ddd";
+    // let darkText = "#333",
+    //    lightText = "#ddd";
 
     if (encountered.property("name")) {
 
@@ -3388,7 +3388,7 @@
           .data(encounters, d => d.property("id"))
           .join(
             enter => enter.append("div")
-              .classed("flex-child encounter txt-compact mx3 my3 px6 py6", true)
+              .classed("flex-child encounter color-black txt-compact mx3 my3 px6 py6", true)
               .html(getHtml)
               .property("assocId", d => d.attr("id"))
               .style("opacity", 1)
@@ -3403,6 +3403,12 @@
               .remove()
           );
 
+      }
+
+      function getHtml(d) {
+        return `<div class="point-none opacity50 bg-white h-full w-full round color-black shadow-darken25 border--gray-faint px3 py3">
+          ${getInnerHtml(d)}
+        </div>`
       }
 
       function log(encountered) {
@@ -4242,8 +4248,8 @@
     if (d3.select(this).property("name")) {
       // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
       let tooltip = d3.select("#map").append("div")
-        .attr("class","tooltip point-none")
-        .html(getHtml(d3.select(this)))
+        .attr("class","tooltip point-none shadow-darken50")
+        .html(getInnerHtml(d3.select(this)))
         .style("left", (d3.event.layerX + 10) + "px")
         .style("top", (d3.event.layerY - 30) + "px")
         .attr("fill", "honeydew")
@@ -4258,15 +4264,9 @@
 
   }
 
-  function getHtml(d) {
+  function getInnerHtml(d) {
 
     // only arrives here if node and name confirmed
-
-    // verb/pretext
-      // passing
-      // entering
-      // exiting
-      // traversing
 
     let pre = `<span class="name txt-compact2 txt-s txt-m-mxl">`;
 
@@ -4278,7 +4278,7 @@
 
     if (d.property("category") === "Ecoregion") {
       mainOut += `<br />
-      <span class="name-ii txt-em txt-xs txt-s-mxl ">Level ${d.property("level")} Ecoregion</span >
+      <span class="name-ii txt-em txt-xs txt-s-mxl">Level ${d.property("level")} Ecoregion</span >
       `
     }
 
@@ -4333,10 +4333,9 @@
 
   function highlightAssoc() {
 
-    let selection = d3.select(this);
-
     // select & highlight corresponding enrich elements on map
-    let selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
+    let selection = d3.select(this),
+      selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
 
     let associated = g.select("#enrich-layer").selectAll(`${selector}`);
 
@@ -4351,35 +4350,33 @@
 
     if (selection.classed("encounter")) {
 
+      d3.select(hoverNode.firstChild).classed("opacity75",true)
+
       let fillVal = g.select("#enrich-layer").select(`${selector}`).style("fill");
 
-      if (fillVal) {
+      if (fillVal.startsWith("url")) {  // textured
 
-        if (fillVal.startsWith("url")) {  // texture
+        // get pattern src (for html, not svg) from existing patterns obj
+        let pattern = patterns[associated.attr("patternKey")];
 
-          // get pattern src (for html, not svg) from existing patterns obj
-          let pattern = patterns[associated.attr("patternKey")];
+        d3.select(hoverNode).style("background-image", `url(${pattern.src})`) // avoids [object Object]? // always uninverted
 
-          d3.select(hoverNode).style("background-image", `url(${pattern.src})`) // avoids [object Object]? // always uninverted
+      } else if (fillVal === "none") {  // lines
 
-        } else if (fillVal === "none") {
+        if (associated.property("sub-tag")) { // watersheds
+          let patternKey = associated.property("category").toLowerCase() + "-" + associated.property("sub-tag").divId + "-" + selector.slice(1,3);
+
+          d3.select(hoverNode).style("background-image", `url(${patterns[patternKey].src})`)
+
+        } else {  // rivers
 
           d3.select(hoverNode).style("background-color",g.select("#enrich-layer").select(`${selector}`).style("stroke"));
 
-        } else {
-
-          d3.select(hoverNode).style("background-color",fillVal)
-
         }
-
-        // console.log(d3.select(hoverNode).style("opacity")) // 1
-        // console.log(hoverNode)
-        // styling hoverNode opacity reduces text opacity too;
-        // d3.select(hoverNode).style("opacity",0.4)
 
       } else {
 
-        d3.select(hoverNode).classed("bg-darken25",true)
+        d3.select(hoverNode).style("background-color",fillVal)
 
       }
 
@@ -4397,15 +4394,9 @@
 
   function unhighlight() {
 
-    let selection = d3.select(this);
-
     // select & unhighlight corresponding enrich elements on map
-    let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
-
-    d3.select(hoverNode).classed("bg-darken25",false)
-
-    // select & highlight corresponding enrich elements on map
-    let selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
+    let selection = d3.select(this),
+      selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
 
     g.select("#enrich-layer").selectAll(`${selector}`).transition()
       .style("stroke-opacity", function() {
@@ -4414,6 +4405,20 @@
       .style("opacity", function() {
         return d3.select(this).property("orig-opacity") || 1;
       })
+
+    // unhighlight text node container
+    let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
+
+    if (selection.classed("encounter")) {
+
+      // clear to original background & opacity
+      d3.select(hoverNode).style("background-color","rgba(0, 0, 0, 0)")
+      d3.select(hoverNode).style("background-image","none")
+      d3.select(hoverNode.firstChild).classed("opacity75",false)
+
+    } else {
+      d3.select(hoverNode).classed("bg-darken25",false)
+    }
 
   }
 
