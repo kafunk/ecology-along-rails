@@ -374,7 +374,7 @@
       fullTxt: "Lakes",
       textureType: "paths",
       textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 12, lighter: 8, shapeRendering: "crispEdges"},
-      swatchAdjust: { thicker: 2, heavier: 6 }
+      htmlAdjust: { thicker: 2, heavier: 6 }
       // no keywords, CATEGORY.startsWith("Lake")
     },
     "RIVER": {
@@ -384,12 +384,12 @@
       // lines only, no texture
         // color === riverBlue
     },
-    "ROADLESS": {
+    "INVENTORIED ROADLESS": {
       divId: "roadless-areas",
       fullTxt: "Inventoried Roadless Areas",
       textureType: "paths",
       textureProps: {d: "nylon", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
-      swatchAdjust: { thicker: 1, heavier: 1  }
+      htmlAdjust: { thicker: 0.8, heavier: 14, background: chroma("#ecf2eb").alpha(0.9) }
       // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
     },
     "GRASSLAND": {
@@ -397,22 +397,22 @@
       fullTxt: "Grasslands",
       textureType: "lines",
       textureProps: {thicker: 24, lighter: 24, orientation: "2/8"},
-      swatchAdjust: { thicker: 2, heavier: 6  }
+      htmlAdjust: { thicker: 2, heavier: 6, background: chroma("#ecf2eb").alpha(0.9) }
     },
     "VOLCANO": {
       divId: "volcanoes",
       fullTxt: "Volcanoes",
       textureType: "paths",
       textureProps: {d: "caps", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
-      swatchAdjust: { thicker: 1, heavier: 8  }
+      htmlAdjust: { thicker: 1, heavier: 8, background:  chroma("#ecf2eb").alpha(0.9) }
       // no keywords; CATEGORY.startsWith("Volcano")
     },
     "GEOTHERMAL": {
-      divId: "np-geo-areas",
-      fullTxt: "Non-protected Geothermal Areas",
+      divId: "other-np-geo",
+      fullTxt: "Other Non-protected Geothermal Areas",
       textureType: "lines",
       textureProps: {thicker: 24, lighter: 24, orientation: "6/8"},
-      swatchAdjust: { thicker: 2, heavier: 6  }
+      htmlAdjust: { thicker: 2, heavier: 6, background:  chroma("#ecf2eb").alpha(0.9) }
       // no keywords; CATEGORY === "Geothermal System"
     },
     "PA1": {  // must match one of EACH keyword category
@@ -424,7 +424,7 @@
       weight: 1,
       textureType: "paths",
       textureProps: {d: "hexagons", thicker: 36, lighter: 24, shapeRendering: "crispEdges"},
-      swatchAdjust: { thicker: 2, lighter: 0 },
+      htmlAdjust: { thicker: 2, lighter: 0 },
       getStroke(d) {
         let description = d.properties.DESCRIPTION.toUpperCase();
         if (description.match("NATIONAL")) {
@@ -442,7 +442,7 @@
       weight: 2,
       textureType: "paths",
       textureProps: {d: "crosses", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
-      swatchAdjust: { thicker: 1.2, lighter: 0 }
+      htmlAdjust: { thicker: 1.2, lighter: 0 }
       // national, state, provincial, park, monument, etc matches will be disjoint from PA1 group above (matched only one keyword group, not both)
     },
     "PA3": {
@@ -451,9 +451,7 @@
       weight: 3,
       textureType: "circles",
       textureProps: { complement: true, thicker: 48, lighter: 24 },
-      swatchAdjust: { thinner: 18, lighter: 0, radius: 1, size: 8 }
-      // textureProps: { complement: true, thicker: 36, lighter: 18 },
-      // swatchAdjust: { thicker: 1, lighter: 0 }
+      htmlAdjust: { thinner: 18, lighter: 0, radius: 1, size: 8 }
       // no keywords; CATEGORY === "Protected Area" && DESCRIPTION !== "Inventoried Roadless Area"
     }
   },
@@ -1455,7 +1453,7 @@
             })
             .attr("height", d => d.flagged ? 4 : 2)
             .style("opacity", 0) // initially
-            .style("fill", d => !d.flagged ? "black" : (d.toFrom === "from") ? "green" : "red")
+            .style("fill", d => !d.flagged ? "black" : (d.toFrom === "from") ? "forestgreen" : "darkred")
             .style("stroke", d => !d.flagged ? "dimgray" : "black")
             .style("stroke-width","0.4px")
             .property("name", d => d.shortName)
@@ -2321,6 +2319,13 @@
 
           if (d.selected) {
 
+            // // OMITTED for purposes of reset():
+            // // immediately remove triggerPt and all others associated with same feature ID from remaining search pool to avoid wasting energy on retriggers
+            // let toRemove = quadtree.data().filter(q => {
+            //   return q.properties.id === d.properties.id;
+            // })
+            // quadtree.removeAll(toRemove)
+
             // for flagged, en route trigger-pts only
             if ((g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).node()) && (g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).classed("trigger-pt"))) {
 
@@ -2462,7 +2467,7 @@
     svg.on("click", togglePause)
     // start global timers
     timer = d3.timer(animate);
-    console.log("train departing @ " + d3.now())
+    console.log("train departing @ " + Math.floor(d3.now()))
   }
 
   function arrived() {
@@ -2508,7 +2513,7 @@
     svg.on("click", null)
     // spacebar?
 
-    console.log("train arrived @ " + d3.now())
+    console.log("train arrived @ " + Math.floor(d3.now()))
     console.log("unique encounters",uniqueEncounters.size)
 
   }
@@ -2843,7 +2848,7 @@
         }
       }
 
-      // SWING TWO
+      // SWING TWO: after specific descriptions, before match PA group
       let descrMatch = '';
       if (gj.properties.DESCRIPTION) {
         descrMatch = gj.properties.DESCRIPTION.toUpperCase(),
@@ -2853,26 +2858,13 @@
         }
       }
 
-      // FINAL SWING
-      if (catMatch === "PROTECTED AREA") {  // it must be; get tier
-        if (enrichCats["PA1"].keywords1.some(match,descrMatch) && enrichCats["PA1"].keywords2.some(match,descrMatch)) {
-          return enrichCats["PA1"];
-        } else if (enrichCats["PA2"].keywords.some(match,descrMatch)) {
-          return enrichCats["PA2"];
-        } else {
-          return enrichCats["PA3"];
-        }
+      // FINAL SWING: must be Protected Area; get tier
+      if (enrichCats["PA1"].keywords1.some(match,descrMatch) && enrichCats["PA1"].keywords2.some(match,descrMatch)) {
+        return enrichCats["PA1"];
+      } else if (enrichCats["PA2"].keywords.some(match,descrMatch)) {
+        return enrichCats["PA2"];
       } else {
-        console.log("WHAA??")
-        console.log(catMatch,descrMatch,catKeys)
-        console.log(gj.properties)
-      }
-
-      function match(text) {
-        return this.match(text) // || text.match(this);
-      }
-      function startsWith(text) {
-        return text.startsWith(this) || this.startsWith(text);
+        return enrichCats["PA3"];
       }
 
     }
@@ -2908,13 +2900,6 @@
         let tagId = paTags[paKeys[tagIndex]].divId;
 
         return { ...paTags[paKeys[tagIndex]], ...{ divId: logGroup.divId + "-" + tagId }};
-
-        function someMatch(arr) {
-          return arr.some(match,this);
-          function match(text) {
-            return this.match(text);
-          }
-        }
 
       }
 
@@ -3509,7 +3494,7 @@
             }
 
             if (["#000","#000000","rgb(0,0,0)","rgba(0,0,0,0.75)","rgb(0, 0, 0)","black","none"].includes(symbol.styles.background)) {
-              symbol.styles.background = "#e1e2e2" // COMBAK ADD SOME TRANSPARENCY
+              symbol.styles.background = "#e1e2e2" // chroma("#e1e2e2").alpha(0.8)
             }
 
             let geomType = d.attr("id").slice(0,2),
@@ -3519,10 +3504,10 @@
 
             if (!pattern || (d.property("category") === "Watershed") ) {  // rivers & watersheds, heretofore untexturized
 
-              // if watershed, recalc symbol as precaution to avoid assumption that legend-log-item-sym === legend-log-child-item-sym; avoid flawed offset of dashed line within single child drain symbol
+              // if watershed, don't assume that legend-log-item-sym === legend-log-child-item-sym; recalc avoids flawed offset of dashed line within single child drain symbol
               let textureArr = getTextures(d,key,geomType,padLeft);
 
-              // assign all srcs & urls to patterns object; COULD skip some in this case only.. (lines)
+              // assign all srcs & urls to patterns object; COULD skip actual svg url() some in this case only.. (only lines reach this point)
               pattern = assignPatterns(textureArr,key);
 
             }
@@ -4042,7 +4027,7 @@
     let texture,
       props = (d instanceof d3.selection) ? d.datum().properties : d.properties,  // shorthand
       geomType = props.id.slice(0,2),
-      textureProps = htmlFlag ? {...props.logGroup.textureProps, ...props.logGroup.swatchAdjust} : props.logGroup.textureProps;
+      textureProps = htmlFlag ? {...props.logGroup.textureProps, ...props.logGroup.htmlAdjust} : props.logGroup.textureProps;
     if (geomType === "ln") {
       texture = getLinedTexture(d,padLeft);
     } else if (props.subTag && props.subTag.color) {
@@ -4059,7 +4044,7 @@
         }
         texture = getNewTexture(props.logGroup.textureType,textureOpts)
       }
-    } else { // mostly lakes
+    } else { // pre-determined textured lines (lakes, grasslands, volcanoes, other-np-geo, inventoried roadless)
       texture = getNewTexture(props.logGroup.textureType,textureProps);
     }
     htmlFlag ? hiddenSvg.call(texture) : svg.call(texture);
@@ -4101,7 +4086,7 @@
         .size(s)
         .heavier()
         .stroke(d.style("stroke"))
-        .background(`rgba(${chroma("#eee").alpha(0.8).rgba().join(",")})`)
+        .background(`rgba(${chroma("#ecf2eb").alpha(0.9).rgba().join(",")})`)
         .shapeRendering("crispEdges")
 
   }
@@ -4170,8 +4155,8 @@
     } else if (props.CATEGORY.startsWith("Grass")) {
       return yellowGold;
     } else {
-      console.log("???:",d.properties.NAME,d.properties.DESCRIPTION)
-      return paletteScale(random());
+      // a few remaining Inventoried Roadless Areas
+      return purple; // paletteScale(random());
     }
   }
 
@@ -4431,9 +4416,21 @@
 
   // PARSE, CONVERT, ASSOCIATE
 
-   function getSubstr(string,i0 = 4) { // defaults for use in converting from textures.js url(); assume format "url(#12345)"
+  function getSubstr(string,i0 = 4) { // defaults for use in converting from textures.js url(); assume format "url(#12345)"
     let i1 = string.length - 1;
     return string.substring(i0,i1)
+  }
+
+  function someMatch(arr) {
+    return arr.some(match,this);
+  }
+
+  function match(text) {
+    return this.match(text) // || text.match(this);
+  }
+
+  function startsWith(text) {
+    return text.startsWith(this) || this.startsWith(text);
   }
 
   function replaceCommas(string) {
