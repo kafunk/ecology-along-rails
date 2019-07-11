@@ -408,7 +408,7 @@
       // no keywords; CATEGORY.startsWith("Volcano")
     },
     "GEOTHERMAL": {
-      divId: "np-geothermal-areas",
+      divId: "np-geo-areas",
       fullTxt: "Non-protected Geothermal Areas",
       textureType: "lines",
       textureProps: {thicker: 24, lighter: 24, orientation: "6/8"},
@@ -1474,6 +1474,7 @@
           .attr("id", "headlights")
           .attr("d", sector0)
           .attr("transform", "translate(" + arcPts[0] + ") rotate(" + rotate0 +")")
+          .classed("point-none",true)
           .style("fill","lightyellow") // linearGradient fading outward?
           .style("opacity", 0)
           .property("rotate0", rotate0)
@@ -3385,8 +3386,10 @@
 
       allEncounters[col].unshift(encountered) // array of selections
 
+      // "currently passing" div
       updateOutput(allEncounters[col].slice(),col)
 
+      // legend-log groups
       log(encountered)
 
       function updateOutput(encounters,col) { // allEncounters) {
@@ -3401,7 +3404,10 @@
             enter => enter.append("div")
               .classed("flex-child encounter txt-compact mx3 my3 px6 py6", true)
               .html(getHtml)
-              .style("opacity", 1),
+              .property("assocId", d => d.attr("id"))
+              .style("opacity", 1)
+              .on("mouseover", highlightAssoc)
+              .on("mouseout", unhighlight),
               // .call(enter => enter.transition(t)),
             update => update,
               // .call(update => update.transition(t)),
@@ -3439,16 +3445,15 @@
 
           parentSet.add(group.divId);
 
-          let symbol = styleToSymbol(encountered,group,padLeft),
-            symbolId = (encountered.property("sub-tag") ?
-              encountered.property("sub-tag").divId
-            : encountered.property("log-group").divId) + "-sym";
+          let symbol = styleToSymbol(encountered,padLeft),
+              symbolId = (encountered.property("sub-tag") ?
+                encountered.property("sub-tag").divId
+              : encountered.property("log-group").divId) + "-sym";
 
           symbolSet.add(symbolId)
 
           let itemClass = (parentSet === logGroups) ? "legend-log-item" : "legend-log-child-item";
 
-          // TEMP, COMBAK // REFINE
           let sortedDivIds = [...parentSet].sort((a,b) => {
             return (a < b) ? -1 : 1; // alphabetical; b/c data spread from set of unique items, no need to address a === b
           })
@@ -3462,23 +3467,12 @@
             .join(
               enter => enter.append("div")
                 .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm ${itemClass} relative`,true)
-                .html(getLogHtml(group,symbolId,isParent))
+                .html(getLogHtml(group,symbolId,isParent,padLeft))
                 .property("groupId",group.divId)
                 .property("symbolId",symbolId)
                 .style("opacity", 0)  // initially
-                .on("mouseover", function() {
-                  let hoverNode = (d3.select(this).classed("legend-log-child-item")) ? this : d3.select(this).select("details").select("summary").node();
-                  d3.select(hoverNode).classed("bg-darken25",true)
-                  // highlight all within group
-                  let symbolId = d3.select(this).property("symbolId").match(/.*(?=-)/)[0],
-                       groupId = d3.select(this).property("groupId");
-                  let toHighlight = (d3.select(this).classed("legend-log-child-item")) ? [symbolId, g.select("#enrich-layer").selectAll(`.${symbolId}`).nodes()] : [groupId, g.select("#enrich-layer").selectAll(`.${groupId}`).nodes()];
-                  // highlight toHighlight! RETURN HERE
-                })
-                .on("mouseout", function() {
-                  let hoverNode = (d3.select(this).classed("legend-log-child-item")) ? this : d3.select(this).select("details").select("summary").node();
-                  d3.select(hoverNode).classed("bg-darken25",false)
-                })
+                .on("mouseover", highlightAssoc)
+                .on("mouseout", unhighlight)
                 .call(enter => enter.transition().duration(300)
                   .style("opacity", 1)
                 )
@@ -3486,56 +3480,6 @@
               update => update,
               exit => exit
             )
-
-
-          // // TEMP, COMBAK // REFINE
-          // if (parentSet === logGroups) {
-          //   let sortedDivIds = [...parentSet].sort((a,b) => {
-          //     return (a < b) ? -1 : 1; // alphabetical; b/c data spread from set of unique items, no need to address a === b
-          //   })
-          //   d3.select(`#${parentDivId}`).selectAll(".legend-log-item-top")
-          //     .data(sortedDivIds, d => d)
-          //     .order()
-          //     .join(
-          //       enter => enter.append("div")
-          //         .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item-top relative",true)
-          //         .html(getLogHtml(group,symbolId,isParent))
-          //         .property("groupId",group)
-          //         .property("symbolId",symbolId)
-          //         .style("opacity", 0)  // initially
-          //         .on("mouseover", function() {
-          //           console.log(this)
-          //           // console.log()
-          //           // highlight all
-          //           console.log(d3.select(this).property("groupId"))
-          //
-          //           console.log(d3.select(this).property("symbolId"))
-          //         })
-          //         .call(enter => enter.transition().duration(300)
-          //           .style("opacity", 1)
-          //         )
-          //       ,
-          //       update => update,
-          //       exit => exit
-          //     )
-          // } else {
-          //   let newItem = d3.select(`#${parentDivId}`).append("div")
-          //     .classed("flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm legend-log-item relative",true)
-          //     .html(getLogHtml(group,symbolId,isParent))
-          //     .property("groupId",group.divId)
-          //     .property("symbolId",symbolId)
-          //     .style("opacity", 0)  // initially
-          //     .on("mouseover", function() {
-          //       console.log(this)
-          //       // console.log()
-          //       // highlight all
-          //       console.log(d3.select(this).property("groupId"))
-          //
-          //       console.log(d3.select(this).property("symbolId"))
-          //     })
-          //     .transition().duration(300)
-          //       .style("opacity", 1)
-          // }
 
           // when child element, ensure caret-toggle of parent group is visible
           if (!isParent) d3.select(`#${parentDivId}`).classed("hide-triangle",false).classed("show-triangle",true)
@@ -3550,10 +3494,49 @@
 
           if (symbol.src) swatch.style("background-image", `url(${symbol.src})`) // avoids [object Object]
 
-          function getLogHtml(group,fillId,isParent) {
+          function styleToSymbol(d,padLeft) { // element will already be styled appropriately at this point; turn style to symbol (not all will require textures!)
+
+            let symbol = {
+              styles: {
+                background: d.attr("fillStyle") || d.style("fill"),
+                color: d.attr("strokeStyle") || d.style("stroke"),
+                opacity: d.style("orig-opacity") || 1
+              }
+            }
+
+            if (d.property("category") === "Ecoregion") {
+              return symbol;
+            }
+
+            if (["#000","#000000","rgb(0,0,0)","rgba(0,0,0,0.75)","rgb(0, 0, 0)","black","none"].includes(symbol.styles.background)) {
+              symbol.styles.background = "#e1e2e2" // COMBAK ADD SOME TRANSPARENCY
+            }
+
+            let geomType = d.attr("id").slice(0,2),
+              key = (d.classed("patterned")) ? d.attr("patternKey") : d.property("category").toLowerCase() + "-" + (d.property("sub-tag") ? d.property("sub-tag").divId : d.property("log-group").divId) + "-" + geomType;
+
+            let pattern = patterns[key];
+
+            if (!pattern || (d.property("category") === "Watershed") ) {  // rivers & watersheds, heretofore untexturized
+
+              // if watershed, recalc symbol as precaution to avoid assumption that legend-log-item-sym === legend-log-child-item-sym; avoid flawed offset of dashed line within single child drain symbol
+              let textureArr = getTextures(d,key,geomType,padLeft);
+
+              // assign all srcs & urls to patterns object; COULD skip some in this case only.. (lines)
+              pattern = assignPatterns(textureArr,key);
+
+            }
+
+            symbol.src = (geomType === "py") ? pattern.invertedSrc : pattern.src
+
+            return symbol;
+
+          }
+
+          function getLogHtml(group,fillId,isParent,padLeft) {
 
             let initCount = 1,
-              s = (padLeft > 0) ? 18 : 24;
+              s = 24 - padLeft;
 
             let html,
               innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol"></span>
@@ -3573,41 +3556,6 @@
             }
 
             return html;
-
-          }
-
-          function styleToSymbol(encountered,group,padLeft) {
-            // element will already be styled appropriately at this point; turn style to symbol (not all will require textures!)
-
-            let symbol = {
-              styles: {
-                background: encountered.attr("fillStyle") || encountered.style("fill"),
-                color: encountered.attr("strokeStyle") || encountered.style("stroke"),
-                opacity: encountered.style("orig-opacity") || 1
-              }
-            }
-
-            if (encountered.property("category") === "Ecoregion") {
-              return symbol;
-            }
-
-            if (["#000","#000000","rgb(0,0,0)","rgba(0,0,0,0.75)","rgb(0, 0, 0)","black","none"].includes(symbol.styles.background)) {
-              symbol.styles.background = "#e1e2e2"
-            }
-
-            let keyBase = (encountered.classed("patterned")) ? encountered.attr("patternKey") : encountered.property("category").toLowerCase() + "-" + encountered.attr("id"),
-                    key = keyBase + "-swatch";
-
-            if (!patterns[key] || encountered.property("category") === "Watershed") {
-
-              let texture = processTexture(encountered,true,padLeft); // swatchFlag == true;
-              symbol.src = assignPattern(texture,key,true).src; // swatchFlag == true;
-
-            } else {
-              symbol.src = patterns[key].src
-            }
-
-            return symbol;
 
           }
 
@@ -4059,14 +4007,15 @@
       // equivalent of texture.flag
       let key;
       if (props.subTag && props.subTag.divId) {
-        key = props.logGroup.divId + "-" + props.subTag.divId + "-" + geomType;
+        key = props.subTag.divId + "-" + geomType;
       } else if (props.logGroup.divId) {
         key = props.logGroup.divId + "-" + geomType;
       }
       fill = {key: key}
       if (!patterns[fill.key]) {
-        let texture = processTexture(d);
-        assignPattern(texture,key);
+        // calculate and assign all possible urls & bg sources now
+        let textureArr = getTextures(d,key,geomType);
+        assignPatterns(textureArr,key);
       }
     } else if (props.CATEGORY === "Ecoregion") {
       if (props.LEVEL === "I") {
@@ -4089,37 +4038,38 @@
     return fill;
   }
 
-  function processTexture(d,swatchFlag = false,padLeft = 0) { // d may be gj feature or selected dom node
+  function processTexture(d,htmlFlag = false,invertFlag = false,padLeft = 0) { // d may be gj feature or selected dom node
     let texture,
       props = (d instanceof d3.selection) ? d.datum().properties : d.properties,  // shorthand
       geomType = props.id.slice(0,2),
-      textureProps = swatchFlag ? {...props.logGroup.textureProps, ...props.logGroup.swatchAdjust} : props.logGroup.textureProps;
+      textureProps = htmlFlag ? {...props.logGroup.textureProps, ...props.logGroup.swatchAdjust} : props.logGroup.textureProps;
     if (geomType === "ln") {
       texture = getLinedTexture(d,padLeft);
     } else if (props.subTag && props.subTag.color) {
-      if (swatchFlag || geomType === "pt") {
+      if (invertFlag || geomType === "pt") {
         let textureOpts = {...textureProps, ...{background: props.subTag.color, stroke: "whitesmoke"}};
         if (props.logGroup.textureType === "circles") textureOpts.fill = "whitesmoke";
-        texture = getTexture(props.logGroup.textureType,textureOpts)
-      } else { // not a swatch or point;
+        texture = getNewTexture(props.logGroup.textureType,textureOpts)
+      } else { // svg polygons
         let textureOpts = {...textureProps, ...{stroke: chroma(props.subTag.color).darken().hex() }};
         if (!textureProps.hasOwnProperty("d") && !textureProps.hasOwnProperty("orientation")) {  // circles
           // textureOpts.stroke = props.subTag.color;
           // textureOpts.fill = chroma(props.subTag.color).darken().hex();
           textureOpts.background = "transparent";
         }
-        texture = getTexture(props.logGroup.textureType,textureOpts)
+        texture = getNewTexture(props.logGroup.textureType,textureOpts)
       }
     } else { // mostly lakes
-      texture = getTexture(props.logGroup.textureType,textureProps);
+      texture = getNewTexture(props.logGroup.textureType,textureProps);
     }
-    swatchFlag ? hiddenSvg.call(texture) : svg.call(texture);
+    htmlFlag ? hiddenSvg.call(texture) : svg.call(texture);
     return texture;
   }
 
   function getLinedTexture(d,padLeft) {
 
-    let pathSequence, s = (padLeft > 0) ? 18 : 24;
+    let pathSequence,
+      s = 24 - padLeft;
 
     if (d.property("category") === "Watershed") {
 
@@ -4156,10 +4106,22 @@
 
   }
 
-  function assignPattern(texture,key,swatchFlag) {  // was async
+  function getTextures(d,key,geomType,padLeft) {
+    let texture0 = processTexture(d),  // element-spec: htmlFlag == false, invertFlag == false; padLeft N/A
+        texture1 = processTexture(d,true,false,padLeft),  // output-bgs: htmlFlag == true, invertFlag == false;
+        texture2 = (geomType === "py") ? processTexture(d,true,true) : null;  // for specially inverted polygon legend-log swatches: htmlFlag == true, invertFlag == true; padLeft N/A?
+    return [texture0,texture1,texture2];
+  }
+
+  function assignPatterns([texture0,texture1,texture2],key) {  // was async
     patterns[key] = {
-      src: swatchFlag ? textureToSrc(texture) : "none", // for swatches and canvas fill
-      url: swatchFlag ? "none" : texture.url()          // for svg use
+      // srcs for swatches, dash bgs, and canvas fill;
+        // src === standard, invertedSrc only for polygons (used selectively)
+        // keep distinction between geomTypes in case I bring canvas back in (pt/py sources different for same sub-group)
+      // url for svg use only
+      src: textureToSrc(texture1),
+      invertedSrc: (texture2) ? textureToSrc(texture2) : null,
+      url: texture0.url()
     }
     return patterns[key];
   }
@@ -4223,7 +4185,7 @@
     }
   }
 
-  function getTexture(type = "paths",props) {
+  function getNewTexture(type = "paths",props) {
     let texture = textures[type]()
     Object.keys(props).forEach(d => {
       texture[d](props[d])
@@ -4280,7 +4242,7 @@
 
   }
 
-//// TOOLTIPS
+//// TOOLTIPS & MOUSEOVER
 
   function onMouseenter(d) {
 
@@ -4379,6 +4341,89 @@
 
     // remove tooltip from DOM
     tooltip.remove();
+
+  }
+
+  function highlightAssoc() {
+
+    let selection = d3.select(this);
+
+    // select & highlight corresponding enrich elements on map
+    let selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
+
+    let associated = g.select("#enrich-layer").selectAll(`${selector}`);
+
+// LEVEL III needs thicker stroke?
+
+    associated.transition()
+      .style("stroke-opacity",1)
+      .style("opacity", function() {
+        return d3.select(this).property("hover-opacity") || 0.9
+      })
+
+    // highlight text node container
+    let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
+
+    if (selection.classed("encounter")) {
+
+      let fillVal = g.select("#enrich-layer").select(`${selector}`).style("fill");
+
+      if (fillVal) {
+
+        if (fillVal.startsWith("url")) {  // texture
+
+          // get pattern src (for html, not svg) from existing patterns obj
+          let pattern = patterns[associated.attr("patternKey")];
+
+          d3.select(hoverNode).style("background-image", `url(${pattern.src})`) // avoids [object Object]? // always uninverted
+
+        } else if (fillVal === "none") {
+
+          d3.select(hoverNode).style("background-color",g.select("#enrich-layer").select(`${selector}`).style("stroke"));
+
+        } else {
+
+          d3.select(hoverNode).style("background-color",fillVal)
+
+        }
+
+      } else {
+
+        d3.select(hoverNode).classed("bg-darken25",true)
+
+      }
+
+    } else {
+
+      if (selection.classed("legend-log-child-item")) {
+        d3.event.stopPropagation();  // cancel bubbling
+      }
+
+      d3.select(hoverNode).classed("bg-darken25",true)
+
+    }
+
+  }
+
+  function unhighlight() {
+
+    let selection = d3.select(this);
+
+    // select & unhighlight corresponding enrich elements on map
+    let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
+
+    d3.select(hoverNode).classed("bg-darken25",false)
+
+    // select & highlight corresponding enrich elements on map
+    let selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
+
+    g.select("#enrich-layer").selectAll(`${selector}`).transition()
+      .style("stroke-opacity", function() {
+        return d3.select(this).property("orig-stroke-opacity") || 0
+      })
+      .style("opacity", function() {
+        return d3.select(this).property("orig-opacity") || 1;
+      })
 
   }
 
