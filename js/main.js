@@ -385,11 +385,12 @@
         // color === riverBlue
     },
     "INVENTORIED ROADLESS": {
-      divId: "roadless-areas",
+      divId: "inv-roadless",
       fullTxt: "Inventoried Roadless Areas",
       textureType: "paths",
       textureProps: {d: "nylon", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 0.8, heavier: 14, background: chroma("#ecf2eb").alpha(0.9) }
+      htmlAdjust: { thicker: 0.8, heavier: 14, background: "#e6ece6" }
+      // "#ecf2eb"
       // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
     },
     "GRASSLAND": {
@@ -397,14 +398,14 @@
       fullTxt: "Grasslands",
       textureType: "lines",
       textureProps: {thicker: 24, lighter: 24, orientation: "2/8"},
-      htmlAdjust: { thicker: 2, heavier: 6, background: chroma("#ecf2eb").alpha(0.9) }
+      htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
     },
     "VOLCANO": {
       divId: "volcanoes",
       fullTxt: "Volcanoes",
       textureType: "paths",
       textureProps: {d: "caps", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 1, heavier: 8, background:  chroma("#ecf2eb").alpha(0.9) }
+      htmlAdjust: { thicker: 1, heavier: 8, background: "#e6ece6" }
       // no keywords; CATEGORY.startsWith("Volcano")
     },
     "GEOTHERMAL": {
@@ -412,7 +413,7 @@
       fullTxt: "Other Non-protected Geothermal Areas",
       textureType: "lines",
       textureProps: {thicker: 24, lighter: 24, orientation: "6/8"},
-      htmlAdjust: { thicker: 2, heavier: 6, background:  chroma("#ecf2eb").alpha(0.9) }
+      htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
       // no keywords; CATEGORY === "Geothermal System"
     },
     "PA1": {  // must match one of EACH keyword category
@@ -3493,9 +3494,9 @@
               return symbol;
             }
 
-            if (["#000","#000000","rgb(0,0,0)","rgba(0,0,0,0.75)","rgb(0, 0, 0)","black","none"].includes(symbol.styles.background)) {
-              symbol.styles.background = "#e1e2e2" // chroma("#e1e2e2").alpha(0.8)
-            }
+            // if (["#000","#000000","rgb(0,0,0)","rgba(0,0,0,0.75)","rgb(0, 0, 0)","black","none"].includes(symbol.styles.background)) {
+            //   symbol.styles.background = "#e1e2e2" // chroma("#e1e2e2").alpha(0.8)
+            // }
 
             let geomType = d.attr("id").slice(0,2),
               key = (d.classed("patterned")) ? d.attr("patternKey") : d.property("category").toLowerCase() + "-" + (d.property("sub-tag") ? d.property("sub-tag").divId : d.property("log-group").divId) + "-" + geomType;
@@ -4086,7 +4087,7 @@
         .size(s)
         .heavier()
         .stroke(d.style("stroke"))
-        .background(`rgba(${chroma("#ecf2eb").alpha(0.9).rgba().join(",")})`)
+        .background("#e6ece6")
         .shapeRendering("crispEdges")
 
   }
@@ -4164,7 +4165,8 @@
     if (d.properties.STROKEWIDTH) {
       return d.properties.STROKEWIDTH + "px";
     } else if (d.properties.LEVEL) {
-      return 0.25/(unromanize(d.properties.LEVEL)) + "px";
+      return +(0.25 - 0.05 * unromanize(d.properties.LEVEL)).toFixed(4) + "px";
+      // + unromanize(d.properties.LEVEL)*0.005 ?
     } else {
       return 0.1 + "px";
     }
@@ -4338,8 +4340,6 @@
 
     let associated = g.select("#enrich-layer").selectAll(`${selector}`);
 
-// LEVEL III needs thicker stroke?
-
     associated.transition()
       .style("stroke-opacity",1)
       .style("opacity", function() {
@@ -4371,6 +4371,11 @@
           d3.select(hoverNode).style("background-color",fillVal)
 
         }
+
+        // console.log(d3.select(hoverNode).style("opacity")) // 1
+        // console.log(hoverNode)
+        // styling hoverNode opacity reduces text opacity too;
+        // d3.select(hoverNode).style("opacity",0.4)
 
       } else {
 
