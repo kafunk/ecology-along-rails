@@ -1897,16 +1897,22 @@
         // if #about was hidden on smaller window size
         if (d3.select("#about").classed("disappear-down")) {
           // change disappear-direction for aligment in case of reopen
-          d3.select("#about").classed("disappear-down",false)
-                             .classed("disappear-right",true)
+          d3.select("#about")
+            .classed("disappear-down",false)
+            .classed("disappear-right",true)
           // make sure section-wrapper not "relative"
-          d3.select("#section-wrapper").classed("relative",false)
+          d3.select("#section-wrapper")
+            .classed("relative",false)
           // adjust dash (& associated) padding so long as #about collapsed on mxl
-          d3.select("#attribution").classed("mr24-mxl", true)
-          d3.select("#dash-content").classed("px30-mxl",true)
-          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
+          d3.select("#attribution")
+            .classed("mr24-mxl", true)
+          d3.select("#dash-content")
+            .classed("px30-mxl",true)
+          d3.select("#dash").select(".resizer")
+            .classed("ml-neg36-mxl",true)
           // if #about was *manually* hidden on smaller window
-          if (d3.select("#about").classed("manual-close")) {
+          if (d3.select("#about")
+            .classed("manual-close")) {
             // keep collapsed; do nothing
           } else if (d3.select("#modal-about").classed("none")) {
             // if #about not manually closed && modal-about not open
@@ -1921,30 +1927,39 @@
       calculated.width = window.innerWidth - d3.select("#aside").node().clientWidth;
 
       // update #about-wrapper to align with full map height
-      d3.select("#about-wrapper").style("height", calculated.height + "px");
+      d3.select("#about-wrapper")
+        .style("height", calculated.height + "px");
 
     } else {  // < 1200
 
       // if screen sizing downward from 1200+
       if (d3.select("#aside").classed("mxl")) {
         // remove mxl flag, then reset a variety of styles
-        (d3.select("#aside").classed("mxl", false))
+        d3.select("#aside")
+          .classed("mxl", false)
         // reset #about-wrapper height
-        d3.select("#about-wrapper").style("height", null);
+        d3.select("#about-wrapper")
+          .style("height", null);
         // if #about was manually collapsed on screen mxl
         if (d3.select("#about").classed("disappear-right")) {
           // // *keep* #about collapsed, but change class to disappear-down so transitions/placement correct if #about re-expanded from smaller window position
-          d3.select("#about").classed("disappear-down",true)
-                             .classed("disappear-right",false)
+          d3.select("#about")
+            .classed("disappear-down",true)
+            .classed("disappear-right",false)
           // replace previously-removed "relative" class in #section-wrapper
-          d3.select("#section-wrapper").classed("relative", true);
+          d3.select("#section-wrapper")
+            .classed("relative", true);
           // reset dash and attribution margins
-          d3.select("#attribution").classed("mr24-mxl", false)
-          d3.select("#dash-content").classed("px30-mxl",false)
-          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
+          d3.select("#attribution")
+            .classed("mr24-mxl", false)
+          d3.select("#dash-content")
+            .classed("px30-mxl",false)
+          d3.select("#dash").select(".resizer")
+            .classed("ml-neg36-mxl",false)
         }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
-        d3.select("#about").classed("disappear-right", false)
+        d3.select("#about")
+          .classed("disappear-right", false)
         collapse("about", "down")
       }
 
@@ -2466,6 +2481,7 @@
       .on("click.pause", pauseAnimation)
       .on("click.play", null)
     svg.on("click", togglePause)
+    window.onkeydown = awaitSpaceBar;
     // start global timers
     timer = d3.timer(animate);
     console.log("train departing @ " + Math.floor(d3.now()))
@@ -2512,7 +2528,7 @@
       .on("click.pause",null)
       // .property("disabled", true); // no need to hide completely
     svg.on("click", null)
-    // spacebar?
+    window.onkeydown = null;
 
     console.log("train arrived @ " + Math.floor(d3.now()))
     console.log("unique encounters",uniqueEncounters.size)
@@ -3712,25 +3728,38 @@
 
     } else {
 
-      d3.select(`#${elementStr}`).classed(`disappear-${contentAssoc.opposites[direction]}`, false)
-      d3.select(`#${elementStr}-collapse`).classed("none", false);
-      d3.select(`#${elementStr}-expand`).classed("none", true);
+      d3.select(`#${elementStr}`)
+        .classed(`disappear-${contentAssoc.opposites[direction]}`, false)
+      d3.select(`#${elementStr}-collapse`)
+        .classed("none", false);
+      d3.select(`#${elementStr}-expand`)
+        .classed("none", true);
 
       // size- and element-specific toggles upon expand/collapse of various elements
       if (elementStr === "about") {
         if (window.innerWidth >= 1200) {
-          d3.select("#section-wrapper").classed("relative", true);
-          d3.select("#attribution").classed("mr24-mxl", false)
-          d3.select("#dash-content").classed("px30-mxl",false)
-          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
+          d3.select("#section-wrapper")
+            .classed("relative", true);
+          d3.select("#attribution")
+            .classed("mr24-mxl", false)
+          d3.select("#dash-content")
+            .classed("px30-mxl",false)
+          d3.select("#dash").select(".resizer")
+            .classed("ml-neg36-mxl",false)
         } else {
-          d3.select("#dash-up").classed("mt-neg18", true)
-          d3.select("#dash-up").classed("mt-neg6", false)
-          d3.select("#dash-expand-btn").classed("h18 mt6", true)
-          d3.select("#dash-expand-btn").classed("h24 mt0", false)
+          d3.select("#dash-up")
+            .classed("mt-neg18", true)
+          d3.select("#dash-up")
+            .classed("mt-neg6", false)
+          d3.select("#dash-expand-btn")
+            .classed("h18 mt6", true)
+          d3.select("#dash-expand-btn")
+            .classed("h24 mt0", false)
           if (d3.select("#dash").classed("disappear-down")) {
-            d3.select("#attribution").classed("mt-neg24", false)
-            d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", true)
+            d3.select("#attribution")
+              .classed("mt-neg24", false)
+            d3.select("#attribution")
+              .classed("mt-neg18 mt-neg24-mxl", true)
           }
         }
       } else if (elementStr === "dash") {
@@ -3746,9 +3775,12 @@
 
     if (d3.event && d3.event.defaultPrevented) return; // dragged
 
-    d3.select(`#${elementStr}`).classed(`disappear-${direction}`, true);
-    d3.select(`#${elementStr}-expand`).classed("none", false);
-    d3.select(`#${elementStr}-collapse`).classed("none", true);
+    d3.select(`#${elementStr}`)
+      .classed(`disappear-${direction}`, true);
+    d3.select(`#${elementStr}-expand`)
+      .classed("none", false);
+    d3.select(`#${elementStr}-collapse`)
+      .classed("none", true);
 
     // size- and element-specific toggles upon expand/collapse of various elements
     if (elementStr === "about") {
@@ -3851,6 +3883,17 @@
     else if (experience.animating) resumeAnimation();
   }
 
+  function awaitSpaceBar(e) {
+    if (e.isComposing || e.keyCode !== 32) return;
+    // else, set & unset additional listener
+    window.onkeyup = function(e) {
+      if (e.isComposing || e.keyCode !== 32) return;
+      // else
+      togglePause()
+      window.onkeyup = null;
+    }
+  }
+
   function pauseAnimation() {
     // track state
     experience.paused = true;
@@ -3940,6 +3983,7 @@
 
       // reset listeners..?
       svg.on("click", null)
+      window.onkeydown = null;
 
       if (experience.animating) manualPause(); // CANCEL?
 
