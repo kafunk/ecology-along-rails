@@ -172,7 +172,10 @@ details > summary > span {
 }
 
 /* MEDIA QUERIES */
-/* @media screen and (min-width: 400px) { } */
+@media screen and (min-width: 400px) {
+  /* missing from Assembly */
+  .txt-nowrap-sm { white-space: nowrap !important; }
+}
 @media screen and (min-width: 640px) {
   #resizable { height: 180px; }
   .normal-order-mm { direction: ltr; }
@@ -182,6 +185,7 @@ details > summary > span {
     box-shadow: 1px 1px 1px 1px #2A4C48;
   }
   /* missing from Assembly */
+  /* .txt-nowrap-mm { white-space: nowrap !important; } */
   .align-l-mm { text-align: left !important; }
   .align-r-mm { text-align: right !important; }
 }

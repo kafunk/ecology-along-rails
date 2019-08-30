@@ -15,7 +15,7 @@
   <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross bg-base viewport-full">
 
     <!-- header stays up top, takes up full width -->
-    <header id="header" class="flex-child flex-child--no-shrink bg-lighten25">
+    <header id="header" class="flex-child flex-child--no-shrink bg-lighten25 shadow-darken25 z5">
 
       <!-- inner horizontal wrapper -->
       <div class="flex-parent flex-parent--center-cross grid px6 py6 px12-mm px18-ml px24-mxl">
@@ -659,7 +659,7 @@
 
                       <!-- about collapse triangle--d -->
                       <button id="about-down-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl'>
-                        <span class='icon triangle-l triangle-l--d mx-auto'></span>
+                        <span class='icon triangle-l triangle-l--d mx-auto z4'></span>
                       </button>
 
                       <!-- about collapse triangle--r -->
@@ -906,37 +906,42 @@
     <!-- footer stays on the bottom at full width -->
     <footer id="footer" class="flex-child flex-child--no-shrink bg-darken50 color-lighten75 txt-s txt-m-ml">
       <!-- inner horizontal wrapper -->
-      <div class='flex-parent flex-parent--center-cross grid px6 py3 px12-mm px18-ml px24-mxl ml3'>
+      <div class='flex-parent flex-parent--center-cross flex-parent--space-between-main grid px6 py6 px12-mm px18-ml px24-mxl'>
         <!-- author info -->
         <div class='flex-child col col--5'>
-          <span class="mx6">
-            <span>Map by <a target='_blank' href='https://www.kafunk.com'>Katrina Funk</a></span>
-            <br class="none-mm"/>
-            <span class="mx6 mx0-mm">for MAP 673 // <a target='_blank' class='link' href='https://newmapsplus.uky.edu'> New Maps Plus</a>.</span>
-          </span>
+          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--row-mm flex-parent--start-main-mm flex-parent--center-cross-mm ml6 mb-neg3">
+            <span class="flex-child txt-nowrap-sm">Map by <a target='_blank' href='https://www.kafunk.com' class="txt-nowrap">Katrina Funk</a></span>
+            <!-- <br class="flex-child none-mm"/> -->
+            <span class="none inline-block-mm wmin3"></span>
+            <span class="flex-child txt-nowrap-sm">for MAP 673 // <a target='_blank' class='link' href='https://newmapsplus.uky.edu'> New Maps Plus</a>.</span>
+          </div>
         </div>
         <!-- break/divider icon visible @ mm+ -->
-        <div class="flex-child col col--2 ml-neg1">
-          <svg class="icon mx-auto h30 w30 color-lighten75"><use xlink:href="assets/compass-rose.svg#compass-rose"/></svg>
+        <div class="flex-child col col--2"> <!-- ml-neg1 -->
+          <div class="flex-parent flex-parent--center-main flex-parent--center-cross mx6">
+            <svg class="flex-child icon h30 w30 color-lighten75"><use xlink:href="assets/compass-rose.svg#compass-rose"/></svg>
+          </div>
         </div>
         <!-- social media -->
-        <div class="flex-child col col--5 flex-parent flex-parent--end-main flex-parent--center-cross">
-          <a target="_blank" href="mailto:kafunk@gmail.com">
-            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="email"><use xlink:href='#icon-mail'/></svg>
-          </a>
-          <a target="_blank" href="https://github.com/kafunk">
-            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="github"><use xlink:href='#icon-github'/></svg>
-          </a>
-          <a target="_blank" href="https://twitter.com/kafunkafunk">
-            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="twitter"><use xlink:href='#icon-twitter'/></svg>
-          </a>
-          <a target="_blank" href="https://www.instagram.com/kafunkafunk">
-            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="instagram"><use xlink:href='#icon-instagram'/></svg>
-          </a>
-          <!-- <a target="_blank" href="https://open.spotify.com/user/kafunkafunk">
-            <svg class='flex-child inline-block icon h24 w24 mx6 mb-neg6' alt="spotify"><use xlink:href='#icon-spotify'/></svg>
-          </a> -->
-          <!-- Pinterest,Dribbble,LinkedIn? -->
+        <div class="flex-child col col--5">
+          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr3 mb-neg6">
+            <a target="_blank" href="mailto:kafunk@gmail.com">
+              <svg class='flex-child inline-block icon h24 w24 mr6' alt="email"><use xlink:href='#icon-mail'/></svg>
+            </a>
+            <a target="_blank" href="https://github.com/kafunk">
+              <svg class='flex-child inline-block icon h24 w24 mx6' alt="github"><use xlink:href='#icon-github'/></svg>
+            </a>
+            <a target="_blank" href="https://twitter.com/kafunkafunk">
+              <svg class='flex-child inline-block icon h24 w24 mx6' alt="twitter"><use xlink:href='#icon-twitter'/></svg>
+            </a>
+            <a target="_blank" href="https://www.instagram.com/kafunkafunk">
+              <svg class='flex-child inline-block icon h24 w24 ml6' alt="instagram"><use xlink:href='#icon-instagram'/></svg>
+            </a> <!--mx6-->
+            <!-- <a target="_blank" href="https://open.spotify.com/user/kafunkafunk">
+              <svg class='flex-child inline-block icon h24 w24 ml6' alt="spotify"><use xlink:href='#icon-spotify'/></svg>
+            </a> -->
+            <!-- Pinterest,Dribbble,LinkedIn? -->
+          </div>
         </div>
       </div>
     </footer>
