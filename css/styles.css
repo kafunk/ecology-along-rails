@@ -156,6 +156,11 @@ details > summary > span {
 .unstyled {
  list-style: none;
 }
+
+.hmax-twothirds {
+  max-height: calc(66vh - 60px);
+}
+
 .flex1 { order: 1; }
 .flex2 { order: 2; }
 .flex3 { order: 3; }
