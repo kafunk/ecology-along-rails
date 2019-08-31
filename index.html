@@ -12,7 +12,7 @@
 <body>
 
   <!-- inner body wrapper (vertical)-->
-  <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross bg-base viewport-full">
+  <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross bg-base viewport-full pb6">
 
     <!-- header stays up top, takes up full width -->
     <header id="header" class="flex-child flex-child--no-shrink bg-lighten25 shadow-darken25 z5">
@@ -22,8 +22,8 @@
         <!-- TITLE -->
         <div class="flex-child col col--12">
           <div class="flex-parent flex-parent--column flex-parent--center-main">
-            <h1 id="title" class="flex-child txt-h3 txt-h2-ml txt-nowrap mt-neg3 mt0-mm pt3-ml pt6-mxl ml3 mb-neg12 color-lighten75">Ecology along the rails:</h1>
-            <h2 id="subtitle" class="flex-child txt-h5 txt-h4-ml ml18 ml24-mm ml30-ml ml36-mxl mb-neg3 mb0-mm pb3-mxl color-darken50">A visualization of the journeys implicit in passenger train travel within North America</h2>
+            <h1 id="title" class="flex-child txt-h3 txt-h2-ml txt-nowrap mt3 pt3-ml pt6-mxl ml3 mb-neg12 color-lighten75">Ecology along the rails:</h1> <!-- mt-neg3 -->
+            <h2 id="subtitle" class="flex-child txt-h5 txt-h4-ml ml18 ml24-mm ml30-ml ml36-mxl mt3 mt0-ml mb0-mm pb3-mxl color-darken50">A visualization of the journeys implicit in passenger train travel within North America</h2> <!-- mb-neg3  -->
           </div>
         </div>
       </div>
@@ -78,7 +78,7 @@
                 </div> <!-- end of ui-overlay-group -->
 
                 <!-- map svg/canvas -->
-                <div id="map" class="bg-darken50 mb-neg6"></div>
+                <div id="map" class="bg-darken50"></div>
 
               </div>
 
@@ -97,7 +97,7 @@
                     <!-- dash expand triggers -->
                     <label id="dash-expand" class="flex-child h24 z2">
                       <!-- dash expand triangle--u -->
-                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full'>
+                      <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full shadow-darken25'>
                         <span id="dash-up" class='icon triangle-l triangle-l--u mx-auto mt-neg18 mt-neg6-mxl'></span>
                       </button>
                     </label>
@@ -186,7 +186,7 @@
                                   <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z3 point-all"></div>
 
                                   <!-- main content / dynamically populated legend items  -->
-                                  <div id="log-content-wrapper" class="flex-child flex-child--grow align-center w-full bg-lighten75 px12 py6 scroll-auto">
+                                  <div id="log-content-wrapper" class="flex-child flex-child--grow align-center h-full w-full bg-lighten75 px12 py6 scroll-auto">
                                     <div id="legend-log-content" class="flex-parent flex-parent--column flex-parent--center-main border-t border-b border--dash scroll-auto unstyled">
                                     </div>
                                   </div>
@@ -322,23 +322,23 @@
             <div id="veil" class="absolute top bottom right left h-full z4 opacity50 bg-lighten50 point-none"></div>
 
             <!-- modal/loader group -->
-            <div id="modal-plus" class="absolute left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none">
+            <div id="modal-plus" class="absolute left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none point-none">
 
               <div id="map-init-load" class='absolute left right loading z4 none'></div>
 
               <div class="flex-child flex-parent flex-parent--center-cross flex-parent--center-main bg-transparent bg-lighten75 z5">
 
                 <!-- modal content options -->
-                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative h-full">
+                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative"> <!-- h-full -->
 
                   <!-- inner modal wrapper -->
-                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round h-full'>
+                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round point-all'> <!-- h-full -->
 
                     <!-- featured content // Modal About -->
-                    <div id="modal-about" class='flex-child flex-child--grow shadow-darken75 round px12 mx-auto py12 bg-modal none wmax360 wmax600-mm hmax360 h-full'>
+                    <div id="modal-about" class='flex-child flex-child--grow shadow-darken75 round px12 mx-auto py12 bg-modal none wmax360 wmax600-mm'> <!-- hmax360 h-full -->
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main h-full'>
+                      <div class='flex-parent flex-parent--column flex-parent--center-main'> <!-- h-full -->
 
                         <!-- About--Header -->
                         <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 pt6 pb3 flex-parent flex-parent--center-cross flex-parent--center-main">
@@ -346,7 +346,7 @@
                         </div>
 
                         <!-- About--Main -->
-                        <div class="flex-child flex-child--grow bg-lighten75 round-bl round-br hmax300 scroll-auto">
+                        <div class="flex-child flex-child--grow bg-lighten75 round-bl round-br hmax-twothirds scroll-auto"> <!-- hmax300 -->
 
                           <!-- inner content wrapper -->
                           <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross py12 px18 px24-mm px30-ml py18-ml">
@@ -431,7 +431,7 @@
                                 <li class="txt-li">
                                   <details class="color-symbol">
                                     <summary><span class="inline-block">Other Enrich Data</span></summary>
-                                    <ul class="show-bullets--square txt-s pl12 pl18-ml">
+                                    <ul class="show-bullets--square txt-s pl24 pl36-ml">
                                       <li class="txt-li">
                                         Volcanoes from <a target='_blank' href='https://ngmdb.usgs.gov/gmna'>USGS's Geologic Map of North America</a> GIS Database (2009)
                                       </li>
@@ -444,7 +444,7 @@
                                 <li class="txt-li">
                                   <details class="color-symbol">
                                     <summary><span class="inline-block">Railways &amp; Stations</span></summary>
-                                    <ul class="show-bullets--square txt-s pl12 pl18-ml">
+                                    <ul class="show-bullets--square txt-s pl24 pl36-ml">
                                       <li class="txt-li">
                                         <a target='_blank' href='http://osav-usdot.opendata.arcgis.com/datasets/f15d9e40cd1d4170a36bf31d4e6a3c28_0'>The Bureau of Transportation Statistics' National Transportation Atlas Database (2018)</a>
                                       </li>
@@ -685,8 +685,14 @@
                       <div class='flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross flex-parent--space-between-main h-full-mxl px6 py6'>
 
                         <!-- About--Header -->
-                        <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 hmin36-mxl pt6 pb3 py12-mxl flex-parent flex-parent--center-cross flex-parent--center-main">
+                        <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 hmin36-mxl pt6 pb3 flex-parent flex-parent--center-cross flex-parent--center-main relative">
                           <h3 class='flex-child txt-h4 txt-bold txt-em pt3 pt0-mxl'>About This Map</h3>
+                          <div class="absolute top right left-mxl mr-neg6 mr0-mxl ml-neg6-mxl point-all z5">
+                            <button id="about-expand-icon" class='btn bg-transparent unround color-darken50 color-accent1-on-hover color-accent2-on-active'>
+                              <svg class='icon h24 w24 none-mxl'><use xlink:href='#icon-share'/></svg>
+                              <svg class='icon h24 w24 horz-flip none inline-block-mxl'><use xlink:href='#icon-share'/></svg>
+                            </button>
+                          </div>
                         </div>
 
                         <!-- About--Main -->
@@ -728,13 +734,13 @@
                                   <li class="txt-li">
                                     <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
                                       <summary><span class="inline-block">Ecoregions</span></summary>
-                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                         <li class="txt-li">
                                           Levels I-III from <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/terrestrial-ecoregions-level-iii'>The Commission for Environmental Cooperation (2006)</a>
                                         </li>
                                         <li class="txt-li">
                                           <span class="nevermind-reverse">Level IV Supplements from:</span>
-                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                             <li class="txt-li">
                                               <a target='_blank' href='https://open.canada.ca/data/en/dataset/fe9fd41c-1f67-4bc5-809d-05b62986b26b'>The Dept of Agriculture and Agri-Food (Canada - 2013)</a>
                                             </li>
@@ -753,7 +759,7 @@
                                   <li class="txt-li">
                                     <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
                                       <summary><span class="inline-block">Watersheds</span></summary>
-                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                         <li class="txt-li">
                                           <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/watersheds'>The Commission for Environmental Cooperation (2010)</a>
                                         </li>
@@ -763,10 +769,10 @@
                                   <li class="txt-li">
                                     <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
                                       <summary><span class="inline-block">Protected Areas</span></summary>
-                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                         <li class="txt-li">
                                           From <a class="nevermind-reverse" target='_blank' href='http://www.cec.org/tools-and-resources/map-files'>The Commission for Environmental Cooperation:</a>
-                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                             <li class="txt-li">
                                               <a target='_blank' href='http://www.cec.org/tools-and-resources/map-files/north-american-protected-areas-2017'>North American Protected Areas (2017)</a>
                                             </li>
@@ -788,7 +794,7 @@
                                   <li class="txt-li">
                                     <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
                                       <summary><span class="inline-block">Other Enrich Data</span></summary>
-                                      <ul class="show-bullets--square reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                      <ul class="show-bullets--square reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl24-mm pl36-ml pl0-mxl pr24-mxl">
                                         <li class="txt-li">
                                           <span class="nevermind-reverse">Volcanoes from <a target='_blank' href='https://ngmdb.usgs.gov/gmna'>USGS's Geologic Map of North America</a> GIS Database (2009)</span>
                                         </li>
@@ -801,7 +807,7 @@
                                   <li class="txt-li">
                                     <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
                                       <summary><span class="inline-block">Railways &amp; Stations</span></summary>
-                                      <ul class="show-bullets--square reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                      <ul class="show-bullets--square reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl24-mm pl36-ml pl0-mxl pr24-mxl">
                                         <li class="txt-li">
                                           <a target='_blank' href='http://osav-usdot.opendata.arcgis.com/datasets/f15d9e40cd1d4170a36bf31d4e6a3c28_0'>The Bureau of Transportation Statistics' National Transportation Atlas Database (2018)</a>
                                         </li>
@@ -826,10 +832,10 @@
                                   <li class="txt-li">
                                     <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
                                       <summary><span class="inline-block">Physical Baselayer</span></summary>
-                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                         <li class="txt-li">
                                           <a class="nevermind-reverse" target='_blank' href='https://www.naturalearthdata.com/downloads/10m-physical-vectors'>Natural Earth 1:10m Vectors:</a>
-                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                             <li class="txt-li">Rivers + Lake Centerlines</li>
                                             <li class="txt-li">Lakes + Reservoirs</li>
                                           </ul>
@@ -840,10 +846,10 @@
                                   <li class="txt-li">
                                     <details class="color-symbol reverse-order normal-order-mm reverse-order-mxl">
                                       <summary><span class="inline-block">Cultural Baselayer</span></summary>
-                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                      <ul class="reverse-order normal-order-mm reverse-order-mxl pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                         <li class="txt-li">
                                           <a class="nevermind-reverse" target='_blank' href='https://www.naturalearthdata.com/downloads/10m-cultural-vectors'>Natural Earth 1:10m Vectors:</a>
-                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr18-mxl">
+                                          <ul class="show-bullets reverse-order normal-order-mm reverse-order-mxl txt-s pr12 pr0-mm pl12-mm pl18-ml pl0-mxl pr12-mxl">
                                             <li class="txt-li">Admin 0</li>
                                             <li class="txt-li">Admin 1</li>
                                             <li class="txt-li">Populated Places</li>
@@ -906,10 +912,10 @@
     <!-- footer stays on the bottom at full width -->
     <footer id="footer" class="flex-child flex-child--no-shrink bg-darken50 color-lighten75 txt-s txt-m-ml">
       <!-- inner horizontal wrapper -->
-      <div class='flex-parent flex-parent--center-cross flex-parent--space-between-main grid px6 py6 px12-mm px18-ml px24-mxl'>
+      <div class='flex-parent flex-parent--center-cross flex-parent--space-between-main grid px6 px12-mm my6 px18-ml px24-mxl'>
         <!-- author info -->
-        <div class='flex-child col col--5'>
-          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--row-mm flex-parent--start-main-mm flex-parent--center-cross-mm ml6 mb-neg3">
+        <div class='flex-child flex-child--no-shrink col col--5 mb-neg3'>
+          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--row-mm flex-parent--start-main-mm flex-parent--center-cross-mm ml6">
             <span class="flex-child txt-nowrap-sm">Map by <a target='_blank' href='https://www.kafunk.com' class="txt-nowrap">Katrina Funk</a></span>
             <!-- <br class="flex-child none-mm"/> -->
             <span class="none inline-block-mm wmin3"></span>
@@ -917,14 +923,14 @@
           </div>
         </div>
         <!-- break/divider icon visible @ mm+ -->
-        <div class="flex-child col col--2"> <!-- ml-neg1 -->
+        <div class="flex-child flex-child--no-shrink col col--2"> <!-- ml-neg1 -->
           <div class="flex-parent flex-parent--center-main flex-parent--center-cross mx6">
-            <svg class="flex-child icon h30 w30 color-lighten75"><use xlink:href="assets/compass-rose.svg#compass-rose"/></svg>
+            <svg class="flex-child flex-child--no-shrink icon h30 w30 color-lighten75 mr-neg1"><use xlink:href="assets/compass-rose.svg#compass-rose"/></svg>
           </div>
         </div>
         <!-- social media -->
-        <div class="flex-child col col--5">
-          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr3 mb-neg6">
+        <div class="flex-child flex-child--no-shrink col col--5">
+          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr3 mb-neg6"> <!-- mb-neg6 -->
             <a target="_blank" href="mailto:kafunk@gmail.com">
               <svg class='flex-child inline-block icon h24 w24 mr6' alt="email"><use xlink:href='#icon-mail'/></svg>
             </a>
