@@ -8,24 +8,23 @@
 //// INITIATE DATA LOAD
 
   // background/reference
-  var initBounds = d3.json("data/final/bounding.json"),
-          admin0 = d3.json("data/final/admin0.json"),
-          admin1 = d3.json("data/final/admin1.json"),
-            land = d3.json("data/final/land.json"),
-          places = d3.json("data/final/places.json"),
-         // terrain = d3.buffer("data/final/terrain.tif"),
-       hydroBase = d3.json("data/final/hydro_base.json"),
-       urbanBase = d3.json("data/final/urban_areas.json"),
+  var admin0 = d3.json("data/final/admin0.json"),
+      admin1 = d3.json("data/final/admin1.json"),
+      rivers = d3.json("data/final/rivers.json"),
+       lakes = d3.json("data/final/lakes.json"),
+   urbanBase = d3.json("data/final/urban_areas.json"),
+      places = d3.json("data/final/places.json"),
+     // terrain = d3.buffer("data/final/terrain.tif"),
   // rail
-        railBase = d3.json("data/final/railways.json"),
-        railStns = d3.json("data/final/na_rr_stns.json"),
+    railBase = d3.json("data/final/railways.json"),
+    railStns = d3.json("data/final/na_rr_stns.json"),
   // merged enrich data
-     enrichPolys = d3.json("data/final/enrich_polys.json"),
-     enrichLines = d3.json("data/final/enrich_lines.json"),
-       enrichPts = d3.json("data/final/enrich_pts.json"),
+ enrichPolys = d3.json("data/final/enrich_polys.json"),
+ enrichLines = d3.json("data/final/enrich_lines.json"),
+   enrichPts = d3.json("data/final/enrich_pts.json"),
   // quadtree ready
-    quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
-      triggerPts = d3.json("data/final/enrich_trigger_pts.json");
+quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
+  triggerPts = d3.json("data/final/enrich_trigger_pts.json");
 
 //// CURRENT STATE MANAGEMENT (NOT IDEAL)
 
@@ -35,6 +34,7 @@
   var panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
   var transitionResume = false;
   var reversing = { flag: false, i: 0, t: null, tPad: null }
+  var currentBounds;
 
  // OTHER WORTHWHILE
 
@@ -51,7 +51,8 @@
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
-    maxInitZoom = 18,  // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
+    // maxInitZoom = 36, //  30, // 24, // 18,  // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
+    maxFollowZoom = 36,
     zoomDuration = tPause,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     trainEase = d3.easeSinInOut,
@@ -59,6 +60,8 @@
     reverseCut = 2 // 12;
 
 // AS YET EMPTY, ZERO, OR UNDEFINED
+
+  var active;
 
   var timer, reverseTimer;
 
@@ -116,23 +119,23 @@
 
 // SVG + SIZING
 
-  var padX = 18, padY = -18;
+  // var padX = 18, padY = -18;
 
   var initial = calcSize();
 
   var width = initial.width,
     height = initial.height,
-    translate0 = [(width + padX)/2, (height + padY)/2],
-    extent0 = [[(-width - padX)/2, (-height - padY)/2],[(width + padX)/2, (height + padY)/2]],
-    paddedExtent0 = extent0.map(arr => arr.map(d => d * 1.2)),
-    scale0 = 0.95;
+    // translate0 = [width/2, height/2],
+    extent0 = [[0,0],[width,height]],
+    scale0 = 1;
 
   var svg = d3.select("#map").append("svg")
     .attr("id", "svg")
     .attr("width", width)
     .attr("height", height)
-    .attr("preserveAspectRatio", "xMidYMid meet") // slice")
-    .attr("viewBox", `0 0 ${width} ${height}`)
+    // .attr("viewBox", `0 0 ${width} ${height}`)
+    // // .attr("preserveAspectRatio", "xMidYMid slice")
+    // .attr("preserveAspectRatio", "xMidYMid meet")
 
   var hiddenSvg = d3.select("#map").append("svg")
     .attr("id", "hidden-svg")
@@ -141,10 +144,12 @@
 
   var background = svg.append("rect")
     .attr("id", "background")
-    .attr("width", width)
-    .attr("height", height)
+    .attr("width", "100%") // width)
+    .attr("height", "100%")
+    // .attr("width", width) // width)
+    // .attr("height", height)
     .style("fill", "none")
-    .classed("point-all opacity75 bg-lighten25 no-zoom",true)
+    .classed("point-all opacity75 bg-lighten25 no-zoom absolute top left",true)
     .on("dblclick", resetZoom)
 
   var g = svg.append("g")
@@ -160,7 +165,7 @@
   var projection = d3.geoConicEquidistant()
     .rotate([96,0])
     .parallels([20,60])
-    .clipExtent(paddedExtent0);
+    // .clipExtent(extent0)
 
   var reflectedY = d3.geoIdentity()
     .reflectY(true)
@@ -194,9 +199,9 @@
     .on('mouseenter', highlightBtn)
     .on('mouseleave', removeHighlight)
 
-  var zoom0 = d3.zoomIdentity.translate(translate0[0],translate0[1]).scale(scale0);
+  var zoom0 = d3.zoomIdentity.translate(width/2, height/2).scale(scale0);
 
-  var active = d3.select(null);
+  // var active = d3.select(null);
 
   var zoom = d3.zoom()
     // .translateExtent(paddedExtent0)
@@ -267,20 +272,19 @@
 
    var defaultOptions = {
     init: {
-      get width() { return width + padX; },
-      get height() { return height + padY; },
-      get extent0() { return [[-(width + padX)/2, -(height + padY)/2],[(width + padX)/2, (height + padY)/2]]; },
-      get paddedExtent0() { return this.extent0.map(arr => arr.map(d => d * 1.2)) },
-      get scale() { return scale0; },
-      padTop: 24,
-      get padRight() { return (width >= 1200) ? d3.select("#about").node().clientWidth : 0 },
-      get padBottom() { return (width >= 1200) ? d3.select("#dash").node().clientHeight / 4 : (width < 640) ? d3.select("#dash").node().clientHeight * 2 : d3.select("#dash").node().clientHeight },
-      padLeft: 24
+      get width() { return width; },
+      get height() { return height; },
+      get extent0() { return [[0,0],[width,height]]; },
+      // get scale() { return scale0; },
+      padTop: 0,
+      padRight: 0,
+      padLeft: 0,
+      get padBottom() { return (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 12 : 15; }
     },
     get boundsTransform() { return {...this.init, ...this.spec.bounds} },
     get centerTransform() { return {...this.init, ...this.spec.center} },
     spec: {
-      bounds: { scalePad: 0 },
+      bounds: { scalePad: 0.05 },
       center: { }
     },
     quadtree: {
@@ -373,8 +377,8 @@
       divId: "lakes",
       fullTxt: "Lakes",
       textureType: "paths",
-      textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 12, lighter: 8, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 2, heavier: 6 }
+      textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 18, lighter: 12, shapeRendering: "crispEdges"},
+      htmlAdjust: { thicker: 1.25, heavier: 12 }
       // no keywords, CATEGORY.startsWith("Lake")
     },
     "RIVER": {
@@ -573,36 +577,43 @@
 //// PREPARE MAP LAYERS
 
   // SET BOUNDING BOX
-  initBounds.then(data => {
-    data0 = topojson.feature(data,data.objects.bounds);
-    projection.fitExtent(extent0,data0);
+  admin0.then(data => {
+    // data0 = topojson.feature(data,data.objects.countries);
+    data0 = getMesh(data,"countries");
+    // bounds0 = path.bounds(data0);
+    // bounds0 = () => path.bounds(data0);
+
+    // resetZoom();
+
+    // //
+    // let bottomPad = window.innerWidth >= 1200 ? 9 : 6;
+
+    // let bottomPad = window.innerWidth >= 1200 ? 9 : 6;
+    //
+    // // let bottomPad = 6;
+    // //
+    //     //      rightPad = (window.innerWidth <= 1200) ? 0 : d3.select("#aside").node().clientWidth,
+    //     //       // options = { padBottom: bottomPad, padRight: rightPad };
+    //     //       options = { padBottom: 0, padRight: 0 };
+    //
+    // zoomToBounds(path.bounds(data0).slice(),600,{ padBottom: bottomPad, padRight: 0 });
+
   }, onError)
 
   // DRAW VECTOR BASE
-  Promise.all([admin0,admin1,land,places,hydroBase,urbanBase,railBase,railStns]).then(drawBase, onError);
+  Promise.all([admin0,admin1,lakes,rivers,places,urbanBase,railBase,railStns]).then(drawBase, onError);
 
   function drawBase(data) {
 
     // CONVERT TJ'S TO GJ'S AS NECESSARY
-    let sourceData = new Object();
-    data.forEach(datum => {
-      if (datum["type"] == "Topology") {
-        let oKey = Object.keys(datum.objects)[0],  // object key
-           sdKey = oKey;                           // sourceData key (to distinguish multiple TJ's with objects of same name)
-        if (sourceData[sdKey]) { sdKey += "2" };
-        sourceData[sdKey] = { tj: datum },
-        sourceData[sdKey].gj = topojson.feature(sourceData[sdKey].tj, sourceData[sdKey].tj.objects[oKey]);
-      } else {  // if not topojson, assume already geojson
-        sourceData[datum.name] = { gj: datum };
-      }
-    });
+    let sourceData = tjToGj(data);
 
     // MESH SELECT
-    let lakeMesh = getMesh(sourceData.hydroUnits,"hydroUnits", (a,b) => { return a.properties.strokeweig === null }),
-       urbanMesh = getMesh(sourceData.urbanAreas,"urbanAreas"),
-   continentMesh = getMesh(sourceData.land,"land"),
-   countriesMesh = getMesh(sourceData.countries,"countries"),
-      statesMesh = getMesh(sourceData.states,"states");
+    let continentMesh = getMesh(sourceData.countries.tj,"countries",outerlines()),
+        countriesMesh = getMesh(sourceData.countries.tj,"countries",innerlines()),
+           statesMesh = getMesh(sourceData.states.tj,"states"),
+             lakeMesh = getMesh(sourceData.lakes.tj,"lakes"),
+            urbanMesh = getMesh(sourceData.urbanAreas.tj,"urbanAreas");
 
     // define svg groups
     var baselayers = g.append("g")
@@ -634,45 +645,55 @@
       .attr("id", "lake-mesh")
       .attr("d", path(lakeMesh))
       .style("fill","cyan")
-      .style("stroke","teal")
+      .style("opacity",0.4)
+      .style("stroke","darkcyan")
+      .style("stroke-width",0.05)
+
+    hydroBase.append("path")
+      .attr("id", "lake-mesh2")
+      .attr("d", path(lakeMesh))
+      .style("fill","yellowgreen")
+      .style("opacity",0.12)
+      .style("stroke","black")
       .style("stroke-width",0.1)
-      .style("opacity",0.6)
-      .style("stroke-opacity",1)
 
     urbanBase.append("path")
       .attr("id", "urban-mesh")
       .attr("d", path(urbanMesh))
       .attr("stroke","silver")
       .attr("fill","gainsboro")
+      // .attr("fill", chroma("#44443e").luminance(0.2))
+      // .attr("stroke", chroma("#44443e").luminance(0.1))
       .style("stroke-width",0.1)
-      .style("opacity",0.6)
+      .style("opacity",0.6) // 0.8
 
     // STROKED MESH
     adminBase.append("path")
       .attr("id","country-mesh")
       .attr("d", path(countriesMesh))
       .style("fill","none")
-      .style("stroke","yellowgreen")
-      .style("stroke-width",0.6)
+      .style("stroke","#222834")
+      .style("stroke-width", 0.42)
 
     adminBase.append("path")
       .attr("id","state-mesh")
       .attr("d", path(statesMesh))
       .style("fill","none")
       .style("stroke","magenta")
-      .style("stroke-width",0.4)
+      .style("stroke-width",0.32)
       .style("stroke-dasharray", "0.2 0.4")
 
     // STROKED FEATURES
     hydroBase.append("g")
       .attr("id", "rivers")
       .selectAll("path")
-      .data(sourceData.hydroUnits.gj.features.filter(d => { return d.properties.strokeweig !== null }))
+      .data(sourceData.rivers.gj.features)
       .enter().append("path")
         .attr("d", path)
-        .style("fill","none")
-        .style("stroke","teal")
-        .style("stroke-width", d => { return d.properties.strokeweig })
+        .style("fill", "none")
+        .style("stroke", riverBlue)
+        .style("opacity", 0.8)
+        .style("stroke-width", d => d.properties.strokeweig * 0.6)
 
     railBase.append("g")
       .attr("id", "railways")
@@ -680,7 +701,7 @@
       .data(sourceData.railways.gj.features)
       .enter().append("path")
         .attr("d", path)
-        .attr("stroke-width", d => { return (8/(d.properties.scalerank * 4)) }) // 10/(d.properties.scalerank ** 2)
+        .attr("stroke-width", d => { return (8/(d.properties.scalerank * 6)) })
         .attr("stroke","lightslategray")
         .style("fill", "none")
         .style("opacity",1)
@@ -706,10 +727,10 @@
       .data(sourceData.stations.gj.features)
       .enter().append("use")
         .attr("xlink:href", "#station-icon")
-        .attr("x", d => { return projection(d.geometry.coordinates)[0] - 1.6; })
-        .attr("y", d => { return projection(d.geometry.coordinates)[1] - 2; })
-        .attr("width", 3.2)
-        .attr("height", 4)
+        .attr("x", d => { return projection(d.geometry.coordinates)[0] - 0.75; })
+        .attr("y", d => { return projection(d.geometry.coordinates)[1] - 1; })
+        .attr("width", 1.5)
+        .attr("height", 2)
         .property("name", d => { return cityState(d.properties); })
         .style("opacity", 0.8)
         .style("stroke-opacity", 0.6)
@@ -751,9 +772,9 @@
 
 //// ON INITIAL LOAD
 
-  function initPrompt() {
-    // adjustSize();
-    d3.select("#modal-plus").classed("none",false)
+  function init() {
+    resetZoom();
+    d3.select("#modal-plus").classed("none",false)  // show prompt
   }
 
   function populateOptions(allOptions) {
@@ -917,7 +938,7 @@
       if (returned[0] == null) {
         d3.select("#submit-btn-load").classed("none",true);
         d3.select("#submit-btn-txt").classed("none",false);
-        initPrompt()
+        init()
       } else {
         toggleLoading();
         let processed = processReceived(returned[0]);
@@ -1103,7 +1124,7 @@
       // keep radius consistent with filtered pool of enrichData
       chosen.bufferedRoute = turf.buffer(chosen.lineString, headlightDegrees, {units: "degrees", steps: 12});
 
-      let possFeatures = Promise.all([quadtreeReps,initBounds]).then(getIntersected,onError);
+      let possFeatures = Promise.all([quadtreeReps,admin0]).then(getIntersected,onError);
 
       // bind all trigger points to the DOM for en route intersection
       Promise.all([possFeatures,triggerPts]).then(([idList,pts]) => {
@@ -1136,7 +1157,7 @@
         // FIRST make a quadtree of all representative enrich data pts draped over North America
 
         let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features.filter(d => d.geometry),
-              dataExtent = topojson.feature(quadBounds,quadBounds.objects.bounds).features[0]
+              dataExtent = getMesh(quadBounds,"countries")
 
         let quadtree = makeQuadtree(quadtreeData,{bounding:dataExtent})
 
@@ -1181,24 +1202,29 @@
     Promise.resolve(prepareEnvironment(receivedData)).then(() => { // proceed
 
       let bounds = path.bounds(data1).slice(),
-        bottomPad = (width >= 1200) ? 0 : defaultOptions.init.padBottom;  // adjust for routeBounds only
+        options0 = { scalePad: 0.15 };
 
-      let k0 = getTransform(bounds).k;  // get scale @ framed full route (used to confirm not overzooming)
+      // if (tallerWider(bounds) === "taller") options0.scalePad *= -1;
 
-      let scale1 = Math.min(maxInitZoom,k0),
-         options = { scale: scale1, padBottom: bottomPad };
+      let k1 = getTransform(bounds,options0).k;  // get scale @ framed full route (used to confirm not overzooming)
 
-      let routeBoundsIdentity = getIdentity(getCenterTransform(path.centroid(data1),options));
+      let scale1 = Math.min(maxFollowZoom,k1),
+         options = { scale: scale1 };
+
+      let routeBoundsIdentity = getIdentity(getTransform(bounds,options))
 
       // control timing with transition start/end events
       svg.transition().duration(zoomDuration).ease(zoomEase)
         .call(zoom.transform, routeBoundsIdentity)
-        .on("start", transitionIn)
+        .on("start", () => {
+          currentBounds = path.bounds(data1)
+          transitionIn()
+        })
         .on("end", () => {
-          // confirm g transform where it should be
-          g.attr("transform", routeBoundsIdentity.toString())
-          // keep zoomClick btns in line
-          d3.select("label#zoom").attr("value",routeBoundsIdentity.k)
+          // // confirm g transform where it should be
+          // g.attr("transform", routeBoundsIdentity.toString())
+          // // keep zoomClick btns in line
+          // d3.select("label#zoom").attr("value",routeBoundsIdentity.k)
           // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
           prepareUser();
           d3.timeout(() => {
@@ -1410,7 +1436,7 @@
           .style("fill","none")
           .style("stroke","honeydew")
           .style("opacity",0.6)
-          .style("stroke-width",0.4)
+          .style("stroke-width",0.3)
 
         // setup path for stroke-dash interpolation
         var fullRoute = route.append("path")
@@ -1418,9 +1444,8 @@
           .attr("d", line(arcPts))
           .style("fill", "none")
           .style("stroke", "#682039")  // "#222834" is background
-          .style("stroke-width", 0.3)
+          .style("stroke-width", 0.2)
           .style("opacity",0)
-          .style("stroke-dasharray", "0.8 1.6")
 
         // UNDERLYING TICKS/TIES
         let rrTies = route.append("g")
@@ -1429,36 +1454,34 @@
           .attr("d", line(arcPts))
           .style("fill", "none")
           .style("stroke","gainsboro")
-          .style("stroke-width",0.6)
-          .style("stroke-dasharray", "0.1 0.2")
+          .style("stroke-width",0.4)
+          .style("stroke-dasharray", "0.075 0.25")
 
         // separately add relevant station points (those with stops) using R2R return data
-        // journey.append("g")
         route.append("g").attr("id", "station-stops")
           .selectAll("use")
-          .data(received.relStops)  // ignore first 2 elements, which are begin/end pts and represented elsewhere
-          // .data(received.allStops.slice(2))  // ignore first 2 elements, which are begin/end pts and represented elsewhere
+          .data(received.relStops.sort((a,b) => {
+            // in case stop/start station overlaps with another, stop/start comes later to ensure drawn on top
+            return a.flagged || !b.flagged ? 1 : -1;
+          }))
           .enter().append("use")
             .attr("xlink:href", "#station-icon")
             .attr("x", d => {
-              let halfWidth = (d.flagged) ? 1.6 : 0.8;
+              let halfWidth = (d.flagged) ? 1.25 : 0.75;
               return projection([d.lng,d.lat])[0] - halfWidth;
             })
             .attr("y", d => {
-              let halfHeight = (d.flagged) ? 2 : 1;
+              let halfHeight = (d.flagged) ? 1.5 : 1;
               return projection([d.lng,d.lat])[1] - halfHeight;
             })
-            .attr("width", d => {
-              let width = d.flagged ? 3.2 : 1.6;
-              return width;
-            })
-            .attr("height", d => d.flagged ? 4 : 2)
+            .attr("width", d => d.flagged ? 2.5 : 1.5)
+            .attr("height", d => d.flagged ? 3 : 2)
             .style("opacity", 0) // initially
-            .style("fill", d => !d.flagged ? "black" : (d.toFrom === "from") ? "forestgreen" : "darkred")
+            .style("fill", d => !d.flagged ? "black" : (d.toFrom === "from") ? "forestgreen" : "brown")
             .style("stroke", d => !d.flagged ? "dimgray" : "black")
-            .style("stroke-width","0.4px")
+            .style("stroke-width","0.3px") // 0.4
             .property("name", d => d.shortName)
-            .property("orig-opacity", 0.6)  // specified for mouseenter -> mouseout reset
+            .property("orig-opacity", d => d.flagged ? 1 : 0.6)  // specified for mouseenter -> mouseout reset
             .property("orig-stroke-opacity",0.6)
             .on("mouseenter", onMouseenter)
             .on("mouseout", onMouseout)
@@ -1482,17 +1505,17 @@
         var point = train.append("use")
           .attr("xlink:href", "#train-icon")
           .attr("id","train-point")
-          .attr("x", 0 - 3)
-          .attr("y", 0 - 2)
-          .attr("width", 6)
-          .attr("height", 6)
+          .attr("x", 0 - 1.5)
+          .attr("y", 0 - 1)
+          .attr("width", 3)
+          .attr("height", 3)
           .style("fill","#222834")
         	.style("stroke-width", 1)
           .style("stroke","#682039")
           .style("opacity", 0) // initially
           .attr("transform", "translate(" + arcPts[0] + ") rotate(" + rotate0 + ")")
 
-        return true;
+        return true;  // done
 
       }
 
@@ -1560,15 +1583,18 @@
 
     if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
 
+      let bottomPad = d3.select("#dash").node().clientHeight,
+           options0 = { scalePad: 0.5, padBottom: bottomPad };
+
       // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
-      let bounds2 = path.bounds(data2),
-          bounds3 = path.bounds(data3),
-          k2 = getTransform(bounds2).k,
-          k3 = getTransform(bounds3).k;
+      let bounds2 = path.bounds(data2).slice(),
+          bounds3 = path.bounds(data3).slice(),
+          k2 = getTransform(bounds2,options0).k,
+          k3 = getTransform(bounds3,options0).k;
 
-      let zoomScale = Math.min(maxInitZoom,((maxInitZoom + k2 + k3)/3));
+      let zoomScale = Math.ceil(Math.min(maxFollowZoom,((k2 + k3)/2)));  // almost always returns maxFollowZoom
 
-      zoomAlongOptions = { scale: zoomScale };
+      zoomAlongOptions = { scale: zoomScale, padBottom: bottomPad }
 
       let p0 = zoomArc.node().getPointAtLength(0),
           p1 = zoomArc.node().getPointAtLength(zoomLength);
@@ -1594,8 +1620,9 @@
 
       let zoomFollow = {
         necessary: true, // default
+        // focus: Math.max(viewFocusInt, Math.floor(routeObj.totalDistance / 12)),
         focus: viewFocusInt,
-        limit: viewFocusInt * 2,
+        get limit() { return this.focus * 2 },
         arc: [],
         firstThree: [],
         lastThree: [],
@@ -1651,10 +1678,13 @@
 
   function getSet(again = false) {
     // coordinate zoom to first frame, turning on headlights, dimming background, expanding dash, and ultimately initiating train and route animation
+
     let t = !again ? zoomDuration : zoomDuration/4;
+
     svg.transition().duration(t).ease(zoomEase)
       .call(zoom.transform, firstIdentity)
       .on("start", () => {
+        currentBounds = path.bounds(data2)
         // dim background layers
         if (reversing.i < 1) dimBackground(t/2)
         // expand dash automatically
@@ -1666,10 +1696,10 @@
         svg.on("scroll.zoom",null)
       })
       .on("end", () => {
-        // keep zoom buttons up to date
-        d3.select("label#zoom").attr("value",firstIdentity.k)
-        // confirm g exactly in alignment for next transition
-        g.attr("transform",firstIdentity.toString())
+        // // keep zoom buttons up to date
+        // d3.select("label#zoom").attr("value",firstIdentity.k)
+        // // confirm g exactly in alignment for next transition
+        // g.attr("transform",firstIdentity.toString())
         // reveal train
         g.select("#train-point") // .raise()
           .transition().duration(t/2)
@@ -1692,7 +1722,7 @@
 
     function dimBackground(t) {
 
-      let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#urban-mesh"),d3.select("#country-mesh")],
+      let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#lake-mesh2"),d3.select("#urban-mesh"),d3.select("#country-mesh")],
           dimLess = [d3.select("#state-mesh")];
 
       let dimGroup = dimMore.map(d => {
@@ -1808,9 +1838,6 @@
 ////////////////////////////////////////////////
 
 // CLICK EVENTS
-  d3.select("#about-down").on("click", function() {
-    d3.select(this).classed("manual-close",true);
-  })
 
   // Crucial button functionality (migrated from inline html)
   d3.select("#submit-btn").on("click",function() {
@@ -1824,10 +1851,24 @@
   d3.select("#dash-expand-btn").on("click", () =>  expand("dash"))
   d3.select("#dash-collapse-btn").on("click", () =>  collapse('dash','down'))
   d3.select("#modal-close-btn").on("click", () =>  toggleModal())
-  d3.select("#about-up-btn").on("click", () => expand('about','up'))
-  d3.select("#about-left-btn").on("click", () => expand('about','left'))
-  d3.select("#about-down-btn").on("click", () => collapse('about','down'))
+  d3.select("#about-up-btn").on("click", () => {
+    expand('about','up')
+    if (!d3.select("#modal-about").classed("none")) toggleModal("modal-about")
+  })
+  d3.select("#about-left-btn").on("click", () => {
+    expand('about','left')
+    if (!d3.select("#modal-about").classed("none")) toggleModal("modal-about")
+  })
+  d3.select("#about-down-btn").on("click", () => {
+    d3.select("#about").classed("manual-close",true);
+    collapse('about','down')
+  })
   d3.select("#about-right-btn").on("click", () => collapse('about','right'))
+
+  d3.select("#about-expand-icon").on("click", () => {
+    collapse("about")
+    if (d3.select("#modal-about").classed("none")) toggleModal("modal-about")
+  })
 
   // setup event listener on modal open
   d3.select(window).on("dblclick", function() {
@@ -1838,9 +1879,7 @@
   })
 
 // LOAD EVENTS
-  d3.select(window).on("load", function () {
-    initPrompt();
-  });
+  d3.select(window).on("load", init)
 
 // RESIZE EVENTS
   d3.select(window).on("resize.map", adjustSize)
@@ -1859,21 +1898,121 @@
 
     // if (experience.animating && !experience.paused) pauseAnimation();
 
+    console.log("adjusting size")
+
     // get updated dimensions
     let updated = calcSize();
+
+    // console.log(svg.attr("preserveAspectRatio"))
+
+    // if (updated.width > width || updated.height > height) {
+    //   console.log("growing")
+    //   console.log(svg.attr("preserveAspectRatio"))
+    //   svg.attr("preserveAspectRatio", "xMidYMid meet")
+    //   console.log(svg.attr("preserveAspectRatio"))
+    // } else {
+    //   console.log("shrinking")
+    //   console.log(svg.attr("preserveAspectRatio"))
+    //   svg.attr("preserveAspectRatio", "xMidYMid slice")
+    //   console.log(svg.attr("preserveAspectRatio"))
+    // }
+
+    // let currentTransform = d3.zoomTransform(svg.node())
+    //
+    // let dk0 = (updated.width > width || updated.height > height) ?
+    //            Math.max(updated.width/width,updated.height/height)
+    //          : Math.min(updated.width/width,updated.height/height);
+    //
+    // let dk = tallerWider(currentBounds) === "taller" ?
+    //            updated.height !== height ?
+    //              updated.height/height
+    //            : 1
+    //          : updated.width !== width ?
+    //              updated.width/width
+    //            : 1
+    //
+    // // get current center pt by working backwards through centerTransform() from current transform
+    // let centerPt = getCenterFromTransform(currentTransform),
+    //     newScale = currentTransform.k * dk;
+    //
+    // let dx = (updated.width - width) / 2,
+    //     dy = (updated.height - height) / 2
+    //
+    // // get identity of centered transform at new zoom level
+    // let zoom0 = getIdentity(getCenterTransform(centerPt,{scale:newScale}));
+    // // ok on its own with viewbox but glitchy
+    //
+    // // UPDATE CENTER PT
+    // let zoom1 = Object.assign({}, zoom0)
+    // zoom1.x += dx
+    // zoom1.y += dy
+
+    // console.log(currentBounds)
+    // console.log(getIdentity(getTransform(currentBounds,{height:updated.height,width:updated.width})))
+    // console.log(getIdentity(getTransform(path.bounds(data0)),{height:updated.height,width:updated.width}))
+
+    let zoom1 = getIdentity(getTransform(currentBounds,{height:updated.height,width:updated.width}))  // works without viewbox updates
+
+    // console.log("applying viewbox")
+    // svg.attr("viewBox", `0 0 ${width} ${height}`)
 
     // update/apply new values
     width = updated.width;
     height = updated.height;
-    translate0 = [(width + padX)/2, (height + padY)/2],
-    extent0 = [[(-width - padX)/2, (-height - padY)/2],[(width + padX)/2, (height + padY)/2]],
-    paddedExtent0 = extent0.map(arr => arr.map(d => d * 1.2));
+    extent0 = [[0,0],[width,height]];
 
-    // apply as new svg attributes
     svg.attr("width", updated.width)
        .attr("height", updated.height)
 
-    projection.clipExtent(paddedExtent0);
+    svg.call(zoom.transform, zoom1)
+
+    // projection.clipExtent(extent0)
+
+    // if (updated.width > width || updated.height > height) {
+    //   // growing
+    //   svg.transition().duration(300).ease(zoomEase)
+    //     .attr("width", updated.width)
+    //     .attr("height", updated.height)
+    //     .on("start", () => {
+    //       console.log("started")
+    //       g.transition().duration(300).ease(zoomEase)
+    //         .attr("transform", "translate(" + zoom1.x + "," + zoom1.y + ") scale(" + zoom1.k + ")")
+    //         .style("stroke-width", 1 / (zoom1.k * zoom1.k) + "px")
+    //         .on("end", () => {
+    //           // keep zoom up to date
+    //           svg.call(zoom.transform, zoom1)
+    //           console.log(g.node())
+    //         })
+    //     })
+    // } else {
+    //   svg.attr("width", updated.width)
+    //      .attr("height", updated.height)
+    //
+    //   svg.call(zoom.transform, zoom1)
+    //
+    //   // g.transition().duration(300).ease(zoomEase)
+    //   //   .attr("transform", "translate(" + zoom1.x + "," + zoom1.y + ") scale(" + zoom1.k + ")")
+    //   //   .style("stroke-width", 1 / (zoom1.k * zoom1.k) + "px")
+    //   //   .on("end", () => {
+    //   //     // keep zoom up to date
+    //   //     svg.call(zoom.transform, zoom1)
+    //   //     console.log(g.node())
+    //   //   })
+    // }
+    //
+    // background.attr("width", updated.width)
+    //           .attr("height", updated.height)
+    //
+    // // update/apply new values
+    // width = updated.width;
+    // height = updated.height;
+    // // translate0 = [width/2, height/2];
+    // extent0 = [[0,0],[width,height]];
+
+    // projection.translate(translate0)
+    //           .clipExtent(extent0)
+
+    // projection.clipExtent(extent0)
 
     // constrain zoom behavior (scale)
     // zoom.translateExtent(paddedExtent0)
@@ -1911,8 +2050,7 @@
           d3.select("#dash").select(".resizer")
             .classed("ml-neg36-mxl",true)
           // if #about was *manually* hidden on smaller window
-          if (d3.select("#about")
-            .classed("manual-close")) {
+          if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
           } else if (d3.select("#modal-about").classed("none")) {
             // if #about not manually closed && modal-about not open
@@ -1977,20 +2115,56 @@
 
   }
 
+  function tallerWider(bounds) {
+    bounds = standardizeBounds(bounds);
+    return (bounds[1][1] - bounds[0][1] > bounds[1][0] - bounds[0][0]) ? "taller" : "wider"
+  }
+
   function collapseDirection(width = window.innerWidth) {
     return (width >= 1200) ? "right" : "down";
   }
 
 //// GEOJSON + TOPOJSON HELPERS
 
-  function getMesh(source,key,meshFx) {
+  function getMesh(tj,key,meshFx) {
     if (meshFx) {
-      return topojson.mesh(source.tj, source.tj.objects[key], meshFx);
+      return topojson.mesh(tj, tj.objects[key], meshFx);
     } else if (key) {
-      return topojson.mesh(source.tj, source.tj.objects[key]);
+      return topojson.mesh(tj, tj.objects[key]);
     } else {
-      return topojson.mesh(source.tj);
+      return topojson.mesh(tj);
     }
+  }
+
+  function innerlines() {
+    return function(a,b) { return a !== b; }
+  }
+
+  function outerlines() {
+    return function(a,b) { return a === b; }
+  }
+
+  function tjToGj(group) {
+
+    let i = 2, sourceData = new Object();
+
+    group.forEach(datum => {
+      if (datum["type"] == "Topology") {
+        let oKey = Object.keys(datum.objects)[0], // object key
+          sdKey = oKey; // sourceData key (to distinguish multiple TJ's with objects of same name)
+        if (sourceData[sdKey]) {
+          sdKey += i.toLocaleString();
+          i++;
+        }
+        sourceData[sdKey] = { tj: datum },
+        sourceData[sdKey].gj = topojson.feature(sourceData[sdKey].tj, sourceData[sdKey].tj.objects[oKey]);
+      } else { // if not topojson, assume already geojson
+        sourceData[datum.name] = { gj: datum };
+      }
+    });
+
+    return sourceData;
+
   }
 
   function emptyFeatureCollection() {
@@ -2137,15 +2311,24 @@
 
       svg.transition().duration(400).ease(zoomEase)
          .call(zoom.transform, zoom1)
-         .on("end", () => {
-           g.attr("transform", zoom1.toString())
-         })
+         // .on("end", () => {
+         //   g.attr("transform", zoom1.toString())
+         // })
 
     }
 
     if (experience.animating && !experience.manuallyPaused) resumeAnimation();
 
   }
+
+  // function zoomToBounds(bounds,duration = 1500,options) {
+  //
+  //   let zoomIdentity = getIdentity(getTransform(bounds,options))
+  //
+  //   svg.transition().duration(duration).ease(zoomEase)
+  //     .call(zoom.transform, zoomIdentity)
+
+  // }
 
   function getCenterFromTransform(transform,options) {
     // get current center by working backwards through centerTransform() from current transform
@@ -2167,31 +2350,25 @@
 
     let opts = {...defaultOptions.boundsTransform, ...options};
 
-    let b0,b1;
+    bounds = standardizeBounds(bounds);
 
-    // accept bbox, path.bounds(), or SVG bbox
-    if (bounds.length === 4) {
-      b0 = [bounds[0],bounds[1]],
-      b1 = [bounds[2],bounds[3]]
-    } else {
-      b0 = bounds[0] || [bounds.x,bounds.y],
-      b1 = bounds[1] || [bounds.width,bounds.height]
-    }
-
-    let dx = b1[0] - b0[0],  // domain x (input)
-        dy = b1[1] - b0[1];  // domain y (input)
+    let dx = bounds[1][0] - bounds[0][0],  // domain x (input)
+        dy = bounds[1][1] - bounds[0][1];  // domain y (input)
 
     // account for any padding
     opts.width -= (opts.padLeft + opts.padRight);
     opts.height -= (opts.padTop + opts.padBottom);
 
-    let k = +((1 - opts.scalePad) * Math.min(opts.width/dx, opts.height/dy)).toFixed(4),  // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
-        x = b1[0] + b0[0],  // xMax (b1[0]) + xOffset (b0[0])
-        y = b1[1] + b0[1];  // yMax (b1[1]) + yOffset (b0[1])
+    let k = opts.scale || +((1 - opts.scalePad) * Math.min(opts.width/dx, opts.height/dy)).toFixed(4),  // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
+        x = bounds[1][0] + bounds[0][0],  // xMax (bounds[1][0]) + xOffset (bounds[0][0])
+        y = bounds[1][1] + bounds[0][1];  // yMax (bounds[1][1]) + yOffset (bounds[0][1])
 
     // calculate translate necessary to center data within extent
-    let tx = (opts.width - k * x) / 2,
-        ty = (opts.height - k * y) / 2;
+    // let tx = (opts.width + opts.padLeft - opts.padRight - k * x) / 2,
+    //     ty = (opts.height + opts.padTop - opts.padBottom - k * y) / 2;
+
+    let tx = (opts.width - k * x) / 2, //  + opts.padLeft - opts.padRight,
+        ty = (opts.height - k * y) / 2 // + opts.padTop - opts.padBottom;
 
     let transform = { k: k, x: tx, y: ty };
 
@@ -2225,11 +2402,17 @@
 
   function resetZoom() {
 
-    active.classed("active", false);
+    console.log("resetting zoom")
+
+    if (active) active.classed("active", false);
     active = d3.select(null);
 
-    svg.transition().duration(800).ease(zoomEase)
-      .call(zoom.transform, zoom0)
+    currentBounds = path.bounds(data0); // slice?
+
+    let zoomIdentity = getIdentity(getTransform(currentBounds))
+
+    svg.transition().duration(600).ease(zoomEase)
+      .call(zoom.transform, zoomIdentity)
 
   }
 
@@ -2501,6 +2684,9 @@
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, lastIdentity)
+      .on("start", () => {
+        currentBounds = path.bounds(data3)
+      })
       .on("end", () => {
         // reset manual pan tracking
         panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
@@ -3316,11 +3502,12 @@
           })
           break;
         case "ln":
-          console.log(feature.node())
+          // COMBAK NOT REMOVING LINES
+          // console.log(feature.node())
           if (feature.property("category") === "Watershed") {
             feature.transition().duration(t).ease(d3.easeCubicIn)
-              .style("opacity",0)
-              // .styleTween("stroke-dashoffset", clearDashed)
+              // .style("opacity",0)
+              .styleTween("stroke-dashoffset", clearDashed)
               .on("end", () => feature.remove())
           } else {
             feature.transition().duration(t).ease(d3.easeCubicIn)
@@ -3717,7 +3904,15 @@
 
   function expand(elementStr,direction = "up") {
 
-    if (d3.event && d3.event.defaultPrevented) return; // dragged
+    if (elementStr === ("dash")) { // COMBAK
+      console.log(d3.select(`#${elementStr}`).node())
+    }
+
+    if (d3.event && d3.event.defaultPrevented) {
+      console.log(d3.event)
+      console.log("expand prevented")
+      return; // dragged
+    }
 
     // if window too short to reasonably fit more content, expand modal instead
     if (window.innerHeight < 500) {
@@ -3737,6 +3932,7 @@
 
       // size- and element-specific toggles upon expand/collapse of various elements
       if (elementStr === "about") {
+
         if (window.innerWidth >= 1200) {
           d3.select("#section-wrapper")
             .classed("relative", true);
@@ -3762,18 +3958,24 @@
               .classed("mt-neg18 mt-neg24-mxl", true)
           }
         }
+
+        adjustSize();
+
       } else if (elementStr === "dash") {
         d3.select("#attribution").classed("mt-neg18 mt-neg24 mt-neg24-mxl", false)
       }
 
-      adjustSize();
-
     }
+
   }
 
   function collapse(elementStr, direction = collapseDirection()) {
 
-    if (d3.event && d3.event.defaultPrevented) return; // dragged
+    if (d3.event && d3.event.defaultPrevented) {
+      console.log(d3.event)
+      console.log('collapse prevented')
+      return; // dragged
+    }
 
     d3.select(`#${elementStr}`)
       .classed(`disappear-${direction}`, true);
@@ -3784,6 +3986,7 @@
 
     // size- and element-specific toggles upon expand/collapse of various elements
     if (elementStr === "about") {
+
       if (window.innerWidth >= 1200) {
         d3.select("#section-wrapper").classed("relative", false)
         d3.select("#attribution").classed("mr24-mxl", true)
@@ -3799,6 +4002,9 @@
           d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", false)
         }
       }
+
+      adjustSize();
+
     } else if (elementStr === "dash") {
       if (d3.select("#about").classed("disappear-down")) {
         d3.select("#attribution").classed("mt-neg24", true)
@@ -3808,8 +4014,6 @@
         d3.select("#attribution").classed("mt-neg24", false)
       }
     }
-
-    adjustSize();
 
   }
 
@@ -3842,13 +4046,17 @@
       } else {  // subContent && (!isTogglable(subContent))
         // user wants to switch modal subContent with modal open
         if (d3.select(`#${subContent}`).classed("none")) {
+          if (subContent === "modal-about") {
+            d3.select("#select-new").property("disabled", false);
+          } else if (subContent === "getOptions") {
+            d3.select("#select-new").property("disabled", true); // disable select-new btn while getOptions form is open
+          }
           // open user selected subContent via switch
           let nowOpen = contentAssoc[subContent].opp
           d3.select(`#${subContent}`).classed("none",false)
           d3.select(`#${nowOpen}`).classed("none",true)
           isTogglable(subContent,true)
           isTogglable(nowOpen,false)
-          if (subContent === "getOptions") d3.select("#select-new").property("disabled", true); // disable select-new btn while getOptions form is open
         } else {
           // offer visual affordance that selected content already open (jostle/shake element)
           d3.select(`#${subContent}`).classed("already-open",true)
@@ -3987,7 +4195,7 @@
 
       if (experience.animating) manualPause(); // CANCEL?
 
-      adjustSize();
+      // adjustSize();
       resetZoom();
       collapse("dash", "down")
 
@@ -4034,6 +4242,7 @@
   }
 
 //// STYLES
+
   function getFill(d) {
     let fill,
       props = d.properties, // shorthand
@@ -4213,12 +4422,11 @@
 
   function getStrokeWidth(d) {
     if (d.properties.STROKEWIDTH) {
-      return d.properties.STROKEWIDTH + "px";
+      return d.properties.STROKEWIDTH * 0.6 + "px";
     } else if (d.properties.LEVEL) {
       return +(0.25 - 0.05 * unromanize(d.properties.LEVEL)).toFixed(4) + "px";
-      // + unromanize(d.properties.LEVEL)*0.005 ?
     } else {
-      return 0.1 + "px";
+      return 0.05 + "px";
     }
   }
 
@@ -4467,6 +4675,18 @@
   }
 
 //// OTHER HELPER FUNCTIONS
+
+  function standardizeBounds(bounds) {
+    // accept bbox, path.bounds(), or SVG bbox
+    if (bounds.length === 4) {
+      b0 = [bounds[0],bounds[1]],
+      b1 = [bounds[2],bounds[3]]
+    } else {
+      b0 = bounds[0] || [bounds.x,bounds.y],
+      b1 = bounds[1] || [bounds.width,bounds.height]
+    }
+    return [b0,b1];
+  }
 
   // PARSE, CONVERT, ASSOCIATE
 
@@ -4736,3 +4956,23 @@
     // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
     // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
     // https://www.datamake.io/blog/d3-zoom#geo-canvas!
+
+
+
+// done:
+  // show all of north america (data updates)
+  // remove projection.fitExtent in favor of zoomToBounds
+  // adjust strokewidths and icon sizes accordingly
+  // fix zoom calculations once again (routeBounds, first, last)
+  // fix reset and adjustSize functions (use currentBounds)
+// todo:
+  // timeout on tooltips
+  // rrties => rectangles
+  // fix selectnewroute
+  // rid of failure/feelings language
+  // form smoothness
+  // clicking on log name while animated paused/stopped zooms to feature
+  // cues to click or hit spacebar for pause
+  // cross browser testing: Judges will use the current versions of Firefox, Safari, or Chrome with a true color monitor with a resolution of at least 1280 x 800.
+// fix:
+  // ensure 'select new route' correctly expands dash
