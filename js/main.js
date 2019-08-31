@@ -73,7 +73,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   var prevTranslate, prevRotate, prevExtent, searchExtent;
 
-  var transPt0,rotatePt0;
+  var pt0;
 
   var mm = 0, accumReset = 0, geoMM;
 
@@ -91,8 +91,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   var fullPath, fullLength, tFull;
 
   var zoomArc, zoomLength, tPad;
-
-  var semiSimp, semiSimpLength;
 
   var labels = [];
 
@@ -1414,21 +1412,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         var train = journey.append("g")
           .attr("id", "train")
 
-        let arcPts = received.arcPts; // shorthand; currently projected(?)
+        let arcPts = getSimpRoute(turf.lineString(received.arcPts),0.1).geometry.coordinates;
 
         // LINE/ROUTE
-
-        // semiSimp path for headlights/eventual compass to follow
-        semiSimp = getSimpRoute(turf.lineString(arcPts),0.5);
-        let simpCoords = semiSimp.geometry.coordinates; // shorthand
-
-        // bind (and optionally render) semiSimp line (currently using for later DOM access to path nodes within bearWithMe())
-        journey.append("path")
-          .attr("id", "semi-simp")
-          .attr("d", line(simpCoords))
-          .style("fill","none")
-          // .style("stroke","slateblue")
-          // .style("stroke-width","1px")
 
         // faint underlying solid
         route.append("path")
@@ -1488,8 +1474,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         // make headlights!
         let radians0 = 0, // start with unrotated sector
-            sector0 = getSector(radians0,headlightRadius),
-            rotate0 =  getRotate(simpCoords[0],simpCoords[1]);
+             sector0 = getSector(radians0,headlightRadius),
+            // rotate0 =  getRotate(simpCoords[0],simpCoords[1]);
+             rotate0 =  getRotate(arcPts[0],arcPts[1]);
 
         // add headlights as DOM node (opacity transitions in from 0)
         var headlights = train.append("path")
@@ -1566,7 +1553,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     trainPt = g.select("#train-point");
     headlights = g.select("#headlights");
     fullPath = g.select("#full-route");
-    semiSimp = g.select("#semi-simp");
+
     if (zoomFollow.arc.length) {
       // bind zoomArc to DOM for tracking only (not visible)
       zoomArc = g.append("path")
@@ -2562,10 +2549,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function preanimate() {
 
     fullLength = fullPath.node().getTotalLength();
-    semiSimpLength = semiSimp.node().getTotalLength();
 
-    transPt0 = fullPath.node().getPointAtLength(0);
-    rotatePt0 = semiSimp.node().getPointAtLength(0);
+    pt0 = fullPath.node().getPointAtLength(0);
 
     eased = (t, t1 = tFull) => trainEase(t/t1);
     routeDashInterpolator = d3.interpolateString("0," + fullLength, fullLength + "," + fullLength);
@@ -2578,13 +2563,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // calculate initial search extent for quadtree
     let sectorExtent = [[-arcWidth/2,-arcHeight],[arcWidth/2,0]],
-    translatedExtent = translateExtent(sectorExtent,transPt0.x,transPt0.y);
+    translatedExtent = translateExtent(sectorExtent,pt0.x,pt0.y);
 
     // searchExtent is sector (headlight) extent translatedThenRotated
-    searchExtent = rotateExtent(translatedExtent,rotate0,[transPt0.x,transPt0.y]);
+    searchExtent = rotateExtent(translatedExtent,rotate0,[pt0.x,pt0.y]);
 
     // save newly determined values as previous values
-    prevTranslate = [transPt0.x,transPt0.y];
+    prevTranslate = [pt0.x,pt0.y];
        prevExtent = searchExtent;
        prevRotate = rotate0;
 
@@ -2636,20 +2621,16 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function getTrainTransformAt(t) { // INCL ROTATE
 
-    // called with two selections because headlights rotate according to semi-simplified path for smoother interpolator, while translating along full path to ensure alignment with trainPt itself
-    let l0 = eased(t) * fullLength,
-        l1 = eased(t) * semiSimpLength;
+    let l1 = eased(t) * fullLength;
 
-    let transPt1 = fullPath.node().getPointAtLength(l0),
-       rotatePt1 = semiSimp.node().getPointAtLength(l1);
+    let pt1 = fullPath.node().getPointAtLength(l1)
 
-    let rotate = (rotatePt0.x !== rotatePt1.x) ? getRotate(rotatePt0,rotatePt1) : prevRotate; // || rotate0?
+    let rotate = (pt0.x !== pt1.x) ? getRotate(pt0,pt1) : prevRotate; // || rotate0?
 
     // shift pt values pt0 >> pt1
-    transPt0 = transPt1;
-    rotatePt0 = rotatePt1;
+    pt0 = pt1;
 
-    return { x: transPt1.x, y: transPt1.y, r: rotate }; // NOTE R, NOT K
+    return { x: pt1.x, y: pt1.y, r: rotate }; // NOTE R, NOT K
 
   }
 
@@ -4215,7 +4196,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       d3.select("#journey").selectAll("*").remove()
       g.select("#enrich-layer").selectAll("*").remove();
 
-      // reset main quadtree.... such that node.selected === none!
+console.log(quadtree)
+      // reset main quadtree.... such that node.selected === none! COMBAK
 
       // d3.select("#get-options").node().innerHTML = form0;
       // d3.select("#dash-plus").node().innerHTML = dash0;
@@ -4225,7 +4207,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       // // optional? (would be reset programmatically before they are used anyway)
       // firstIdentity = null, lastIdentity = null;
-      // fullPath = null, semiSimp = null
+      // fullPath = null
       // tFull,fullLength,tPad,zoomLength
       // routeDashInterpolator
       // data0, data1, data2, data3;
@@ -4511,6 +4493,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // bring tooltip into full opacity
       tooltip.transition().duration(100)
         .style("opacity", 1)
+
+      // automatically fade tooltip after 5 seconds
+      d3.timeout(() => {
+
+        tooltip.transition().duration(300)
+          .style("opacity", 0)
+
+        // remove tooltip from DOM
+        tooltip.remove();
+
+      }, 5000);
 
     }
 
@@ -4874,6 +4867,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // double size of background-images that populate sections of "currently passing" by flipping down mirrored version of first, then set background-image to repeat for continuous coverage
   // fixed: undisable play/pause visual
   // fixed: pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
+  // automatic ordering of legend-log category (so pa-grp3 does not appear above pa-grp1, even if that is the order in which features were encountered)
+  // logBackground river should be taller than wide? interweave with mirrored dashed line?
 
 // WORKING ON
   // debugging RESET functionality (how to clone without rendering, including bound event listeners and data at select state?) and making less hacksome
@@ -4889,12 +4884,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 // MINOR FIXES (COMING SOON)
   // have textured backgrounds recalculate from group up on each render
   // grossly pair down accompanying text (esp all that "overly dramatic" stuff)
-  // logBackground river should be taller than wide? interweave with mirrored dashed line?
   // station updates:
     // REMOVE: Port Kent, NY
 
 // ADDITIONS (COMING SOON)
-  // automatic ordering of legend-log category (so pa-grp3 does not appear above pa-grp1, even if that is the order in which features were encountered)
   // visual affordance/invitation: large transparent play btn simulates 'click' upon animation begin, then visually collapses into much smaller play/pause button in top left corner
   // add automatic highlighting or otherwise improve visual linking of currently passing list with actual rendered features (temporarily align color? thumbnail of shape => dash background?)
 
@@ -4929,7 +4922,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // all baselayer elements == canvas
     // enrich lines = svg
     // remaining enrich = canvas
-    // all toplayer and hidden elements == svg (full-route, semi-simp, zoomalong, headlights, trainpt, quadtree data)
+    // all toplayer and hidden elements == svg (full-route, zoomalong, headlights, trainpt, quadtree data)
     // integrate canvas and svg seamlessly with one another
     // restructure render/zoom/reveal appropriately
     // STRUCTURE
@@ -4957,22 +4950,32 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
     // https://www.datamake.io/blog/d3-zoom#geo-canvas!
 
-
-
-// done:
+// recently done:
   // show all of north america (data updates)
   // remove projection.fitExtent in favor of zoomToBounds
   // adjust strokewidths and icon sizes accordingly
   // fix zoom calculations once again (routeBounds, first, last)
   // fix reset and adjustSize functions (use currentBounds)
-// todo:
   // timeout on tooltips
-  // rrties => rectangles
-  // fix selectnewroute
+  // slightly simplify train path (improves rrties viz); now train and headlights follow route exactly (rid of semiSimp)
+
+// todo:
   // rid of failure/feelings language
   // form smoothness
   // clicking on log name while animated paused/stopped zooms to feature
   // cues to click or hit spacebar for pause
   // cross browser testing: Judges will use the current versions of Firefox, Safari, or Chrome with a true color monitor with a resolution of at least 1280 x 800.
+  // fix selectnewroute glitches // REMAKE QUADTREE
+// performance:
+  // enrich data in dynamo DB? query?
+  // truncate coordinates and other values wherever possible
+  // slim library imports / take only what I need
+  // dynamically simplify map geometries
+// low priority:
+  // rrties => rectangles
+  // integrate R2R autocomplete
+  // station updates:
+    // REMOVE: Port Kent, NY
+    // remove ann arbor?
 // fix:
   // ensure 'select new route' correctly expands dash
