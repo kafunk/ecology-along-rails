@@ -578,6 +578,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   admin0.then(data => {
     data0 = getMesh(data,"countries");
     bounds0 = path.bounds(data0); // .slice();
+    resetZoom();
   }, onError)
 
   // DRAW VECTOR BASE
@@ -752,8 +753,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 //// ON INITIAL LOAD
 
-  function init() {
-    resetZoom();
+  function initPrompt() {
+    // resetZoom();
     d3.select("#modal-plus").classed("none",false)  // show prompt
   }
 
@@ -917,7 +918,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       if (returned[0] == null) {
         d3.select("#submit-btn-load").classed("none",true);
         d3.select("#submit-btn-txt").classed("none",false);
-        init()
+        initPrompt()
       } else {
         toggleLoading();
         let processed = processReceived(returned[0]);
@@ -1878,7 +1879,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   })
 
 // LOAD EVENTS
-  d3.select(window).on("load", init)
+  d3.select(window).on("load", initPrompt)
 
 // RESIZE EVENTS
   d3.select(window).on("resize.map", adjustSize)
@@ -3724,6 +3725,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               <label class="flex-child flex-child--grow log-name px3">${group.fullTxt}</label>
               <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
 
+// COMBAK partial safari fix (creates the different problem of decentering triangle)
+// <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash">
+//   ${innerHtml}
+// </div>
+
             if (isParent) {
               html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle">
                 <summary class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash hmin24">
@@ -5004,26 +5010,41 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // fix reset and adjustSize functions (use currentBounds)
   // timeout on tooltips
   // slightly simplify train path (improves rrties viz); now train and headlights follow route exactly (rid of semiSimp)
+  // ensure 'select new route' correctly expands dash
+  // fix selectnewroute glitches // REMAKE QUADTREE
+  // fix glitchiness on sibling drag within legend log (due to recent h-full addition?)
+  // fix zoom jump on about collapse
 
 // todo:
+  // adjustsize/reset multiple times to avoid stalling before cache occurs
+  // first/last identity calculated dynamically, as all other centerTransforms (avoids miszoom if screen size adjusted in the meantime -- esp relevant on reverse)
   // rid of failure/feelings language
   // form smoothness
   // clicking on log name while animated paused/stopped zooms to feature
   // cues to click or hit spacebar for pause
   // cross browser testing: Judges will use the current versions of Firefox, Safari, or Chrome with a true color monitor with a resolution of at least 1280 x 800.
-  // fix selectnewroute glitches // REMAKE QUADTREE
-  // fix glitchiness on sibling drag within legend log (due to recent h-full addition?)
-  // fix zoom jump on about collapse
+
+// SAFARI FIXES (ENSURE CURRENT, NOT DEVE)
+  // about pane reopen right DOES NOT WORK; on first open, collapse bar misaligned (fixed on adjustsize()...); subsequently opening causes entire pane to pop off screen
+  // legend-log summary content not on one line (see partial fix noted)
+  // about down and expand up arrows get cut off / tucked behind other content
+  // lines appear on left when opening details elements / data sources (disappear again on scroll)
+
+// FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
+  // credit bar (bottom right) gets cut off by dash expand on all screen sizes
+  // journey log extends container
+  // everything blurry upon zoom (ie entire animation..)
+  // no details triangles visible within legend-log
+  // reverse icon cut off (or super small?)
+
 // performance:
-  // enrich data in dynamo DB? query?
+  // remove elevation query? (see network tab -- slows me down!)
+  // enrich data in dynamo DB? --> query?
   // truncate coordinates and other values wherever possible
   // slim library imports / take only what I need
   // dynamically simplify map geometries
 // low priority:
-  // rrties => rectangles
   // integrate R2R autocomplete
   // station updates:
     // REMOVE: Port Kent, NY
     // remove ann arbor?
-// fix:
-  // ensure 'select new route' correctly expands dash
