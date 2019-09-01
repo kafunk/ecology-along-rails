@@ -34,7 +34,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   var panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
   var transitionResume = false;
   var reversing = { flag: false, i: 0, t: null, tPad: null }
-  var currentBounds;
+  var currentBounds; // = {};
 
  // OTHER WORTHWHILE
 
@@ -85,6 +85,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   // all unprojected: init bounds (ie continent), full route, first route frame, last route frame
   let data0, data1, data2, data3;
+  let bounds0, bounds1, bounds2, bounds3;
 
   var trainPt, headlights;
 
@@ -117,13 +118,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 // SVG + SIZING
 
-  // var padX = 18, padY = -18;
-
   var initial = calcSize();
 
   var width = initial.width,
     height = initial.height,
-    // translate0 = [width/2, height/2],
     extent0 = [[0,0],[width,height]],
     scale0 = 1;
 
@@ -142,10 +140,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   var background = svg.append("rect")
     .attr("id", "background")
-    .attr("width", "100%") // width)
+    .attr("width", "100%")
     .attr("height", "100%")
-    // .attr("width", width) // width)
-    // .attr("height", height)
     .style("fill", "none")
     .classed("point-all opacity75 bg-lighten25 no-zoom absolute top left",true)
     .on("dblclick", resetZoom)
@@ -163,7 +159,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   var projection = d3.geoConicEquidistant()
     .rotate([96,0])
     .parallels([20,60])
-    // .clipExtent(extent0)
+    .translate([width/2, height/2])
+    .clipExtent(extent0)
 
   var reflectedY = d3.geoIdentity()
     .reflectY(true)
@@ -576,26 +573,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   // SET BOUNDING BOX
   admin0.then(data => {
-    // data0 = topojson.feature(data,data.objects.countries);
     data0 = getMesh(data,"countries");
-    // bounds0 = path.bounds(data0);
-    // bounds0 = () => path.bounds(data0);
-
-    // resetZoom();
-
-    // //
-    // let bottomPad = window.innerWidth >= 1200 ? 9 : 6;
-
-    // let bottomPad = window.innerWidth >= 1200 ? 9 : 6;
-    //
-    // // let bottomPad = 6;
-    // //
-    //     //      rightPad = (window.innerWidth <= 1200) ? 0 : d3.select("#aside").node().clientWidth,
-    //     //       // options = { padBottom: bottomPad, padRight: rightPad };
-    //     //       options = { padBottom: 0, padRight: 0 };
-    //
-    // zoomToBounds(path.bounds(data0).slice(),600,{ padBottom: bottomPad, padRight: 0 });
-
+    bounds0 = path.bounds(data0); // .slice();
   }, onError)
 
   // DRAW VECTOR BASE
@@ -678,7 +657,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("d", path(statesMesh))
       .style("fill","none")
       .style("stroke","magenta")
-      .style("stroke-width",0.32)
+      .style("stroke-width",0.22)
       .style("stroke-dasharray", "0.2 0.4")
 
     // STROKED FEATURES
@@ -1196,26 +1175,31 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     experience.initiated = true;
 
     data1 = receivedData.lineString;
+    bounds1 = path.bounds(data1); // .slice();
 
     Promise.resolve(prepareEnvironment(receivedData)).then(() => { // proceed
 
-      let bounds = path.bounds(data1).slice(),
-        options0 = { scalePad: 0.15 };
+      let options0 = { scalePad: 0.15 };
 
       // if (tallerWider(bounds) === "taller") options0.scalePad *= -1;
 
-      let k1 = getTransform(bounds,options0).k;  // get scale @ framed full route (used to confirm not overzooming)
+      let k1 = getTransform(bounds1,options0).k;  // get scale @ framed full route (used to confirm not overzooming)
 
       let scale1 = Math.min(maxFollowZoom,k1),
          options = { scale: scale1 };
 
-      let routeBoundsIdentity = getIdentity(getTransform(bounds,options))
+      let routeBoundsIdentity = getIdentity(getTransform(bounds1,options))
 
       // control timing with transition start/end events
       svg.transition().duration(zoomDuration).ease(zoomEase)
         .call(zoom.transform, routeBoundsIdentity)
         .on("start", () => {
-          currentBounds = path.bounds(data1)
+          // currentBounds = {
+          //   // data: data1,
+          //   center: getCenterFromTransform(routeBoundsIdentity),
+          //   bounds: path.bounds(data1), // .slice(),
+          //   opts: options
+          // }
           transitionIn()
         })
         .on("end", () => {
@@ -1574,9 +1558,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
            options0 = { scalePad: 0.5, padBottom: bottomPad };
 
       // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
-      let bounds2 = path.bounds(data2).slice(),
-          bounds3 = path.bounds(data3).slice(),
-          k2 = getTransform(bounds2,options0).k,
+      // let bounds2 = path.bounds(data2).slice(),
+      //     bounds3 = path.bounds(data3).slice(),
+      let k2 = getTransform(bounds2,options0).k,
           k3 = getTransform(bounds3,options0).k;
 
       let zoomScale = Math.ceil(Math.min(maxFollowZoom,((k2 + k3)/2)));  // almost always returns maxFollowZoom
@@ -1635,8 +1619,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         zoomFollow.firstThree[1] = zoomFollow.arc[0],
          zoomFollow.lastThree[1] = zoomFollow.arc[zoomFollow.arc.length-1];
 
-        data2 = turf.lineString(zoomFollow.firstThree),
+        data2 = turf.lineString(zoomFollow.firstThree);
         data3 = turf.lineString(zoomFollow.lastThree);
+        bounds2 = path.bounds(data2); //.slice();
+        bounds3 = path.bounds(data3); //.slice();
 
       } else {
 
@@ -1671,7 +1657,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     svg.transition().duration(t).ease(zoomEase)
       .call(zoom.transform, firstIdentity)
       .on("start", () => {
-        currentBounds = path.bounds(data2)
+        // currentBounds = {
+        //   // data: data2,
+        //   center: getCenterFromTransform(firstIdentity),
+        //   bounds: path.bounds(data2), //.slice(),
+        //   opts: { scale: zoomAlongOptions.scale } // zoomAlongOptions
+        // }
         // dim background layers
         if (reversing.i < 1) dimBackground(t/2)
         // expand dash automatically
@@ -1750,9 +1741,23 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // timer countDOWN
       elapsed = reversing.t - elapsed;
       // zoomFollow if necessary
+      // if (zoomArc) {
+      //   if (elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) {
+      //     zoomAlong(elapsed,reversing.t,reversing.tPad);
+      //   } else {
+      //     currentBounds.center = elapsed < reversing.tPad ? getCenterFromTransform(lastIdentity) : getCenterFromTransform(firstIdentity);
+      //   }
+      // }
       if (zoomArc && elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) zoomAlong(elapsed,reversing.t,reversing.tPad);
     } else {  // not reversing
       // zoomFollow if necessary
+      // if (zoomArc) {
+      //   if (elapsed >= tPad && elapsed <= tFull-tPad) {
+      //     zoomAlong(elapsed);
+      //   } else {
+      //     currentBounds.center = elapsed < tPad ? getCenterFromTransform(firstIdentity) : getCenterFromTransform(lastIdentity);
+      //   }
+      // }
       if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) zoomAlong(elapsed);
     }
 
@@ -1770,8 +1775,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     }
 
     function zoomAlong(elapsed, t1 = tFull, tP = tPad) {
+      // currentBounds.center = null;
       let transform = getZoomAlongTransform(elapsed,t1,tP);
-      svg.call(zoom.transform, getIdentity(transform))
+      // currentBounds.center = getCenterFromTransform(transform);
+      svg.call(zoom.transform, getIdentity(transform));
     }
 
   }
@@ -1798,7 +1805,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         panned.updateFlag = false;
 
         // get current center pt by working backwards through centerTransform() from stored panned.transform
-        let currentCenter = getCenterFromTransform(panned.transform);
+        let currentCenter = getCenterFromTransform(panned.transform); // zoomAlongOptions? COMBAK
 
         // get difference btween p and currentCenter
         panned.centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
@@ -1883,65 +1890,44 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function adjustSize() {
 
-    // if (experience.animating && !experience.paused) pauseAnimation();
+    if (experience.animating && !experience.paused) pauseAnimation();
 
-    console.log("adjusting size")
+    // console.log("adjusting size")
 
     // get updated dimensions
     let updated = calcSize();
 
-    // console.log(svg.attr("preserveAspectRatio"))
+    // function getBoundsFromTransform(transform,options) { }
 
-    // if (updated.width > width || updated.height > height) {
-    //   console.log("growing")
-    //   console.log(svg.attr("preserveAspectRatio"))
-    //   svg.attr("preserveAspectRatio", "xMidYMid meet")
-    //   console.log(svg.attr("preserveAspectRatio"))
-    // } else {
-    //   console.log("shrinking")
-    //   console.log(svg.attr("preserveAspectRatio"))
-    //   svg.attr("preserveAspectRatio", "xMidYMid slice")
-    //   console.log(svg.attr("preserveAspectRatio"))
+    // let options = { ...currentBounds.opts, ...{ height: updated.height, width: updated.width } };
+
+    let currentTransform = d3.zoomTransform(svg.node()),
+           currentCenter = getCenterFromTransform(currentTransform),
+                      k0 = currentTransform.k,
+                      k1 = k0 * updated.height/height * updated.width/width;
+
+    // let dk = updated.height > height || updated.width > width ?
+    //     Math.max(updated.height/height, updated.width/width)
+    //   : Math.min(updated.height/height, updated.width/width)
+    // console.log(dk)
+    // console.log(k0)
+    // console.log(updated.height/height)
+    // console.log(updated.width/width)
+    // let k1 = k0 * dk;
+    // console.log(k1)
+    // console.log(currentBounds.opts)
+
+    // if (options.scale) {
+    //   options.scale = k1;
+    //   currentBounds.opts.scale = k1;
     // }
 
-    // let currentTransform = d3.zoomTransform(svg.node())
-    //
-    // let dk0 = (updated.width > width || updated.height > height) ?
-    //            Math.max(updated.width/width,updated.height/height)
-    //          : Math.min(updated.width/width,updated.height/height);
-    //
-    // let dk = tallerWider(currentBounds) === "taller" ?
-    //            updated.height !== height ?
-    //              updated.height/height
-    //            : 1
-    //          : updated.width !== width ?
-    //              updated.width/width
-    //            : 1
-    //
-    // // get current center pt by working backwards through centerTransform() from current transform
-    // let centerPt = getCenterFromTransform(currentTransform),
-    //     newScale = currentTransform.k * dk;
-    //
-    // let dx = (updated.width - width) / 2,
-    //     dy = (updated.height - height) / 2
-    //
-    // // get identity of centered transform at new zoom level
-    // let zoom0 = getIdentity(getCenterTransform(centerPt,{scale:newScale}));
-    // // ok on its own with viewbox but glitchy
-    //
-    // // UPDATE CENTER PT
-    // let zoom1 = Object.assign({}, zoom0)
-    // zoom1.x += dx
-    // zoom1.y += dy
+    let options = { height: updated.height, width: updated.width, scale: k1 };
 
-    // console.log(currentBounds)
-    // console.log(getIdentity(getTransform(currentBounds,{height:updated.height,width:updated.width})))
-    // console.log(getIdentity(getTransform(path.bounds(data0)),{height:updated.height,width:updated.width}))
+    let zoomIdentity = getIdentity(getCenterTransform(currentCenter,options));
+    // let zoomIdentity = getIdentity(getCenterTransform(currentCenter,{ ...options, ...{ scale: k1 }}))
 
-    let zoom1 = getIdentity(getTransform(currentBounds,{height:updated.height,width:updated.width}))  // works without viewbox updates
-
-    // console.log("applying viewbox")
-    // svg.attr("viewBox", `0 0 ${width} ${height}`)
+    // console.log(g.node())
 
     // update/apply new values
     width = updated.width;
@@ -1951,60 +1937,67 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     svg.attr("width", updated.width)
        .attr("height", updated.height)
 
-    svg.call(zoom.transform, zoom1)
+    svg.call(zoom.transform, zoomIdentity)
 
-    // projection.clipExtent(extent0)
+    // console.log(zoomIdentity)
 
-    // if (updated.width > width || updated.height > height) {
-    //   // growing
-    //   svg.transition().duration(300).ease(zoomEase)
-    //     .attr("width", updated.width)
-    //     .attr("height", updated.height)
-    //     .on("start", () => {
-    //       console.log("started")
-    //       g.transition().duration(300).ease(zoomEase)
-    //         .attr("transform", "translate(" + zoom1.x + "," + zoom1.y + ") scale(" + zoom1.k + ")")
-    //         .style("stroke-width", 1 / (zoom1.k * zoom1.k) + "px")
-    //         .on("end", () => {
-    //           // keep zoom up to date
-    //           svg.call(zoom.transform, zoom1)
-    //           console.log(g.node())
-    //         })
-    //     })
+    // let zoomIdentity;
+
+    // if (currentBounds.center) {
+    //
+    //   let k = currentBounds.opts.scale < maxFollowZoom ?
+    //     Math.min(maxFollowZoom,getTransform(currentBounds.bounds, { ...options, ...{ scale: null } }).k)
+    //   : currentBounds.opts.scale;
+    //
+    //   zoomIdentity = getIdentity(getCenterTransform(currentBounds.center,{ ...options, ...{ scale: k }}))
+    //
+    // } else if (timer && experience.animating) {
+    //   // while animation in progress (currentBounds constantly changing) determine center upon adjustSize to avoid repeated unused storage calls/calculations
+    //   // currentBounds.center set to null while elapsed > tpad && elapsed < tFull - tPad; otherwise, center stored from first/last identity
+    //
+    //   let t = experience.paused ? experience.pausedAt : d3.now() - timer._time;
+    //
+    //   if (reversing.flag) t = reversing.t - t;
+    //
+    //   let t1 = (reversing.flag) ? reversing.t : tFull,
+    //       tP = (reversing.flag) ? reversing.tPad : tPad;
+    //
+    //   let ct = eased(t) * zoomLength;
+    //
+    //   let cc = zoomArc.node().getPointAtLength(ct)
+    //
+    //   let k = currentBounds.opts.scale < maxFollowZoom ?
+    //     Math.min(maxFollowZoom,getTransform(currentBounds.bounds, { ...options, ...{ scale: null } }).k)
+    //   : currentBounds.opts.scale;
+    //
+    //   zoomIdentity = getIdentity(getCenterTransform(getCenterFromTransform(getZoomAlongTransform(t,t1,tP)),{ ...options, ...{ scale: k }}))
+    //
+    //   // console.log(getIdentity(getCenterTransform([cc.x,cc.y],{ ...options, ...{ scale: k }})))
+    //
     // } else {
-    //   svg.attr("width", updated.width)
-    //      .attr("height", updated.height)
     //
-    //   svg.call(zoom.transform, zoom1)
+    //   zoomIdentity = getIdentity(getTransform(currentBounds.bounds,options))
     //
-    //   // g.transition().duration(300).ease(zoomEase)
-    //   //   .attr("transform", "translate(" + zoom1.x + "," + zoom1.y + ") scale(" + zoom1.k + ")")
-    //   //   .style("stroke-width", 1 / (zoom1.k * zoom1.k) + "px")
-    //   //   .on("end", () => {
-    //   //     // keep zoom up to date
-    //   //     svg.call(zoom.transform, zoom1)
-    //   //     console.log(g.node())
-    //   //   })
     // }
     //
-    // background.attr("width", updated.width)
-    //           .attr("height", updated.height)
+    // console.log(zoomIdentity)
     //
     // // update/apply new values
     // width = updated.width;
     // height = updated.height;
-    // // translate0 = [width/2, height/2];
     // extent0 = [[0,0],[width,height]];
+    //
+    // svg.attr("width", updated.width)
+    //    .attr("height", updated.height)
+    //
+    // svg.call(zoom.transform, zoomIdentity)
 
-    // projection.translate(translate0)
-    //           .clipExtent(extent0)
-
-    // projection.clipExtent(extent0)
+    projection.clipExtent(extent0)
 
     // constrain zoom behavior (scale)
     // zoom.translateExtent(paddedExtent0)
 
-    // if (experience.animating && !experience.manuallyPaused) resumeAnimation();
+    if (experience.animating && !experience.manuallyPaused) resumeAnimation();
 
   }
 
@@ -2389,17 +2382,21 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function resetZoom() {
 
-    console.log("resetting zoom")
+    // console.log("resetting zoom")
 
     if (active) active.classed("active", false);
     active = d3.select(null);
 
-    currentBounds = path.bounds(data0); // slice?
+    // currentBounds = {
+    //   // data: data0,
+    //   bounds: path.bounds(data0), // .slice(),
+    //   opts: null
+    // }
 
-    let zoomIdentity = getIdentity(getTransform(currentBounds))
+    zoom0 = getIdentity(getTransform(path.bounds(data0))) // ,currentBounds.opts))
 
     svg.transition().duration(600).ease(zoomEase)
-      .call(zoom.transform, zoomIdentity)
+      .call(zoom.transform, zoom0)
 
   }
 
@@ -2665,9 +2662,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, lastIdentity)
-      .on("start", () => {
-        currentBounds = path.bounds(data3)
-      })
+      // .on("start", () => {
+      //   currentBounds = {
+      //     // data: data3,
+      //     center: getCenterFromTransform(lastIdentity),
+      //     bounds: path.bounds(data3), // .slice(),
+      //     opts: { scale: zoomAlongOptions.scale } // zoomAlongOptions
+      //   }
+      // })
       .on("end", () => {
         // reset manual pan tracking
         panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
@@ -3887,6 +3889,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     if (elementStr === ("dash")) { // COMBAK
       console.log(d3.select(`#${elementStr}`).node())
+      // debugger;
     }
 
     if (d3.event && d3.event.defaultPrevented) {
@@ -4148,6 +4151,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function selectNew() {
+
+    console.log('here')
+
     // if mid-animation, pause and confirm user intent
     if (experience.animating && !experience.paused) pauseAnimation();
     let confirmed = experience.initiated ? confirm('Do you wish to select a new route?') : true;
@@ -4184,6 +4190,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       d3.select("#getOption0").html(state0.opt0)
       d3.select("#getOption1").html(state0.opt1)
 
+// debugger;
+
       zoomArc = null;
       experience = { initiated: false, animating: false, paused: false, manuallyPaused: false, pausedAt: null }
       togglesOff = { info: false, select: false }
@@ -4191,12 +4199,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       logBackgrounds = {};
       transitionResume = false;
       reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
+      data1 = null, data2 = null, data3 = null;
 
       // add fade transitions to content removal
       d3.select("#journey").selectAll("*").remove()
       g.select("#enrich-layer").selectAll("*").remove();
 
-console.log(quadtree)
+      if (routeQuadtree) console.log(routeQuadtree)
+
       // reset main quadtree.... such that node.selected === none! COMBAK
 
       // d3.select("#get-options").node().innerHTML = form0;
@@ -4681,6 +4691,11 @@ console.log(quadtree)
     return [b0,b1];
   }
 
+  function getCenter(bounds) {
+    bounds = standardizeBounds(bounds);
+    return [(bounds[1][0] - bounds[0][0])/2, (bounds[1][1] - bounds[0][1])/2];  // domain y (input)
+  }
+
   // PARSE, CONVERT, ASSOCIATE
 
   function getSubstr(string,i0 = 4) { // defaults for use in converting from textures.js url(); assume format "url(#12345)"
@@ -4966,6 +4981,8 @@ console.log(quadtree)
   // cues to click or hit spacebar for pause
   // cross browser testing: Judges will use the current versions of Firefox, Safari, or Chrome with a true color monitor with a resolution of at least 1280 x 800.
   // fix selectnewroute glitches // REMAKE QUADTREE
+  // fix glitchiness on sibling drag within legend log (due to recent h-full addition?)
+  // fix zoom jump on about collapse
 // performance:
   // enrich data in dynamo DB? query?
   // truncate coordinates and other values wherever possible
