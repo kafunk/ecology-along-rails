@@ -28,13 +28,16 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 //// CURRENT STATE MANAGEMENT (NOT IDEAL)
 
-  var state0 = {}; // restorable?
   var experience = { initiated: false, animating: false, paused: false }
   var togglesOff = { info: false, select: false }
   var panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
   var transitionResume = false;
   var reversing = { flag: false, i: 0, t: null, tPad: null }
   var currentBounds; // = {};
+
+  // PERSISTENT ACROSS ROUTES
+  var quadtree0;
+  var state0 = {}; // restorable?
 
  // OTHER WORTHWHILE
 
@@ -892,7 +895,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function onSubmit(opt0,opt1) {
-
     // opt0 == from, opt1 == to
 
     let testOpt0 = opt0.split(', '),  // note space after comma
@@ -1133,14 +1135,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         // FIRST make a quadtree of all representative enrich data pts draped over North America
 
-        let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features.filter(d => d.geometry),
+        let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features,
+        // .filter(d => d.geometry),
               dataExtent = getMesh(quadBounds,"countries")
 
-        let quadtree = makeQuadtree(quadtreeData,{bounding:dataExtent})
+        if (!quadtree0) quadtree0 = makeQuadtree(quadtreeData,{bounding:dataExtent})
 
-        let searchExtent = padExtent(path.bounds(chosen.bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad; uncomment below for visual
+        let searchExtent = padExtent(path.bounds(chosen.bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad
 
-        let filteredEnrich = searchQuadtree(quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
+        let filteredEnrich = searchQuadtree(quadtree0, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
 
         let possibleFeatures = new Set(filteredEnrich.map(d => d.properties.id));
 
@@ -1200,6 +1203,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           //   bounds: path.bounds(data1), // .slice(),
           //   opts: options
           // }
+          currentBounds = path.bounds(data1); // slice()
           transitionIn()
         })
         .on("end", () => {
@@ -1228,8 +1232,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       function setupDash(received) {
 
-        // store state0
-        state0.dash = d3.select("#dash").node().innerHTML;
+        // // store state0
+        // state0.dash = d3.select("#dash").node().innerHTML;
 
         // ROUTE SUMMARY
         // agency names & lines
@@ -1663,6 +1667,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         //   bounds: path.bounds(data2), //.slice(),
         //   opts: { scale: zoomAlongOptions.scale } // zoomAlongOptions
         // }
+        currentBounds = path.bounds(data2); // slice()
         // dim background layers
         if (reversing.i < 1) dimBackground(t/2)
         // expand dash automatically
@@ -1890,7 +1895,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function adjustSize() {
 
-    if (experience.animating && !experience.paused) pauseAnimation();
+    // if (experience.animating && !experience.paused) pauseAnimation();
 
     // console.log("adjusting size")
 
@@ -1904,18 +1909,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let currentTransform = d3.zoomTransform(svg.node()),
            currentCenter = getCenterFromTransform(currentTransform),
                       k0 = currentTransform.k,
-                      k1 = k0 * updated.height/height * updated.width/width;
+                      // k1 = k0 * updated.height/height * updated.width/width;
+                      k1 = (tallerWider(currentBounds) === "taller") ? k0 * updated.height/height : k0 * updated.width/width;
 
-    // let dk = updated.height > height || updated.width > width ?
-    //     Math.max(updated.height/height, updated.width/width)
-    //   : Math.min(updated.height/height, updated.width/width)
-    // console.log(dk)
-    // console.log(k0)
-    // console.log(updated.height/height)
-    // console.log(updated.width/width)
-    // let k1 = k0 * dk;
-    // console.log(k1)
-    // console.log(currentBounds.opts)
+    // // WORKS FOR GETTING SMALLER
+    // let k = k0;
+    // if ((bounds0[1][0] - bounds0[0][0]) * k0 > updated.width) k *= updated.width/width
+    // if ((bounds0[1][1] - bounds0[0][1]) * k0 > updated.height) k *= updated.height/height
 
     // if (options.scale) {
     //   options.scale = k1;
@@ -1925,9 +1925,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let options = { height: updated.height, width: updated.width, scale: k1 };
 
     let zoomIdentity = getIdentity(getCenterTransform(currentCenter,options));
-    // let zoomIdentity = getIdentity(getCenterTransform(currentCenter,{ ...options, ...{ scale: k1 }}))
-
-    // console.log(g.node())
 
     // update/apply new values
     width = updated.width;
@@ -1938,8 +1935,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
        .attr("height", updated.height)
 
     svg.call(zoom.transform, zoomIdentity)
-
-    // console.log(zoomIdentity)
 
     // let zoomIdentity;
 
@@ -1997,7 +1992,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // constrain zoom behavior (scale)
     // zoom.translateExtent(paddedExtent0)
 
-    if (experience.animating && !experience.manuallyPaused) resumeAnimation();
+    // if (experience.animating && !experience.manuallyPaused) resumeAnimation();
 
   }
 
@@ -2237,6 +2232,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     g.style("stroke-width", 1 / (tk * tk) + "px");
 
+    // projection.clipExtent(extent0)
+
     // keep zoom buttons up to date
     d3.select("label#zoom").attr("value", tk)
 
@@ -2315,12 +2312,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let opts = {...defaultOptions.centerTransform, ...options};
 
+    // temp opposite
+    opts.padBottom = opts.padBottom === 15 ? 12 : 15;
+
     // account for any padding
     opts.width -= (opts.padLeft + opts.padRight);
     opts.height -= (opts.padTop + opts.padBottom);
 
-    let x = ((transform.x - opts.width/2) / -transform.k), // - opts.padRight + opts.padLeft,
-        y = ((transform.y - opts.height/2) / -transform.k) // - opts.padBottom + opts.padTop;
+    let x = (transform.x - opts.width/2) / -transform.k,
+        y = (transform.y - opts.height/2) / -transform.k;
 
     return [x,y];
 
@@ -2339,7 +2339,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     opts.width -= (opts.padLeft + opts.padRight);
     opts.height -= (opts.padTop + opts.padBottom);
 
-    let k = opts.scale || +((1 - opts.scalePad) * Math.min(opts.width/dx, opts.height/dy)).toFixed(4),  // Math.max() determines which dimension will serve as best anchor to provide closest view of this data while maintaining aspect ratio
+    let k = opts.scale || +((1 - opts.scalePad) * Math.min(opts.width/dx, opts.height/dy)).toFixed(4),
         x = bounds[1][0] + bounds[0][0],  // xMax (bounds[1][0]) + xOffset (bounds[0][0])
         y = bounds[1][1] + bounds[0][1];  // yMax (bounds[1][1]) + yOffset (bounds[0][1])
 
@@ -2393,7 +2393,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     //   opts: null
     // }
 
-    zoom0 = getIdentity(getTransform(path.bounds(data0))) // ,currentBounds.opts))
+    currentBounds = path.bounds(data0).slice();
+
+    zoom0 = getIdentity(getTransform(currentBounds));
 
     svg.transition().duration(600).ease(zoomEase)
       .call(zoom.transform, zoom0)
@@ -2662,14 +2664,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
       .call(zoom.transform, lastIdentity)
-      // .on("start", () => {
-      //   currentBounds = {
-      //     // data: data3,
-      //     center: getCenterFromTransform(lastIdentity),
-      //     bounds: path.bounds(data3), // .slice(),
-      //     opts: { scale: zoomAlongOptions.scale } // zoomAlongOptions
-      //   }
-      // })
+      .on("start", () => {
+        currentBounds = path.bounds(data3); // slice()
+        // currentBounds = {
+        //   // data: data3,
+        //   center: getCenterFromTransform(lastIdentity),
+        //   bounds: path.bounds(data3), // .slice(),
+        //   opts: { scale: zoomAlongOptions.scale } // zoomAlongOptions
+        // }
+      })
       .on("end", () => {
         // reset manual pan tracking
         panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
@@ -3887,11 +3890,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function expand(elementStr,direction = "up") {
 
-    if (elementStr === ("dash")) { // COMBAK
-      console.log(d3.select(`#${elementStr}`).node())
-      // debugger;
-    }
-
     if (d3.event && d3.event.defaultPrevented) {
       console.log(d3.event)
       console.log("expand prevented")
@@ -4152,8 +4150,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function selectNew() {
 
-    console.log('here')
-
     // if mid-animation, pause and confirm user intent
     if (experience.animating && !experience.paused) pauseAnimation();
     let confirmed = experience.initiated ? confirm('Do you wish to select a new route?') : true;
@@ -4173,7 +4169,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     function resetConfirmed() {
 
-      // restore orig opacity levels of dimmed base
+      // COMBAK TODO
+      // restore orig opacity levels of dimmed base?
       // work below into cohensive reset method attached to currentState obj
 
       // reset listeners..?
@@ -4182,32 +4179,66 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       if (experience.animating) manualPause(); // CANCEL?
 
-      // adjustSize();
-      resetZoom();
-      collapse("dash", "down")
-
-      d3.select("#dash").html(state0.dash)
-      d3.select("#getOption0").html(state0.opt0)
-      d3.select("#getOption1").html(state0.opt1)
-
-// debugger;
-
       zoomArc = null;
       experience = { initiated: false, animating: false, paused: false, manuallyPaused: false, pausedAt: null }
-      togglesOff = { info: false, select: false }
+      // togglesOff = { info: false, select: false }
       panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
       logBackgrounds = {};
       transitionResume = false;
       reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
       data1 = null, data2 = null, data3 = null;
+      readyAndWaiting = {};
+
+      encounteredPts = new Set(),
+      encounteredLines = new Set(),
+      encounteredPolys = new Set(),
+      uniqueEncounters = new Set(),
+         allEncounters = {
+           "A": [],
+           "B": [],
+           "C": []
+         };
+
+      logGroups = new Set(),
+       tagTypes = new Set(),
+      symbolSet = new Set();
 
       // add fade transitions to content removal
-      d3.select("#journey").selectAll("*").remove()
-      g.select("#enrich-layer").selectAll("*").remove();
+      d3.select("#journey").remove()
+      g.select("#enrich-layer").remove();
+      d3.select(".quadtree-data").remove()
+      d3.select("#zoom-arc").remove()
 
-      if (routeQuadtree) console.log(routeQuadtree)
+      if (routeQuadtree) routeQuadtree.removeAll(routeQuadtree.data())
 
-      // reset main quadtree.... such that node.selected === none! COMBAK
+      // resetDash
+      let encounterGrps = ["#encounters-A", "#encounters-B", "#encounters-C"];
+      encounterGrps.forEach(selector => {
+        d3.select(selector)
+          .style("background-image", null)
+          .selectAll('.encounter').remove()
+      })
+      d3.select("#legend-log-content").selectAll(".legend-log-item").remove()
+      d3.select("#from-to").select("#from").selectAll("span").remove()
+      d3.select("#from-to").select("#to").selectAll("span").remove()
+      d3.select("#from-to").select("#via").selectAll("div").remove()
+      d3.select("#from-to").select("#totals").selectAll("span").remove()
+      d3.select("#elevation").selectAll("span").remove()
+      d3.select("#odometer").selectAll("span").remove()
+      d3.select("#compass").selectAll("span").remove()
+      d3.select("#clock").selectAll("span").remove()
+      d3.select("#total-miles").selectAll("text").remove()
+      d3.select("#total-time").selectAll("text").remove()
+
+      // flag all to remove as one-life ?
+
+      // adjustSize();
+      resetZoom();
+      collapse("dash", "down")
+
+      // d3.select("#dash").html(state0.dash)
+      d3.select("#getOption0").html(state0.opt0)
+      d3.select("#getOption1").html(state0.opt1)
 
       // d3.select("#get-options").node().innerHTML = form0;
       // d3.select("#dash-plus").node().innerHTML = dash0;
