@@ -60,10 +60,6 @@ details > summary > span {
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
 
-#encounters {
-  scroll-behavior: smooth;
-  transition: 0.4s;
-}
 #elevation,#clock {
   border-radius: 5px 50px;
   background: #dbd99f;

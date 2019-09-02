@@ -158,7 +158,9 @@
                                   </div>
 
                                   <!-- to-from insert -->
-                                  <div id="from-to" class="flex-child px3 py3 bg-lighten25 scroll-auto">
+                                  <div id="from-to" class="flex-child px3 bg-lighten25 scroll-auto">
+                                    <!-- py3  -->
+                                    <!-- re-add with actual content? -->
                                     <div class="flex-parent flex-parent--center-cross flex-parent--center-main h-full">
                                       <div id="from" class="flex-child txt-xs pl12 pr3 flex-parent flex-parent--column">
                                         <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-depart'></use></svg>
@@ -253,41 +255,43 @@
                                     <h5 class='flex-child txt-h6 txt-fancy2 txt-em txt-bold'>You are currently:</h5>
                                   </div>
 
-                                  <div id="narration-txt" class="h-full flex-child flex-child--grow bg-lighten75 grid">
-                                    <div id="encounters-A" class="h-full col col--4 flex-parent flex-parent--column-reverse scroll-auto">
-                                      <canvas id="pts" class="none"></canvas>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Traversing special places</span>
+                                  <div id="narration-txt" class="h-full flex-child flex-child--grow bg-lighten75 scroll-always"> <!-- scroll-always for firefox -->
+                                    <div class="grid h-full">
+                                      <div id="encounters-A" class="h-full col col--4 scroll-auto flex-parent flex-parent--column"> <!-- removed column-reverse; will have to use insert vs append? -->
+                                        <canvas id="pts" class="none"></canvas>
+                                        <div class="flex-child mx3 my3 placeholder encounter px6 py6">
+                                          <span>Traversing special places</span>
+                                        </div>
+                                        <div class="flex-child mx3 my3 placeholder encounter px6 py6">
+                                          <span>Encountering incredible things</span>
+                                        </div>
+                                        <div class="flex-child mx3 my3 placeholder encounter px6 py6">
+                                          <span>Beholding the world made fresh again</span>
+                                        </div>
                                       </div>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Encountering incredible things</span>
+                                      <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column align-center scroll-auto">
+                                        <canvas id="polys" class="none"></canvas>
+                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
+                                          <span>Encountering incredible things</span>
+                                        </div>
+                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
+                                          <span>Beholding the world made fresh again</span>
+                                        </div>
+                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
+                                          <span>Traversing special places</span>
+                                        </div>
                                       </div>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Beholding the world made fresh again</span>
-                                      </div>
-                                    </div>
-                                    <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column-reverse align-center scroll-auto">
-                                      <canvas id="polys" class="none"></canvas>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Encountering incredible things</span>
-                                      </div>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Beholding the world made fresh again</span>
-                                      </div>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Traversing special places</span>
-                                      </div>
-                                    </div>
-                                    <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column-reverse align-r scroll-auto">
-                                      <canvas id="lines" class="none"></canvas>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Beholding the world made fresh again</span>
-                                      </div>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Traversing special places</span>
-                                      </div>
-                                      <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
-                                        <span>Encountering incredible things</span>
+                                      <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column align-r scroll-auto">
+                                        <canvas id="lines" class="none"></canvas>
+                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
+                                          <span>Beholding the world made fresh again</span>
+                                        </div>
+                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
+                                          <span>Traversing special places</span>
+                                        </div>
+                                        <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
+                                          <span>Encountering incredible things</span>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
