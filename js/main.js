@@ -89,7 +89,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   // all unprojected: init bounds (ie continent), full route, first route frame, last route frame
   let data0, data1, data2, data3;
-  let bounds0, bounds1, bounds2, bounds3;
 
   var trainPt, headlights;
 
@@ -200,21 +199,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     .on('mouseenter', highlightBtn)
     .on('mouseleave', removeHighlight)
 
-  var zoom0 = d3.zoomIdentity.translate(width/2, height/2).scale(scale0);
-
-  // var active = d3.select(null);
-
   var zoom = d3.zoom()
-    // .translateExtent(paddedExtent0)
     .scaleExtent(scaleExtent)
     .on("zoom", zoomed)
     .filter(() => {
       // dbl-clicking on background does not trigger zoom (actually resets it)
       return !(d3.event.type === "dblclick" && d3.event.path[0].classList.contains('no-zoom'))
     })
-
-  svg.call(zoom.transform, zoom0) // keep this line first
-     .call(zoom)
 
 //// COLORS
 
@@ -276,12 +267,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       get width() { return width; },
       get height() { return height; },
       get extent0() { return [[0,0],[width,height]]; },
-      // get scale() { return scale0; },
       padTop: 0,
       padRight: 0,
       padLeft: 0,
       padBottom: 0
-      // get padBottom() { return (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 12 : 15; }
     },
     get boundsTransform() { return {...this.init, ...this.spec.bounds} },
     get centerTransform() { return {...this.init, ...this.spec.center} },
@@ -581,8 +570,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // SET BOUNDING BOX
   admin0.then(data => {
     data0 = getMesh(data,"countries");
-    bounds0 = path.bounds(data0); // .slice();
     resetZoom();
+    svg.call(zoom);
   }, onError)
 
   // DRAW VECTOR BASE
@@ -1183,35 +1172,28 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     experience.initiated = true;
 
     data1 = receivedData.lineString;
-    bounds1 = path.bounds(data1); // .slice();
 
     Promise.resolve(prepareEnvironment(receivedData)).then(() => { // proceed
 
-      let bottomPad = (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 18 : 21,
+      let routeBoundsIdentity = () => {
+
+        let bounds1 = path.bounds(data1).slice(),
+          bottomPad = (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 18 : 21,
            options0 = { scalePad: 0.15, padBottom: bottomPad };
 
-      // if (tallerWider(bounds) === "taller") options0.scalePad *= -1;
+        let k1 = getTransform(bounds1,options0).k;  // initial run used to confirm not overzooming
 
-      let k1 = getTransform(bounds1,options0).k;  // get scale @ framed full route (used to confirm not overzooming)
+        let scale1 = Math.min(maxFollowZoom,k1),
+           options = { scale: scale1, padBottom: bottomPad };
 
-      let scale1 = Math.min(maxFollowZoom,k1),
-         options = { scale: scale1, padBottom: bottomPad };
+        return getIdentity(getTransform(bounds1,options));
 
-      let routeBoundsIdentity = getIdentity(getTransform(bounds1,options))
+      }
 
       // control timing with transition start/end events
       svg.transition().duration(zoomDuration).ease(zoomEase)
         .call(zoom.transform, routeBoundsIdentity)
         .on("start", () => {
-          // currentBounds = {
-          //   data: data1,
-          //   clean: true,
-          //   transform: routeBoundsIdentity,
-          //   // center: getCenterFromTransform(routeBoundsIdentity),
-          //   bounds: path.bounds(data1).slice(),
-          //   opts: options
-          // }
-          // currentBounds = path.bounds(data1).slice();
           currentBounds = {
             bounds: path.bounds(data1).slice(),
             get domEdge() {
@@ -1222,10 +1204,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           transitionIn()
         })
         .on("end", () => {
-          // // confirm g transform where it should be
-          // g.attr("transform", routeBoundsIdentity.toString())
-          // // keep zoomClick btns in line
-          // d3.select("label#zoom").attr("value",routeBoundsIdentity.k)
           // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
           prepareUser();
           d3.timeout(() => {
@@ -1579,10 +1557,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
            options0 = { scalePad: 0.5, padBottom: bottomPad };
 
       // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
-      // let bounds2 = path.bounds(data2).slice(),
-      //     bounds3 = path.bounds(data3).slice(),
-      let k2 = getTransform(bounds2,options0).k,
-          k3 = getTransform(bounds3,options0).k;
+      let k2 = getTransform(path.bounds(data2).slice(),options0).k,
+          k3 = getTransform(path.bounds(data3).slice(),options0).k;
 
       let zoomScale = Math.ceil(Math.min(maxFollowZoom,((k2 + k3)/2)));  // almost always returns maxFollowZoom
 
@@ -1592,9 +1568,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           p1 = zoomArc.node().getPointAtLength(zoomLength);
 
       // then calc final first/last frames at constant scale with center centered! (note diff fn call)
-      firstIdentity = getIdentity(getCenterTransform([p0.x,p0.y],zoomAlongOptions))
+      firstIdentity = () => getIdentity(getCenterTransform([p0.x,p0.y],zoomAlongOptions))
 
-      lastIdentity = getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
+      lastIdentity = () => getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
 
       tPad = zoomFollow.tpsm * zoomFollow.focus;  // use tpsm to delay zoomFollow until train hits mm <zoomFollow.focus>; tps(implified)m because focusPt is calculated from simplified route
 
@@ -1642,8 +1618,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         data2 = turf.lineString(zoomFollow.firstThree);
         data3 = turf.lineString(zoomFollow.lastThree);
-        bounds2 = path.bounds(data2); //.slice();
-        bounds3 = path.bounds(data3); //.slice();
 
       } else {
 
@@ -1675,57 +1649,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let t = !again ? zoomDuration : zoomDuration/4;
 
-    // // in case of delay between calculation & animation start? IE in case of reverse
-//     let zoomIdentity = getIdentity(getCenterTransform(getCenterFromTransform(firstIdentity),zoomAlongOptions));
-//     console.log(firstIdentity)
-//     console.log(zoomIdentity)
-//
-//     console.log(getZoomAlongTransform(0,tFull,tPad))
-//     console.log(getZoomAlongTransform(tPad,tFull,tPad))
-//     // ie getZoomAlongTransform
-//
-// console.log(trainEase(0))
-// console.log(trainEase(tPad))
-// console.log(trainEase(0) * zoomLength)
-// console.log(trainEase(tPad) * zoomLength)
-// console.log(zoomArc.node().getPointAtLength(trainEase(0) * zoomLength))
-// console.log(zoomArc.node().getPointAtLength(trainEase(tPad) * zoomLength))
-// console.log(zoomArc.node().getPointAtLength(0))
-// console.log(zoomArc.node().getPointAtLength(tPad))
-//
-//     let p = zoomArc.node().getPointAtLength(0),
-//     p2 = zoomArc.node().getPointAtLength(tPad),
-//     testId = getCenterTransform([p.x,p.y],{ scale: zoomAlongOptions.scale }),
-//       testId2 = getCenterTransform([p.x,p.y], { scale: zoomAlongOptions.scale })
-
-let p0 = zoomArc.node().getPointAtLength(0);
-let zoomIdentity = getIdentity(getCenterTransform([p0.x,p0.y],zoomAlongOptions))
-
-console.log(zoomAlongOptions)
-// console.log(zoomAlongOptions)
-// console.log(getIdentity(testId))
-// console.log(getIdentity(testId2))
-// console.log(getIdentity(getCenterTransform([p2.x,p2.y],{ scale: zoomAlongOptions.scale })))
-
-    // simpT = d3.scaleLinear().domain([tP,t1-tP]),
-    //     simpL = t => trainEase(t) * zoomLength,
-    //         l = simpL(simpT(elapsed)),
-    //         p = zoomArc.node().getPointAtLength(l);
-
-
     svg.transition().duration(t).ease(zoomEase)
-      .call(zoom.transform, zoomIdentity) // getIdentity(testId)) // firstIdentity) // zoomIdentity) // firstIdentity)
+      .call(zoom.transform, firstIdentity)
       .on("start", () => {
-        console.log('starting')
-        // currentBounds = {
-        //   data: data2,
-        //   clean: true,
-        //   transform: firstIdentity,
-        //   // center: getCenterFromTransform(firstIdentity),
-        //   bounds: path.bounds(data2).slice(),
-        //   opts: { scale: zoomAlongOptions.scale }
-        // }
-        // currentBounds = path.bounds(data2).slice();
         currentBounds = {
           bounds: path.bounds(data2).slice(),
           get domEdge() {
@@ -1744,10 +1670,6 @@ console.log(zoomAlongOptions)
         svg.on("scroll.zoom",null)
       })
       .on("end", () => {
-        // // keep zoom buttons up to date
-        // d3.select("label#zoom").attr("value",firstIdentity.k)
-        // // confirm g exactly in alignment for next transition
-        // g.attr("transform",firstIdentity.toString())
         // reveal train
         g.select("#train-point") // .raise()
           .transition().duration(t/2)
@@ -1811,23 +1733,9 @@ console.log(zoomAlongOptions)
       // timer countDOWN
       elapsed = reversing.t - elapsed;
       // zoomFollow if necessary
-      // if (zoomArc) {
-      //   if (elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) {
-      //     zoomAlong(elapsed,reversing.t,reversing.tPad);
-      //   } else {
-      //     currentBounds.center = elapsed < reversing.tPad ? getCenterFromTransform(lastIdentity) : getCenterFromTransform(firstIdentity);
-      //   }
-      // }
       if (zoomArc && elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) zoomAlong(elapsed,reversing.t,reversing.tPad);
     } else {  // not reversing
       // zoomFollow if necessary
-      // if (zoomArc) {
-      //   if (elapsed >= tPad && elapsed <= tFull-tPad) {
-      //     zoomAlong(elapsed);
-      //   } else {
-      //     currentBounds.center = elapsed < tPad ? getCenterFromTransform(firstIdentity) : getCenterFromTransform(lastIdentity);
-      //   }
-      // }
       if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) zoomAlong(elapsed);
     }
 
@@ -1845,9 +1753,7 @@ console.log(zoomAlongOptions)
     }
 
     function zoomAlong(elapsed, t1 = tFull, tP = tPad) {
-      // currentBounds.center = null;
       let transform = getZoomAlongTransform(elapsed,t1,tP);
-      // currentBounds.center = getCenterFromTransform(transform);
       svg.call(zoom.transform, getIdentity(transform));
     }
 
@@ -1962,96 +1868,18 @@ console.log(zoomAlongOptions)
 
     // if (experience.animating && !experience.paused) pauseAnimation();
 
-    // console.log("adjusting size")
-
     // get updated dimensions
     let updated = calcSize();
 
-    // let zoomIdentity;
+    let currentTransform = d3.zoomTransform(svg.node()),
+           currentCenter = getCenterFromTransform(currentTransform),
+                      k0 = currentTransform.k,
+                      dk = currentBounds.domEdge === "height" ? updated.height/height : updated.width/width,
+                      k1 = k0 * dk;
 
-//     if (currentBounds.clean) {
-//       // RETURNS PERFECT ADJUSTMENTS ON PREDETERMINED BOUNDS, BUT DOES NOT ADAPT TO USER ZOOM
-//
-//       let options = { ...currentBounds.opts, ...{ height: updated.height, width: updated.width } };
-//
-//       // if (currentBounds.center) {
-//       if (currentBounds.transform) {
-//
-//         // let k = currentBounds.opts.scale < maxFollowZoom ?
-//         //   Math.min(maxFollowZoom,getTransform(currentBounds.bounds, { ...options, ...{ scale: null } }).k)
-//         // : currentBounds.opts.scale;
-//
-//         // console.log(currentBounds.data)
-//         console.log(currentBounds.bounds.flat())
-//         console.log(path.bounds(currentBounds.data).slice().flat())
-//         if (currentBounds.center) console.log(currentBounds.center)
-//
-//         let center = getCenterFromTransform(currentBounds.transform),
-//                  k = Math.min(maxFollowZoom,getTransform(currentBounds.bounds, { ...options, ...{ scale: null } }).k)
-//
-// if (currentBounds.opts && currentBounds.opts.scale) console.log(currentBounds.opts.scale)
-//         console.log(k)
-//         console.log(center)
-//
-//         zoomIdentity = getIdentity(getCenterTransform(currentBounds.center,{ ...options, ...{ scale: k }}))
-//         // zoomIdentity = getIdentity(getCenterTransform(center,{ ...options, ...{ scale: k }}))
-// console.log(g.node())
-//
-//       } else if (timer && experience.animating) {
-//         // while animation in progress (currentBounds constantly changing) determine center upon adjustSize to avoid repeated unused storage calls/calculations
-// // ** COMBAK DO THIS :
-//        // currentBounds.center set to null while elapsed > tpad && elapsed < tFull - tPad; otherwise, center stored from first/last identity
-//
-//         let t = experience.paused ? experience.pausedAt : d3.now() - timer._time;
-//
-//         if (reversing.flag) t = reversing.t - t;
-//
-//         let t1 = (reversing.flag) ? reversing.t : tFull,
-//             tP = (reversing.flag) ? reversing.tPad : tPad;
-//
-//         let ct = eased(t) * zoomLength;
-//
-//         let cc = zoomArc.node().getPointAtLength(ct)
-//
-//         // let k = currentBounds.opts.scale < maxFollowZoom ?
-//         //   Math.min(maxFollowZoom,getTransform(currentBounds.bounds, { ...options, ...{ scale: null } }).k)
-//         // : currentBounds.opts.scale;
-//
-//         let k = Math.min(maxFollowZoom,getTransform(currentBounds.bounds, { ...options, ...{ scale: null } }).k)
-//
-//         zoomIdentity = getIdentity(getCenterTransform(getCenterFromTransform(getZoomAlongTransform(t,t1,tP)),{ ...options, ...{ scale: k }}))
-//
-//         // console.log(getIdentity(getCenterTransform([cc.x,cc.y],{ ...options, ...{ scale: k }})))
-//
-//       } else {
-//
-//         zoomIdentity = getIdentity(getTransform(currentBounds.bounds,options))
-//
-//       }
-//
-//     } else {
-//       // IMPERFECT ADJUSTMENTS, BUT ADAPTS TO USER ZOOM
+    let options = { height: updated.height, width: updated.width, scale: k1 };
 
-
-// console.log({...defaultOptions.boundsTransform, ...options});
-
-      // let opts0 = { ...defaultOptions.boundsTransform, ...currentBounds.opts }s
-      //
-      // console.log(opts0)
-
-      let currentTransform = d3.zoomTransform(svg.node()),
-             currentCenter = getCenterFromTransform(currentTransform),
-                        k0 = currentTransform.k,
-                        // dk = tallerWider(currentBounds.bounds) === "taller" ? updated.height/height : updated.width/width,
-                        // dk = tallerWider(currentBounds) === "taller" ? updated.height/height : updated.width/width,
-                        dk = currentBounds.domEdge === "height" ? updated.height/height : updated.width/width,
-                        k1 = k0 * dk;
-
-      let options = { height: updated.height, width: updated.width, scale: k1 };
-
-      let zoomIdentity = getIdentity(getCenterTransform(currentCenter,options));
-
-    // }
+    let zoomIdentity = getIdentity(getCenterTransform(currentCenter,options));
 
     // REGARDLESS, update/apply new values
     width = updated.width;
@@ -2064,17 +1892,6 @@ console.log(zoomAlongOptions)
     svg.call(zoom.transform, zoomIdentity)
 
     projection.clipExtent(extent0)
-
-    // OTHER IDEAS
-    // // WORKS FOR GETTING SMALLER
-    // let k = k0;
-    // if ((bounds0[1][0] - bounds0[0][0]) * k0 > updated.width) k *= updated.width/width
-    // if ((bounds0[1][1] - bounds0[0][1]) * k0 > updated.height) k *= updated.height/height
-
-    // if (options.scale) {
-    //   options.scale = k1;
-    //   currentBounds.opts.scale = k1;
-    // }
 
     // constrain zoom behavior (scale)
     // zoom.translateExtent(paddedExtent0)
@@ -2393,28 +2210,16 @@ console.log(zoomAlongOptions)
       // get current center pt by working backwards through centerTransform() from current transform
       let centerPt = getCenterFromTransform(currentTransform);
       // get identity of centered transform at new zoom level
-      let zoom1 = getIdentity(getCenterTransform(centerPt,{scale:newScale}));
+      let zoomIdentity = getIdentity(getCenterTransform(centerPt,{scale:newScale}));
 
       svg.transition().duration(400).ease(zoomEase)
-         .call(zoom.transform, zoom1)
-         // .on("end", () => {
-         //   g.attr("transform", zoom1.toString())
-         // })
+         .call(zoom.transform, zoomIdentity)
 
     }
 
     if (experience.animating && !experience.manuallyPaused) resumeAnimation();
 
   }
-
-  // function zoomToBounds(bounds,duration = 1500,options) {
-  //
-  //   let zoomIdentity = getIdentity(getTransform(bounds,options))
-  //
-  //   svg.transition().duration(duration).ease(zoomEase)
-  //     .call(zoom.transform, zoomIdentity)
-
-  // }
 
   function getCenterFromTransform(transform,options) {
     // get current center by working backwards through centerTransform() from current transform
@@ -2484,14 +2289,14 @@ console.log(zoomAlongOptions)
     // let k = opts.scale,
     //    tx = -k * x + opts.width/2,  // no need to divide -k * x by 2 since given as center
     //    ty = -k * y + opts.height/2; // no need to divide -k * y by 2 since given as center
-    //
+
     // let k = opts.scale,
     //    tx = -k * x + opts.width/2 - opts.padLeft + opts.padRight,
     //    ty = -k * y + opts.height/2 - opts.padTop + opts.padBottom //2
 
     let k = opts.scale,
-       tx = -k * x + opts.width/2 + opts.padLeft - opts.padRight,  // no need to divide -k * x by 2 since given as center
-       ty = -k * y + opts.height/2 + opts.padTop - opts.padBottom //2
+       tx = -k * x + opts.width/2 + opts.padLeft - opts.padRight,
+       ty = -k * y + opts.height/2 + opts.padTop - opts.padBottom
 
     return {x: tx, y: ty, k: k};
 
@@ -2499,15 +2304,11 @@ console.log(zoomAlongOptions)
 
   function resetZoom() {
 
-    // console.log("resetting zoom")
-
     if (active) active.classed("active", false);
     active = d3.select(null);
-    //
-    // let options = { padBottom: (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 12 : 15 }
+
     let options = { padBottom: (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 18 : 21 }
 
-    // currentBounds = path.bounds(data0).slice();
     currentBounds = {
       bounds: path.bounds(data0).slice(),
       get domEdge() {
@@ -2516,26 +2317,7 @@ console.log(zoomAlongOptions)
       }
     }
 
-    zoom0 = getIdentity(getTransform(currentBounds.bounds,options));
-
-    // currentBounds = {
-    //   // data: data0,
-    //   clean: true,
-    //   bounds: path.bounds(data0).slice(),
-    //   opts: null
-    // }
-
-    // bounds0 = path.bounds(data0).slice();
-    // zoom0 = getIdentity(getTransform(bounds0));
-
-    // currentBounds = {
-    //   data: data0,
-    //   clean: true,
-    //   transform: zoom0,
-    //   // center: getCenterFromTransform(zoom0),
-    //   bounds: bounds0,
-    //   opts: {}
-    // }
+    let zoom0 = getIdentity(getTransform(currentBounds.bounds,options));
 
     svg.transition().duration(600).ease(zoomEase)
       .call(zoom.transform, zoom0)
@@ -2801,35 +2583,10 @@ console.log(zoomAlongOptions)
     experience.manuallyPaused = false;
     experience.pausedAt = null;
 
-    // let zoomIdentity = getIdentity(getCenterTransform(getCenterFromTransform(lastIdentity),zoomAlongOptions));
-
-    let p1 = zoomArc.node().getPointAtLength(zoomLength),
-     zoomIdentity = getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
-
-// console.log(zoomLength) // 26.69
-// console.log(tFull)
-// console.log(tPad)
-// console.log(tFull-tPad)
-// console.log(fullLength)
-// console.log(totalMiles * tpm)
-
-let t1 = tFull-tPad,
- simpT = d3.scaleLinear().domain([tPad,tFull-tPad]),
- simpL = t => trainEase(t) * zoomLength,
-     l = simpL(simpT(t1)),
-     p = zoomArc.node().getPointAtLength(l);
-
-// console.log(l) // 26.69
-// console.log(p) // svg pt
-
-console.log(zoomIdentity)
-console.log(getIdentity(getCenterTransform([p.x,p.y],zoomAlongOptions)))
-
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
-      .call(zoom.transform, zoomIdentity) // lastIdentity) // zoomIdentity) // lastIdentity)
+      .call(zoom.transform, lastIdentity)
       .on("start", () => {
-        // currentBounds = path.bounds(data3).slice();
         currentBounds = {
           bounds: path.bounds(data3).slice(),
           get domEdge() {
@@ -2837,14 +2594,6 @@ console.log(getIdentity(getCenterTransform([p.x,p.y],zoomAlongOptions)))
             return this._domEdge;
           }
         }
-        // currentBounds = {
-        //   data: data3,
-        //   clean: true,
-        //   transform: lastIdentity,
-        //   // center: getCenterFromTransform(lastIdentity),
-        //   bounds: path.bounds(data3).slice(),
-        //   opts: { scale: zoomAlongOptions.scale } // zoomAlongOptions
-        // }
       })
       .on("end", () => {
         // reset manual pan tracking
@@ -2922,14 +2671,9 @@ console.log(getIdentity(getCenterTransform([p.x,p.y],zoomAlongOptions)))
         </div>
       `)
 
-    // let zoomIdentity = getIdentity(getCenterTransform(getCenterFromTransform(lastIdentity),zoomAlongOptions));
-
-    let p1 = zoomArc.node().getPointAtLength(zoomLength),
-     zoomIdentity = getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
-
     // confirm at final identity
     svg.transition().duration(750).ease(zoomEase)
-      .call(zoom.transform, zoomIdentity) // lastIdentity) // may already be here
+      .call(zoom.transform, lastIdentity) // may already be here
       .on("start", () => {
         // prereverse() to adjust select values stored during preanimate();
         eased = (t, t1 = reversing.t) => trainEase(t/t1);
@@ -4369,7 +4113,7 @@ console.log(getIdentity(getCenterTransform([p.x,p.y],zoomAlongOptions)))
       logBackgrounds = {};
       transitionResume = false;
       reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
-      data1 = null, data2 = null, data3 = null;
+      // data1 = null, data2 = null, data3 = null;
       readyAndWaiting = {};
 
       encounteredPts = new Set(),
@@ -4422,26 +4166,6 @@ console.log(getIdentity(getCenterTransform([p.x,p.y],zoomAlongOptions)))
       // d3.select("#dash").html(state0.dash)
       d3.select("#getOption0").html(state0.opt0)
       d3.select("#getOption1").html(state0.opt1)
-
-      // d3.select("#get-options").node().innerHTML = form0;
-      // d3.select("#dash-plus").node().innerHTML = dash0;
-      // d3.select("#dash-wrapper").node().innerHTML = dash0;
-      // d3.select("#dash-content").node().innerHTML = dash0;
-      // d3.select("#resizable2").node().innerHTML = dash0;
-
-      // // optional? (would be reset programmatically before they are used anyway)
-      // firstIdentity = null, lastIdentity = null;
-      // fullPath = null
-      // tFull,fullLength,tPad,zoomLength
-      // routeDashInterpolator
-      // data0, data1, data2, data3;
-
-       // empty selections? d3.select("div.parent").html("");
-
-       // https://stackoverflow.com/questions/7671965/how-to-reset-dom-after-manipulation#
-       // document.data("map0").replaceAll("#map-plus")
-       // document.data("dash0").replaceAll("#dash-plus")
-       // document.data("modal0").replaceAll("#modal-plus")
 
     }
 
