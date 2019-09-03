@@ -3822,11 +3822,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function expand(elementStr,direction = "up") {
 
-    if (d3.event && d3.event.defaultPrevented) {
-      console.log(d3.event)
-      console.log("expand prevented")
-      return; // dragged
-    }
+    if (d3.event && d3.event.defaultPrevented) return; // dragged
 
     // if window too short to reasonably fit more content, expand modal instead
     if (window.innerHeight < 500) {
@@ -3837,39 +3833,26 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     } else {
 
-      d3.select(`#${elementStr}`)
-        .classed(`disappear-${contentAssoc.opposites[direction]}`, false)
-      d3.select(`#${elementStr}-collapse`)
-        .classed("none", false);
-      d3.select(`#${elementStr}-expand`)
-        .classed("none", true);
+      d3.select(`#${elementStr}`).classed(`disappear-${contentAssoc.opposites[direction]}`, false)
+      d3.select(`#${elementStr}-collapse`).classed("none", false);
+      d3.select(`#${elementStr}-expand`).classed("none", true);
 
       // size- and element-specific toggles upon expand/collapse of various elements
       if (elementStr === "about") {
 
         if (window.innerWidth >= 1200) {
-          d3.select("#section-wrapper")
-            .classed("relative", true);
-          d3.select("#attribution")
-            .classed("mr24-mxl", false)
-          d3.select("#dash-content")
-            .classed("px30-mxl",false)
-          d3.select("#dash").select(".resizer")
-            .classed("ml-neg36-mxl",false)
+          d3.select("#section-wrapper").classed("relative", true);
+          d3.select("#attribution").classed("mr24-mxl", false)
+          d3.select("#dash-content").classed("px30-mxl",false)
+          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
         } else {
-          d3.select("#dash-up")
-            .classed("mt-neg18", true)
-          d3.select("#dash-up")
-            .classed("mt-neg6", false)
-          d3.select("#dash-expand-btn")
-            .classed("h18 mt6", true)
-          d3.select("#dash-expand-btn")
-            .classed("h24 mt0", false)
+          d3.select("#dash-up").classed("mt-neg21", true)
+          d3.select("#dash-up").classed("mt-neg10", false)
+          d3.select("#dash-expand-btn").classed("h18 mt6", true)
+          d3.select("#dash-expand-btn").classed("h24 mt0", false)
           if (d3.select("#dash").classed("disappear-down")) {
-            d3.select("#attribution")
-              .classed("mt-neg24", false)
-            d3.select("#attribution")
-              .classed("mt-neg18 mt-neg24-mxl", true)
+            d3.select("#attribution").classed("mt-neg24", false)
+            d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", true)
           }
         }
 
@@ -3885,18 +3868,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function collapse(elementStr, direction = collapseDirection()) {
 
-    if (d3.event && d3.event.defaultPrevented) {
-      console.log(d3.event)
-      console.log('collapse prevented')
-      return; // dragged
-    }
+    if (d3.event && d3.event.defaultPrevented) return; // dragged
 
-    d3.select(`#${elementStr}`)
-      .classed(`disappear-${direction}`, true);
-    d3.select(`#${elementStr}-expand`)
-      .classed("none", false);
-    d3.select(`#${elementStr}-collapse`)
-      .classed("none", true);
+    d3.select(`#${elementStr}`).classed(`disappear-${direction}`, true);
+    d3.select(`#${elementStr}-expand`).classed("none", false);
+    d3.select(`#${elementStr}-collapse`).classed("none", true);
 
     // size- and element-specific toggles upon expand/collapse of various elements
     if (elementStr === "about") {
@@ -3907,8 +3883,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         d3.select("#dash-content").classed("px30-mxl",true)
         d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
       } else {
-        d3.select("#dash-up").classed("mt-neg6", true)
-        d3.select("#dash-up").classed("mt-neg18", false)
+        d3.select("#dash-up").classed("mt-neg10", true)
+        d3.select("#dash-up").classed("mt-neg21", false)
         d3.select("#dash-expand-btn").classed("h24 mt0", true)
         d3.select("#dash-expand-btn").classed("h18 mt6", false)
         if (d3.select("#dash").classed("disappear-down")) {
@@ -4930,6 +4906,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // first/last identity calculated dynamically, as all other centerTransforms (avoids miszoom if screen size adjusted in the meantime -- esp relevant on reverse)
   // browser stuff fixed:
     // firefox: journey log extends container
+    // play-pause icons compatible
 
 // todo:
   // rid of failure/feelings language
@@ -4943,12 +4920,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // legend-log summary content not on one line (see partial fix noted)
   // about down and expand up arrows get cut off / tucked behind other content
   // lines appear on left when opening details elements / data sources (disappear again on scroll)
+  // no resize event dispatched upon second tab opened/closed (tab bar revealed)
 
 // FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
   // credit bar (bottom right) gets cut off by dash expand on all screen sizes
   // everything blurry upon zoom (ie entire animation..)
   // no details triangles visible within legend-log
-  // reverse icon cut off (or super small?)
 
 // performance:
   // remove elevation query? (see network tab -- slows me down!)

@@ -107,6 +107,8 @@ details > summary > span {
 .mr-neg9 { margin-right: -9px; }
 .ml-neg9 { margin-left: -9px; }
 .mt-neg9 { margin-top: -9px; }
+.mt-neg21 { margin-top: -21px; }
+.mt-neg10 { margin-top: -10px; }
 
 .point-none { pointer-events: none; }
 .point-all { pointer-events: all; }
@@ -209,6 +211,7 @@ details > summary > span {
     border-radius: 5px;
     box-shadow: 1px 1px 1px 1px #2A4C48;
   }
+  .mt11-mm { margin-top: 11px !important; }
   /* missing from Assembly */
   /* .txt-nowrap-mm { white-space: nowrap !important; } */
   .align-l-mm { text-align: left !important; }
