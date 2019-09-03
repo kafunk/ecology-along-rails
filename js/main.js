@@ -1918,18 +1918,16 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             .classed("disappear-down",false)
             .classed("disappear-right",true)
           // make sure section-wrapper not "relative"
-          d3.select("#section-wrapper")
-            .classed("relative",false)
+          d3.select("#section-wrapper").classed("relative",false)
           // adjust dash (& associated) padding so long as #about collapsed on mxl
-          d3.select("#attribution")
-            .classed("mr24-mxl", true)
-          d3.select("#dash-content")
-            .classed("px30-mxl",true)
+          d3.select("#attribution").classed("mr24-mxl", true)
+          d3.select("#dash-content").classed("px30-mxl",true)
           d3.select("#dash").select(".resizer")
             .classed("ml-neg36-mxl",true)
           // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
+            console.log('issue?')
           } else if (d3.select("#modal-about").classed("none")) {
             // if #about not manually closed && modal-about not open
             expand("about","left");
@@ -1951,11 +1949,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // if screen sizing downward from 1200+
       if (d3.select("#aside").classed("mxl")) {
         // remove mxl flag, then reset a variety of styles
-        d3.select("#aside")
-          .classed("mxl", false)
+        d3.select("#aside").classed("mxl", false)
         // reset #about-wrapper height
-        d3.select("#about-wrapper")
-          .style("height", null);
+        d3.select("#about-wrapper").style("height", null);
         // if #about was manually collapsed on screen mxl
         if (d3.select("#about").classed("disappear-right")) {
           // // *keep* #about collapsed, but change class to disappear-down so transitions/placement correct if #about re-expanded from smaller window position
@@ -1963,19 +1959,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             .classed("disappear-down",true)
             .classed("disappear-right",false)
           // replace previously-removed "relative" class in #section-wrapper
-          d3.select("#section-wrapper")
-            .classed("relative", true);
+          d3.select("#section-wrapper").classed("relative", true);
           // reset dash and attribution margins
-          d3.select("#attribution")
-            .classed("mr24-mxl", false)
-          d3.select("#dash-content")
-            .classed("px30-mxl",false)
-          d3.select("#dash").select(".resizer")
-            .classed("ml-neg36-mxl",false)
+          d3.select("#attribution").classed("mr24-mxl", false)
+          d3.select("#dash-content").classed("px30-mxl",false)
+          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
         }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
-        d3.select("#about")
-          .classed("disappear-right", false)
+        d3.select("#about").classed("disappear-right", false)
         collapse("about", "down")
       }
 
@@ -4938,3 +4929,5 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // station updates:
     // REMOVE: Port Kent, NY
     // remove ann arbor?
+
+// make sure manual-close class removed as appropriate
