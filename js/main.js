@@ -139,7 +139,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   svgLoaded = true;
 
   var hiddenSvg = d3.select("#map").append("svg")
-    .attr("id", "hidden-svg")
     .attr("width",0)
     .attr("height", 0)
 
@@ -2556,20 +2555,34 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function departed() {
+
     // track state
     experience.animating = true;
+
     // show play-pause btn & activate listeners
-    d3.select("#play-pause")
-      .classed("none",false)
+
+    // d3.select("#play-pause-icon")
+    //   .text('\u2016') // pause
+    //   .classed("ml-neg6 ml0-mxl",false)
+    d3.select("#play-pause-btn")
+      .classed("hide-visually none",false)
       .property("disabled", false)
-      .text("II")
       .on("click.pause", pauseAnimation)
       .on("click.play", null)
+
+    d3.select("#play-pause-icon")
+      .selectAll(".icon-opt").classed("none",true)
+
+    d3.select("#play-pause-icon")
+      .select("#pause-icon").classed("none",false)
+
     svg.on("click", togglePause)
     window.onkeydown = awaitSpaceBar;
+
     // start global timers
     timer = d3.timer(animate);
     console.log("train departing @ " + Math.floor(d3.now()))
+
   }
 
   function arrived() {
@@ -2615,12 +2628,20 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("#current-time").text(totalTime)
 
     // update play-pause btn and listeners
-    d3.select("#play-pause")
-      .text('\u21BB')
+    // d3.select("#play-pause-icon")
+    //   .text('\u21BB')
+    //   .classed("ml-neg6 ml0-mxl",true)
+    d3.select("#play-pause-btn")
       .on("click.replay",replayAnimation)
       .on("click.play",null)
       .on("click.pause",null)
-      // .property("disabled", true); // no need to hide completely
+
+    d3.select("#play-pause-icon")
+      .selectAll(".icon-opt").classed("none",true)
+
+    d3.select("#play-pause-icon")
+      .select("#replay-icon").classed("none",false)
+
     svg.on("click", null)
     window.onkeydown = null;
 
@@ -2640,15 +2661,25 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("#current-time").text("0")
 
     // reenable and update play-pause btn
-    d3.select("#play-pause")
-      .html("")
-      .text('\u25BA') // Play
+    // d3.select("#play-pause-icon")
+    //   .html('')
+    //   .text('\u25BA') // Play
+    //   .classed("pr18",false)
+    //   .classed("mb-neg3 ml-neg6 ml0-mxl",true)
+    //   // .classed("px6 px12-ml",true)
+    //   // .classed("px3 px6-ml",false)
+
+    d3.select("#play-pause-btn")
       .on("click.replay",null)
       .on("click.play",getSet)
       .on("click.pause",null)
-      .classed("px6 px12-ml",true)
-      .classed("px3 px6-ml",false)
       .property("disabled",false)
+
+    d3.select("#play-pause-icon")
+      .selectAll(".icon-opt").classed("none",true)
+
+    d3.select("#play-pause-icon")
+      .select("#play-icon").classed("none",false)
 
     // automatically restart animation from beginning?
     d3.timeout(getSet(true),tPause * 12); // again = true; ensure quadtree encounters only triggering reveal, not readding to dom
@@ -2657,19 +2688,26 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function replayAnimation() {
     // update play-pause icon
-    d3.select("#play-pause")
-      .text('')
+    d3.select("#play-pause-btn")
       .on("click.play",null)
       .on("click.pause",null)
       .on("click.replay",null)
       .property("disabled",true)
-      .classed("px6 px12-ml",false)
-      .classed("px3 px6-ml",true)
-      .html(`
-        <div id="testid" class="h-full w-full flex-parent flex-parent--center-cross flex-parent--center-main">
-          <span class="flex-child loading loading--s point-none horz-flip"></span>
-        </div>
-      `)
+
+    // d3.select("#play-pause-icon")
+    //   .text('')
+    //   .classed("mb-neg3 ml-neg6 ml0-mxl",false)
+    //   .html(`
+    //     <div class="horz-flip mr-neg6 mr-neg3-mxl">
+    //       <span class="loading loading--s"></span>
+    //     </div>
+    //   `)
+
+    d3.select("#play-pause-icon")
+      .selectAll(".icon-opt").classed("none",true)
+
+    d3.select("#play-pause-icon")
+      .select("#reversing-icon").classed("none",false)
 
     // confirm at final identity
     svg.transition().duration(750).ease(zoomEase)
@@ -4018,10 +4056,19 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // stop timer (after pausedAt stored)
     timer.stop();
     // toggle play/pause
-    d3.select("#play-pause")
-      .text('\u25BA') // Play
+    // d3.select("#play-pause-icon")
+    //   .text('\u25BA') // Play
+    //   .classed("ml-neg6 ml0-mxl",true)
+    d3.select("#play-pause-btn")
       .on("click.play",resumeAnimation)
       .on("click.pause",null)
+
+    d3.select("#play-pause-icon")
+      .selectAll(".icon-opt").classed("none",true)
+
+    d3.select("#play-pause-icon")
+      .select("#play-icon").classed("none",false)
+
     // allow free zooming while paused
     svg.call(zoom)
   }
@@ -4067,10 +4114,20 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // if (animatable) ?
       timer.restart(animate,delay,time);
       // toggle pause-play
-      d3.select("#play-pause")
-        .text("II") // Pause
+      // d3.select("#play-pause-icon")
+      //   // .text("II") // Pause
+      //   .text('\u2016')
+      //   .classed("ml-neg6 ml0-mxl",false)
+      d3.select("#play-pause-btn")
         .on("click.pause", manualPause)
         .on("click.play", null)
+
+      d3.select("#play-pause-icon")
+        .selectAll(".icon-opt").classed("none",true)
+
+      d3.select("#play-pause-icon")
+        .select("#pause-icon").classed("none",false)
+
     }
 
   }
@@ -4916,9 +4973,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // fix glitchiness on sibling drag within legend log (due to recent h-full addition?)
   // fix zoom jump on about collapse
   // adjustsize/reset multiple times to avoid stalling before cache occurs
+  // first/last identity calculated dynamically, as all other centerTransforms (avoids miszoom if screen size adjusted in the meantime -- esp relevant on reverse)
+  // browser stuff fixed:
+    // firefox: journey log extends container
 
 // todo:
-  // first/last identity calculated dynamically, as all other centerTransforms (avoids miszoom if screen size adjusted in the meantime -- esp relevant on reverse)
   // rid of failure/feelings language
   // form smoothness
   // clicking on log name while animated paused/stopped zooms to feature
@@ -4933,7 +4992,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 // FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
   // credit bar (bottom right) gets cut off by dash expand on all screen sizes
-  // journey log extends container
   // everything blurry upon zoom (ie entire animation..)
   // no details triangles visible within legend-log
   // reverse icon cut off (or super small?)

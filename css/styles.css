@@ -21,6 +21,7 @@ a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
 
 svg path { stroke-linejoin: round; }
+  /* shape-rendering: geometricPrecision; } <-- Firebox SVG is blurry on zoom?? */
   /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
 ul.show-bullets li { list-style: outside; }
@@ -31,7 +32,6 @@ ul.show-bullets--square li { list-style: square; }
   position: absolute;
   top: 0.5; left: 8px;
 }
-
 /* hide details triangle marker until child content added */
 details.hide-triangle > summary {
   list-style: none;
@@ -39,6 +39,19 @@ details.hide-triangle > summary {
 details.hide-triangle > summary::-webkit-details-marker {
   display: none;
 }
+
+details.show-triangle > summary {
+  /* list-style: none; */
+  list-style:initial;
+}
+
+details.show-triangle > summary::-webkit-details-marker {
+  /* display: inline-block; */
+  display: flex;
+ font-size: 125%;
+ margin-left: 2px;
+}
+
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
 .legend-log-child-item {
   margin-left: 12px
@@ -56,6 +69,8 @@ details.color-symbol > summary::-webkit-details-marker {
 details > summary > span {
   color: rgba(0,0,0,0.75);
 }
+
+/* #play-pause-txt { transform: scale(1.4); } */
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
@@ -85,9 +100,30 @@ details > summary > span {
   direction: ltr; unicode-bidi: embed;
 }
 
+.mt1 { margin-top: 1px;}
+.mb1 { margin-bottom: 1px; }
+.my9 { margin-top: 9px; margin-bottom: 9px; }
+.mb-neg9 { margin-bottom: -9px; }
+.mr-neg9 { margin-right: -9px; }
+.ml-neg9 { margin-left: -9px; }
+.mt-neg9 { margin-top: -9px; }
+
 .point-none { pointer-events: none; }
 .point-all { pointer-events: all; }
 .horz-flip { transform: scale(-1, 1); }
+.rotate90 { transform: rotate(90deg); }
+/* .replay { transform: translate(2%,-10%) scale(-1, 1) rotate(-45deg); } */
+#replay-icon { transform: scale(-1, 1) rotate(-45deg); }
+#play-icon { transform: scale(-1.5, 0.75) rotate(135deg); }
+/* translate(2%,-10%)  */
+@media screen and (min-width: 1200px) {
+  .mr-neg9-mxl {
+    margin-right: -9px !important;
+  }
+  .mt-neg9-mxl {
+    margin-top: -9px !important;
+  }
+}
 
 .bg-base { background: #2A4C48; }
 /* .bg-main {} */
@@ -200,6 +236,7 @@ details > summary > span {
   .reverse-order-mxl li .nevermind-reverse {
     direction: ltr; unicode-bidi: embed;
   }
+  .mb-neg9-mxl { margin-bottom: -9px; }
   .flex3-mxl { order: 3; }
   .flex4-mxl { order: 4; }
   /* missing from Assembly */
