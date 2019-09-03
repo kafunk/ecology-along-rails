@@ -40,19 +40,18 @@ details.hide-triangle > summary::-webkit-details-marker {
   display: none;
 }
 
-details.show-triangle > summary {
-  /* works on current chrome too */
-  /* list-style: none; */
-  /* list-style: initial; */
-  /* display: flex; */
-  /* padding-right: 12px; */
-  /* transform: translateX(-1px); */
+
+details.show-triangle > summary::marker {
+  position: absolute;
+  font-size: 150%;
+  margin-bottom: -18px;
+  margin-left: 8px;
+  padding-top: 6px;
+  vertical-align: middle;
 }
 
 details.show-triangle > summary::-webkit-details-marker {
-  /* display: flex; */
   font-size: 125%; /* enlarges details triangle on chrome only */
-  /* list-style: initial; */
   margin-top: 8px;
   vertical-align: middle;
 }
@@ -61,20 +60,20 @@ details.show-triangle > summary::-webkit-details-marker {
     margin-top: 7px;
     margin-left: -1px;
   }
+  details.show-triangle > summary::marker {
+    margin-bottom: -20px;
+    margin-left: 6px;
+  }
 }
 @media screen and (min-width: 1200px) {
   details.show-triangle > summary::-webkit-details-marker {
     margin-top:  6px;
     margin-left: -2px;
   }
+  details.show-triangle > summary::marker {
+    margin-bottom: -22px;
+  }
 }
-
-/* details.show-triangle:open > summary::-webkit-details-marker {
-    padding-right: 12px;
-    margin-right: 6px;
-    margin-left: -3px;
-    color: red;
-} */
 
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
 .legend-log-child-item {

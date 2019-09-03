@@ -3645,15 +3645,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               <label class="flex-child flex-child--grow log-name px3">${group.fullTxt}</label>
               <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
 
-// COMBAK partial safari fix (creates the different problem of decentering triangle)
-// <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash">
-//   ${innerHtml}
-// </div>
- // class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash hmin24"
-
-// aberdeen amherst overzooms?
-// WRAP LOG SYMBOL IN VERTICAL FLEX DIV
-// flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash
             if (isParent) {
               html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle">
                 <summary>
@@ -4909,13 +4900,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // first/last identity calculated dynamically, as all other centerTransforms (avoids miszoom if screen size adjusted in the meantime -- esp relevant on reverse)
   // browser stuff fixed:
     // firefox: journey log extends container
-    // play-pause icons compatible
+    // play-pause icons compatible (safari)
     // safari: about down and expand up arrows get cut off / tucked behind other content
-    // about pane reopen right DOES NOT WORK; on first open, collapse bar misaligned (fixed on adjustsize()...); subsequently opening causes entire pane to pop off screen
-    // credit bar (bottom right) gets cut off by dash expand on all screen sizes
+    // about pane reopen right DOES NOT WORK; on first open, collapse bar misaligned (fixed on adjustsize()...); subsequently opening causes entire pane to pop off screen (safari)
+    // credit bar (bottom right) gets cut off by dash expand on all screen sizes (firefox)
     // make sure manual-close class removed as appropriate
+    // no details triangles visible within legend-log (firefox)
 
 // todo:
+  // points with texture have solid/dark back/border to distinguish? recalc texture to avoid blending?
   // rid of failure/feelings language
   // form smoothness
   // clicking on log name while animated paused/stopped zooms to feature
@@ -4926,10 +4919,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // legend-log summary content not on one line (see partial fix noted)
   // lines appear on left when opening details elements / data sources (disappear again on scroll)
   // no resize event dispatched upon second tab opened/closed (tab bar revealed)
+  // watershed html texture doesn't render (legend-log, narrative) (also firefox)
 
 // FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
   // everything blurry upon zoom (ie entire animation..)
-  // no details triangles visible within legend-log
+  // aberdeen amherst overzooms on small screens?
+  // watershed html texture doesn't render (legend-log, narrative) (also safari)
 
 // performance:
   // remove elevation query? (see network tab -- slows me down!)
