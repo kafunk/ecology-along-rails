@@ -1821,19 +1821,23 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   d3.select("#dash-collapse-btn").on("click", () =>  collapse('dash','down'))
   d3.select("#modal-close-btn").on("click", () =>  toggleModal())
   d3.select("#about-up-btn").on("click", () => {
-    expand('about','up')
+    d3.select("#about").classed("manual-close",false);
     if (!d3.select("#modal-about").classed("none")) toggleModal("modal-about")
+    expand('about','up')
   })
   d3.select("#about-left-btn").on("click", () => {
-    expand('about','left')
+    d3.select("#about").classed("manual-close",false);
     if (!d3.select("#modal-about").classed("none")) toggleModal("modal-about")
+    expand('about','left')
   })
   d3.select("#about-down-btn").on("click", () => {
     d3.select("#about").classed("manual-close",true);
     collapse('about','down')
   })
-  d3.select("#about-right-btn").on("click", () => collapse('about','right'))
-
+  d3.select("#about-right-btn").on("click", () => {
+    d3.select("#about").classed("manual-close",true);
+    collapse('about','right')
+  })
   d3.select("#about-expand-icon").on("click", () => {
     collapse("about")
     if (d3.select("#modal-about").classed("none")) toggleModal("modal-about")
@@ -1920,14 +1924,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           // make sure section-wrapper not "relative"
           d3.select("#section-wrapper").classed("relative",false)
           // adjust dash (& associated) padding so long as #about collapsed on mxl
-          d3.select("#attribution").classed("mr24-mxl", true)
+          d3.select("#attribution").classed("mr26-mxl", true)
           d3.select("#dash-content").classed("px30-mxl",true)
           d3.select("#dash").select(".resizer")
             .classed("ml-neg36-mxl",true)
           // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
-            console.log('issue?')
           } else if (d3.select("#modal-about").classed("none")) {
             // if #about not manually closed && modal-about not open
             expand("about","left");
@@ -1961,7 +1964,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           // replace previously-removed "relative" class in #section-wrapper
           d3.select("#section-wrapper").classed("relative", true);
           // reset dash and attribution margins
-          d3.select("#attribution").classed("mr24-mxl", false)
+          d3.select("#attribution").classed("mr26-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
         }
@@ -3833,7 +3836,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         if (window.innerWidth >= 1200) {
           d3.select("#section-wrapper").classed("relative", true);
-          d3.select("#attribution").classed("mr24-mxl", false)
+          d3.select("#attribution").classed("mr26-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
         } else {
@@ -3850,7 +3853,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         adjustSize();
 
       } else if (elementStr === "dash") {
-        d3.select("#attribution").classed("mt-neg18 mt-neg24 mt-neg24-mxl", false)
+        d3.select("#attribution").classed("mt-neg18 mt-neg24 mt-neg24-mxl mb24", false)
+        d3.select("#attribution").classed("mt-neg6 mb6", true)
       }
 
     }
@@ -3870,7 +3874,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       if (window.innerWidth >= 1200) {
         d3.select("#section-wrapper").classed("relative", false)
-        d3.select("#attribution").classed("mr24-mxl", true)
+        d3.select("#attribution").classed("mr26-mxl", true)
         d3.select("#dash-content").classed("px30-mxl",true)
         d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
       } else {
@@ -3887,6 +3891,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       if (svgLoaded) adjustSize();
 
     } else if (elementStr === "dash") {
+      d3.select("#attribution").classed("mt-neg6 mb6",false)
+      d3.select("#attribution").classed("mb24",true)
       if (d3.select("#about").classed("disappear-down")) {
         d3.select("#attribution").classed("mt-neg24", true)
         d3.select("#attribution").classed("mt-neg18 mt-neg24-mxl", false)
@@ -4898,6 +4904,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // browser stuff fixed:
     // firefox: journey log extends container
     // play-pause icons compatible
+    // safari: about down and expand up arrows get cut off / tucked behind other content
+    // about pane reopen right DOES NOT WORK; on first open, collapse bar misaligned (fixed on adjustsize()...); subsequently opening causes entire pane to pop off screen
 
 // todo:
   // rid of failure/feelings language
@@ -4906,10 +4914,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // cues to click or hit spacebar for pause
   // cross browser testing: Judges will use the current versions of Firefox, Safari, or Chrome with a true color monitor with a resolution of at least 1280 x 800.
 
-// SAFARI FIXES (ENSURE CURRENT, NOT DEVE)
-  // about pane reopen right DOES NOT WORK; on first open, collapse bar misaligned (fixed on adjustsize()...); subsequently opening causes entire pane to pop off screen
+// SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // legend-log summary content not on one line (see partial fix noted)
-  // about down and expand up arrows get cut off / tucked behind other content
   // lines appear on left when opening details elements / data sources (disappear again on scroll)
   // no resize event dispatched upon second tab opened/closed (tab bar revealed)
 

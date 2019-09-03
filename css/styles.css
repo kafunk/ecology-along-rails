@@ -41,15 +41,18 @@ details.hide-triangle > summary::-webkit-details-marker {
 }
 
 details.show-triangle > summary {
+  /* works on current chrome too */
   /* list-style: none; */
-  list-style:initial;
+  /* list-style: initial; */
+  /* display: flex; */
+  /* padding-right: 12px; */
+  /* transform: translateX(-1px); */
 }
 
 details.show-triangle > summary::-webkit-details-marker {
-  /* display: inline-block; */
-  display: flex;
- font-size: 125%;
- margin-left: 2px;
+  /* display: flex; */
+  font-size: 125%; /* enlarges details triangle on chrome only */
+  /* list-style: initial; */
 }
 
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
@@ -102,6 +105,7 @@ details > summary > span {
 
 .mt1 { margin-top: 1px;}
 .mb1 { margin-bottom: 1px; }
+.mr1 { margin-right: 1px; }
 .my9 { margin-top: 9px; margin-bottom: 9px; }
 .mb-neg9 { margin-bottom: -9px; }
 .mr-neg9 { margin-right: -9px; }
@@ -231,6 +235,7 @@ details > summary > span {
   }
   .flex3-mxl { order: 3; }
   .flex4-mxl { order: 4; }
+  .mr26-mxl { margin-right: 26px !important; }
 
   .txt-nowrap-mxl { white-space: nowrap !important; }
   /* missing from Assembly */
