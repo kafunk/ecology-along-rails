@@ -3649,11 +3649,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 // <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash">
 //   ${innerHtml}
 // </div>
+ // class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash hmin24"
 
+// aberdeen amherst overzooms?
+// WRAP LOG SYMBOL IN VERTICAL FLEX DIV
+// flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash
             if (isParent) {
               html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle">
-                <summary class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash hmin24">
-                  ${innerHtml}
+                <summary>
+                  <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash">
+                    ${innerHtml}
+                  </div>
                 </summary>
               </details>`
             } else {
@@ -4906,6 +4912,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // play-pause icons compatible
     // safari: about down and expand up arrows get cut off / tucked behind other content
     // about pane reopen right DOES NOT WORK; on first open, collapse bar misaligned (fixed on adjustsize()...); subsequently opening causes entire pane to pop off screen
+    // credit bar (bottom right) gets cut off by dash expand on all screen sizes
+    // make sure manual-close class removed as appropriate
 
 // todo:
   // rid of failure/feelings language
@@ -4920,7 +4928,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // no resize event dispatched upon second tab opened/closed (tab bar revealed)
 
 // FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
-  // credit bar (bottom right) gets cut off by dash expand on all screen sizes
   // everything blurry upon zoom (ie entire animation..)
   // no details triangles visible within legend-log
 
@@ -4935,5 +4942,3 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // station updates:
     // REMOVE: Port Kent, NY
     // remove ann arbor?
-
-// make sure manual-close class removed as appropriate
