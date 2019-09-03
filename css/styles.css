@@ -70,8 +70,6 @@ details > summary > span {
   color: rgba(0,0,0,0.75);
 }
 
-/* #play-pause-txt { transform: scale(1.4); } */
-
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
 
@@ -92,6 +90,8 @@ details > summary > span {
 #resizable { height: 120px; }
 
 #dash .resizer { cursor: ns-resize; }
+#replay-icon { transform: scale(-1, 1) rotate(-45deg); }
+#play-icon { transform: scale(-1.5, 0.75) rotate(135deg); }
 
 /* reverse triangle position and direction on data source details elements  */
 .reverse-order { direction: rtl; }
@@ -112,18 +112,6 @@ details > summary > span {
 .point-all { pointer-events: all; }
 .horz-flip { transform: scale(-1, 1); }
 .rotate90 { transform: rotate(90deg); }
-/* .replay { transform: translate(2%,-10%) scale(-1, 1) rotate(-45deg); } */
-#replay-icon { transform: scale(-1, 1) rotate(-45deg); }
-#play-icon { transform: scale(-1.5, 0.75) rotate(135deg); }
-/* translate(2%,-10%)  */
-@media screen and (min-width: 1200px) {
-  .mr-neg9-mxl {
-    margin-right: -9px !important;
-  }
-  .mt-neg9-mxl {
-    margin-top: -9px !important;
-  }
-}
 
 .bg-base { background: #2A4C48; }
 /* .bg-main {} */
@@ -236,12 +224,15 @@ details > summary > span {
   .reverse-order-mxl li .nevermind-reverse {
     direction: ltr; unicode-bidi: embed;
   }
-  .mb-neg9-mxl { margin-bottom: -9px; }
   .flex3-mxl { order: 3; }
   .flex4-mxl { order: 4; }
   /* missing from Assembly */
   .align-l-mxl { text-align: left !important; }
   .align-r-mxl { text-align: right !important; }
+  .ml-neg9-mxl { margin-right: -9px !important; }
+  .mr-neg9-mxl { margin-right: -9px !important; }
+  .mt-neg9-mxl { margin-top: -9px !important; }
+  .mb-neg9-mxl { margin-bottom: -9px !important; }
 }
 
 /* ANIMATION */

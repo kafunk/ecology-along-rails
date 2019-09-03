@@ -2560,19 +2560,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     experience.animating = true;
 
     // show play-pause btn & activate listeners
-
-    // d3.select("#play-pause-icon")
-    //   .text('\u2016') // pause
-    //   .classed("ml-neg6 ml0-mxl",false)
     d3.select("#play-pause-btn")
       .classed("hide-visually none",false)
       .property("disabled", false)
       .on("click.pause", pauseAnimation)
       .on("click.play", null)
-
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none",true)
-
     d3.select("#play-pause-icon")
       .select("#pause-icon").classed("none",false)
 
@@ -2628,17 +2622,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("#current-time").text(totalTime)
 
     // update play-pause btn and listeners
-    // d3.select("#play-pause-icon")
-    //   .text('\u21BB')
-    //   .classed("ml-neg6 ml0-mxl",true)
     d3.select("#play-pause-btn")
       .on("click.replay",replayAnimation)
       .on("click.play",null)
       .on("click.pause",null)
-
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none",true)
-
     d3.select("#play-pause-icon")
       .select("#replay-icon").classed("none",false)
 
@@ -2661,23 +2650,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("#current-time").text("0")
 
     // reenable and update play-pause btn
-    // d3.select("#play-pause-icon")
-    //   .html('')
-    //   .text('\u25BA') // Play
-    //   .classed("pr18",false)
-    //   .classed("mb-neg3 ml-neg6 ml0-mxl",true)
-    //   // .classed("px6 px12-ml",true)
-    //   // .classed("px3 px6-ml",false)
-
     d3.select("#play-pause-btn")
       .on("click.replay",null)
       .on("click.play",getSet)
       .on("click.pause",null)
       .property("disabled",false)
-
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none",true)
-
     d3.select("#play-pause-icon")
       .select("#play-icon").classed("none",false)
 
@@ -2693,22 +2672,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .on("click.pause",null)
       .on("click.replay",null)
       .property("disabled",true)
-
-    // d3.select("#play-pause-icon")
-    //   .text('')
-    //   .classed("mb-neg3 ml-neg6 ml0-mxl",false)
-    //   .html(`
-    //     <div class="horz-flip mr-neg6 mr-neg3-mxl">
-    //       <span class="loading loading--s"></span>
-    //     </div>
-    //   `)
-
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none",true)
-
     d3.select("#play-pause-icon")
       .select("#reversing-icon").classed("none",false)
-
     // confirm at final identity
     svg.transition().duration(750).ease(zoomEase)
       .call(zoom.transform, lastIdentity) // may already be here
@@ -4056,19 +4023,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // stop timer (after pausedAt stored)
     timer.stop();
     // toggle play/pause
-    // d3.select("#play-pause-icon")
-    //   .text('\u25BA') // Play
-    //   .classed("ml-neg6 ml0-mxl",true)
     d3.select("#play-pause-btn")
       .on("click.play",resumeAnimation)
       .on("click.pause",null)
-
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none",true)
-
     d3.select("#play-pause-icon")
       .select("#play-icon").classed("none",false)
-
     // allow free zooming while paused
     svg.call(zoom)
   }
@@ -4114,20 +4075,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // if (animatable) ?
       timer.restart(animate,delay,time);
       // toggle pause-play
-      // d3.select("#play-pause-icon")
-      //   // .text("II") // Pause
-      //   .text('\u2016')
-      //   .classed("ml-neg6 ml0-mxl",false)
       d3.select("#play-pause-btn")
         .on("click.pause", manualPause)
         .on("click.play", null)
-
       d3.select("#play-pause-icon")
         .selectAll(".icon-opt").classed("none",true)
-
       d3.select("#play-pause-icon")
         .select("#pause-icon").classed("none",false)
-
     }
 
   }
