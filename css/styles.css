@@ -202,6 +202,7 @@ details > summary > span {
 @media screen and (min-width: 400px) {
   /* missing from Assembly */
   .txt-nowrap-sm { white-space: nowrap !important; }
+  .inline-block-sm { display: inline-block !important; }
 }
 @media screen and (min-width: 640px) {
   #resizable { height: 180px; }
@@ -213,13 +214,14 @@ details > summary > span {
   }
   .mt11-mm { margin-top: 11px !important; }
   /* missing from Assembly */
-  /* .txt-nowrap-mm { white-space: nowrap !important; } */
+  .txt-nowrap-mm { white-space: nowrap !important; }
   .align-l-mm { text-align: left !important; }
   .align-r-mm { text-align: right !important; }
 }
 @media screen and (min-width: 640px) and (max-width: 1199px) {
   .flex3-mm-ml { order: 3; }
   .flex4-mm-ml { order: 4; }
+  .txt-nowrap-ml { white-space: nowrap !important; }
 }
 @media screen and (min-width: 1200px) {
   .reverse-order-mxl { direction: rtl; }
@@ -229,6 +231,8 @@ details > summary > span {
   }
   .flex3-mxl { order: 3; }
   .flex4-mxl { order: 4; }
+
+  .txt-nowrap-mxl { white-space: nowrap !important; }
   /* missing from Assembly */
   .align-l-mxl { text-align: left !important; }
   .align-r-mxl { text-align: right !important; }

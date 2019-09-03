@@ -43,9 +43,9 @@
           <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane--> <!--h-full-->
 
             <!-- map and overlay pane -->
-            <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-darken75">
+            <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-map">
 
-              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-map"> <!--h-full-->
+              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-darken25"> <!--h-full-->
 
                 <!-- map overlay: buttons, legend, other ui -->
                 <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl point-none"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
@@ -561,58 +561,59 @@
                     </div>
 
                     <!-- GET START/END FORM -->
-                    <form id="get-options" class="flex-child flex-child--grow col col--12 wmax600 w600-mxl shadow-darken75 round px12 py12 mx-auto bg-modal">
-                      <div class="flex-parent flex-parent--center-cross grid bg-lighten50">
-                        <!-- Form Header-->
-                        <legend class="flex-child col col--12 col--6-mm col--5-mxl my24 align-center px12 px12-ml color-darken75">
-                          <h2 class="txt-h3 txt-fancy color-darken75">Select a Route <br class="none inline-block-mm"/> to Experience</h2>
+                    <form id="get-options" class="flex-child flex-child--grow col col--12 wmax600 shadow-darken75 round px12 py12 mx-auto bg-modal">
+                      <div class="flex-parent flex-parent--center-cross grid bg-lighten50 round">
+                        <!-- Form Header -->
+                        <legend class="flex-child flex-child--grow col col--12 col--6-mm col--5-mxl bg-lighten10 px12 px18-mxl py18 py36-mm w-full align-center color-darken75 round-tl">
+                          <h2 class="txt-h3 txt-fancy color-darken75"><span class="txt-nowrap-mxl txt-h3 txt-fancy color-darken50">Select a Route</span> <span class="txt-nowrap-mm txt-h3 txt-fancy color-darken50">to Experience</span></h2>
                         </legend>
                         <!-- Fieldset wrapper-->
-                        <div class="flex-child col col--12 col--6-mm col--7-mxl px12 py12 bg-lighten75">
-                          <!-- Get Start -->
-                          <fieldset class="py6 relative">
-                            <!-- default input (search box with matching) wrapper -->
-                            <div class='absolute flex-parent flex-parent--center-cross w36 h36 pl3'>
-                              <span class="triangle--r"></span>
-                            </div>
-                            <input type="text" id="getOption0" class="input pl36" value="Enter origin" list="startList" placeholder="You have to start somewhere" required />
-                            <datalist id="startList">
-                              <label for="option0Suggest">(-- some possibilities --)</label>
-                              <!-- backup input box (dropdown) wrapper -->
-                              <div class="select-container">
-                                <!-- dropdown1 (start route) -->
-                                <select id="option0Suggest" class="input select start-node">
-                                  <!-- insert start options here: -->
-                                  <!-- <option value=${cityState} class=${country}>${cityState}</option> -->
-                                </select>
-                                <div class='select-arrow'></div>
+                        <div class="flex-child col col--12 col--6-mm col--7-mxl px12 py12 bg-lighten75 round-tr">
+                            <!-- Get Start -->
+                            <fieldset class="px12 py12 relative">
+                              <!-- default input (search box with matching) wrapper -->
+                              <div class='absolute flex-parent flex-parent--center-cross w36 h36 pl3'>
+                                <span class="triangle--r"></span>
                               </div>
-                            </datalist>
-                          </fieldset>
-                          <!-- Get End -->
-                          <fieldset class="py6 mt3">
-                            <!-- default input (search box with matching) wrapper -->
-                            <div class='absolute flex-parent flex-parent--center-cross w36 h36 pl3'>
-                              <span class="triangle--r"></span>
-                            </div>
-                            <input type="text" id="getOption1" class="input pl36" value="Enter destination" list="endList" placeholder="Everything ends" required />
-                            <datalist id="endList">
-                              <label for="option1Suggest">(-- some possibilities --)</label>
-                              <!-- backup input box (dropdown) wrapper -->
-                              <div class="select-container">
-                                <!-- dropdown2 (end route) -->
-                                <select id="option1Suggest" class="input select end-node">
-                                  <!-- insert end options here: -->
-                                  <!-- <option value=${cityState} class=${country}>${cityState}</option> -->
-                                </select>
-                                <div class='select-arrow'></div>
+                              <input type="text" id="getOption0" class="input pl36" value="Enter origin" list="startList" placeholder="You have to start somewhere" required />
+                              <datalist id="startList">
+                                <label for="option0Suggest">(-- some possibilities --)</label>
+                                <!-- backup input box (dropdown) wrapper -->
+                                <div class="select-container">
+                                  <!-- dropdown1 (start route) -->
+                                  <select id="option0Suggest" class="input select start-node">
+                                    <!-- insert start options here: -->
+                                    <!-- <option value=${cityState} class=${country}>${cityState}</option> -->
+                                  </select>
+                                  <div class='select-arrow'></div>
+                                </div>
+                              </datalist>
+                            </fieldset>
+                            <!-- Get End -->
+                            <fieldset class="px12 py12">
+                              <!-- default input (search box with matching) wrapper -->
+                              <div class='absolute flex-parent flex-parent--center-cross w36 h36 pl3'>
+                                <span class="triangle--r"></span>
                               </div>
-                            </datalist>
-                          </fieldset>
-                        </div> <!-- end fieldset wrapper -->
+                              <input type="text" id="getOption1" class="input pl36" value="Enter destination" list="endList" placeholder="Everything ends" required />
+                              <datalist id="endList">
+                                <label for="option1Suggest">(-- some possibilities --)</label>
+                                <!-- backup input box (dropdown) wrapper -->
+                                <div class="select-container">
+                                  <!-- dropdown2 (end route) -->
+                                  <select id="option1Suggest" class="input select end-node">
+                                    <!-- insert end options here: -->
+                                    <!-- <option value=${cityState} class=${country}>${cityState}</option> -->
+                                  </select>
+                                  <div class='select-arrow'></div>
+                                </div>
+                              </datalist>
+                            </fieldset>
+                          </div> <!-- end fieldset wrapper -->
+                        <!-- </div> -->
                         <!-- GO button -->
                         <fieldset class="flex-child col col--12 h36">
-                          <button id="submit-btn" class="h-full w-full btn btn--darken50 unround txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main">
+                          <button id="submit-btn" class="h-full w-full btn btn--darken50 unround-tl unround-tr txt-spacing4 flex-parent flex-parent--center-cross flex-parent--center-main round-bl round-br">
                             <span id="submit-btn-txt" class="txt-fancy2 flex-child txt-l mt-neg12 pt6 mb-neg3">LET'S GO</span>
                             <span id="submit-btn-load" class="flex-child loading loading--s loading--dark none"></span>
                           </button>
@@ -622,7 +623,7 @@
 
                     <!-- modal close button -->
                     <label id="modal-close">
-                      <button id="modal-close-btn" class='absolute top right btn color-lighten75 bg-base opacity75 bg-lighten25-on-hover border-t border-r bg-darken50-on-active round-full px3 py3 mt6 mr6 mt3-mm mr3-mm z5'>
+                      <button id="modal-close-btn" class='absolute top right btn color-lighten75 bg-base bg-darken50-on-hover border-t border-r bg-darken75-on-active round-full px3 py3 mt12 mr12 z5'>
                         <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-close'/></svg>
                       </button>
                     </label>
@@ -640,7 +641,8 @@
         </section>
 
         <!-- ASIDE -->
-        <aside id="aside" class='flex-child scroll-hidden bg-aside'>
+        <aside id="aside" class='flex-child scroll-hidden bg-aside wmax360-mxl'>
+          <!-- w-full -->
 
           <!-- inner about/sidebar content wrapper -->
           <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross ">
@@ -654,10 +656,10 @@
                 <!-- toggles -->
                 <div id="about-toggles" class="flex-child">
 
-                  <div class="flex-parent flex-parent--center-cross flex-parent--center-main">
+                  <div class="flex-parent flex-parent--center-cross flex-parent--center-main h-full border-l-mxl border-l--2">
 
                     <!-- about expand triggers -->
-                    <label id="about-expand" class="flex-child h24 w24-mxl none">
+                    <label id="about-expand" class="flex-child h24 w24-mxl h-full-mxl none">
 
                       <!-- about expand triangle--u -->
                       <button id="about-up-btn" class='absolute left right btn color-lighten100 bg-accent2 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround h24 w-full none-mxl'>
@@ -672,7 +674,7 @@
                     </label>
 
                     <!-- about collapse triggers -->
-                    <label id="about-collapse" class="flex-child h12 w6-mxl z2">
+                    <label id="about-collapse" class="flex-child h12 w6-mxl z2 relative-mxl h-full-mxl">
 
                       <!-- about collapse triangle--d -->
                       <button id="about-down-btn" class='absolute left right btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround h18 border-t w-full none-mxl'>
@@ -680,8 +682,8 @@
                       </button>
 
                       <!-- about collapse triangle--r -->
-                      <button id="about-right-btn" class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active border-l unround none block-mxl'>
-                        <span class='absolute icon triangle-l triangle-l--r ml-neg3 mt-neg9'></span>
+                      <button id="about-right-btn" class='absolute top bottom btn color-lighten100 bg-transparent color-darken50-on-hover color-darken75-on-active unround none block-mxl'>
+                        <span class='absolute icon triangle-l triangle-l--r mt-neg9'></span>
                       </button>
 
                     </label>
@@ -690,7 +692,8 @@
 
                 </div>
 
-                <div id="about" class="flex-child w360-mxl wmin240-mxl">
+                <div id="about" class="flex-child flex-child--grow">
+                   <!-- w360-mxl wmin240-mxl -->
 
                   <!-- about inner wrapper -->
                   <div id="about-wrapper" class='flex-parent flex-parent--column-mxl flex-parent--stretch-cross flex-parent--center-main py12-mxl px12-mxl'>
