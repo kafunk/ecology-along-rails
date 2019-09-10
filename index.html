@@ -52,19 +52,21 @@
 
                   <!-- top left // Custom Data UI Elements -->
                   <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my9 z3 txt-s txt-m-mxl h30 h36-mxl'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
-                    <button disabled id="select-new" class='flex-child btn round reset-options point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active mx3 mx6-mxl h-full'>Select New Route</button>
-                    <button disabled id="play-pause-btn" class='btn round play-pause point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active flex-parent flex-parent--center-cross flex-parent--center-main mx3 mx6-mm my6 h-full w30 w36-mxl hide-visually none'>
-                      <div id="play-pause-icon" class="flex-child flex-child--grow txt-bold point-none">
-                        <span id="pause-icon" class="relative ml3 mr-neg3 mr-neg1-mxl icon-opt none">
-                          <svg class='icon pause ml-neg12 mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top left'><use xlink:href='#icon-minus'/></svg>
-                          <svg class='icon pause mr-neg6 mr-neg9-mxl mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top right'><use xlink:href='#icon-minus'/></svg>
-                        </span>
-                        <span class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main">
-                          <svg id="replay-icon" class='icon icon-opt replay mt-neg3 h24 w24 h30-mxl w30-mxl none'><use xlink:href='#icon-rotate'/></svg>
-                          <svg id="play-icon" class='icon icon-opt play mr12 mt-neg3 h24 w24 h30-mxl w30-mxl none'><use xlink:href='#icon-smooth-ramp'/></svg>
-                        </span>
-                        <div id="reversing-icon" class="icon-opt horz-flip mr-neg6 mr-neg3-mxl none">
-                          <span class="loading loading--s"></span>
+                    <button disabled id="select-new" class='flex-child flex-child--grow flex-child--no-shrink btn round reset-options point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active mx3 mx6-ml my6 h-full'>Select New Route</button>
+                    <button disabled id="play-pause-btn" class='flex-child flex-child--no-shrink btn round play-pause point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active mx3 mx6-mm my6 h-full w30 w36-mxl none'>
+                      <div class="flex-parent flex-parent--center-cross flex-parent--center-main">
+                        <div id="play-pause-icon" class="flex-child flex-child--grow txt-bold point-none">
+                          <span id="pause-icon" class="relative ml3 mr-neg3 mr-neg1-mxl icon-opt none">
+                            <svg class='icon pause ml-neg12 mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top left'><use xlink:href='#icon-minus'/></svg>
+                            <svg class='icon pause mr-neg6 mr-neg9-mxl mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top right'><use xlink:href='#icon-minus'/></svg>
+                          </span>
+                          <span class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main">
+                            <svg id="replay-icon" class='icon icon-opt replay mt-neg3 h24 w24 h30-mxl w30-mxl none'><use xlink:href='#icon-rotate'/></svg>
+                            <svg id="play-icon" class='icon icon-opt play mr12 mt-neg3 h24 w24 h30-mxl w30-mxl none'><use xlink:href='#icon-smooth-ramp'/></svg>
+                          </span>
+                          <div id="reversing-icon" class="icon-opt horz-flip mr-neg6 mr-neg3-mxl none">
+                            <span class="loading loading--s"></span>
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -86,6 +88,32 @@
                       <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-minus'></use></svg>
                     </button>
                   </label>
+
+                  <div class="absolute top bottom left right flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main mt0 mb120 mx30 point-none">
+                    <div id="center-controls" class="round point-none shadow-darken50 none">
+                      <div id="play-lrg" class="flex-child round opacity100 none">
+                        <div class="round bg-lighten50 px60 py60 flex-parent flex-parent--center-cross flex-parent--center-main">
+                          <svg id="play-icon-lrg" class="flex-child icon color-darken75"><use xlink:href="#icon-smooth-ramp"></use>
+                          </svg>
+                        </div>
+                      </div>
+                      <div id="pause-lrg" class="flex-child round bg-darken25 opacity75 none">
+                        <div class="round bg-lighten50 px36 py60 flex-parent flex-parent--center-cross flex-parent--center-main">
+                          <svg id="pause-icon-left" class="left flex-child icon mx3 mx6-sm"><use xlink:href="#icon-minus"></use></svg>
+                          <svg id="pause-icon-right" class="right flex-child icon mx3 mx6-sm"><use xlink:href="#icon-minus"></use></svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="lrg-control-text" class="absolute top bottom right left flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main mt60 mb-neg30 mx30 point-none hide-visually none">
+                    <div class="round point-none shadow-darken50">
+                      <div class="round bg-darken75 px24 py12 flex-parent flex-parent--center-cross flex-parent--center-main">
+                        <span class="flex-child align-center txt-s txt-m-mm txt-l-ml color-accent3 txt-nowrap-ml txt-bold opacity90">click screen or press spacebar to play/pause animation</span>
+                      </div>
+                    </div>
+                  </div>
+
                 </div> <!-- end of ui-overlay-group -->
 
                 <!-- map svg/canvas -->
@@ -173,14 +201,14 @@
                                     <!-- py3  -->
                                     <!-- re-add with actual content? -->
                                     <div class="flex-parent flex-parent--center-cross flex-parent--center-main h-full">
-                                      <div id="from" class="flex-child txt-xs pl12 pr3 flex-parent flex-parent--column">
+                                      <div id="from" class="flex-child txt-xs pl12 pr3 flex-parent flex-parent--column py3">
                                         <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-depart'></use></svg>
                                       </div>
-                                      <div id="to" class="flex-child txt-xs pl3 pr12 flex-parent flex-parent--column-reverse">
+                                      <div id="to" class="flex-child txt-xs pl3 pr12 flex-parent flex-parent--column-reverse py3">
                                         <svg class='icon flex-child flex-child--no-shrink h18 w18 h24-mm w24-mm'><use xlink:href='#icon-arrive'></use></svg>
                                       </div>
-                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 pr6--ml mt3 mx-auto scroll-auto"></div>
-                                      <div id="totals" class="flex-child flex-child--no-shrink txt-compact txt-xs pl6 pr3 mr3 scroll-auto none inline-block-ml flex-parent flex-parent--column flex-parent--center-main flex-parent--end-cross">
+                                      <div id="via" class="flex-child txt-compact txt-xs pl6 pr3 pr6--ml mt3 mx-auto scroll-auto py3"></div>
+                                      <div id="totals" class="flex-child flex-child--no-shrink txt-compact txt-xs pl6 pr3 mr3 scroll-auto none inline-block-ml flex-parent flex-parent--column flex-parent--center-main flex-parent--end-cross py3">
                                         <span class="flex-child none block-ml flex-parent flex-parent--center-cross">
                                           <svg class='flex-child icon h18 w18 mb-neg6 none inline-block-ml'><use xlink:href='#icon-globe'></use></svg>
                                           <span class="flex-child none inline-block-ml txt-em">Total distance:</span>
@@ -339,14 +367,14 @@
             <div id="veil" class="absolute top bottom right left h-full z4 opacity50 bg-lighten50 point-none"></div>
 
             <!-- modal/loader group -->
-            <div id="modal-plus" class="absolute left right flex-parent flex-parent--center-cross flex-parent--center-main z3 none point-none">
+            <div id="modal-plus" class="absolute left right flex-parent flex-parent--center-cross flex-parent--center-main z3 point-none">
 
               <div id="map-init-load" class='absolute left right loading z4 none'></div>
 
               <div class="flex-child flex-parent flex-parent--center-cross flex-parent--center-main bg-transparent bg-lighten75 z5">
 
                 <!-- modal content options -->
-                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative"> <!-- h-full -->
+                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative none"> <!-- h-full -->
 
                   <!-- inner modal wrapper -->
                   <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round point-all'> <!-- h-full -->

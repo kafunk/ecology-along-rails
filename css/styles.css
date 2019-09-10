@@ -115,6 +115,9 @@ details > summary > span {
 #dash .resizer { cursor: ns-resize; }
 #replay-icon { transform: scale(-1, 1) rotate(-45deg); }
 #play-icon { transform: scale(-1.5, 0.75) rotate(135deg); }
+#play-icon-lrg { transform: translate(-30px,0px) scale(-12, 6) rotate(135deg); }
+#pause-icon-left { transform: rotate(90deg) scale(8); }
+#pause-icon-right { transform: rotate(90deg) scale(8);  }
 
 /* reverse triangle position and direction on data source details elements  */
 .reverse-order { direction: rtl; }
@@ -160,6 +163,16 @@ details > summary > span {
 }
 .bg-accent2-on-active:active {
   background: var(--bg-dark2) !important;
+}
+.color-accent1 {
+  color: var(--bg-accent3) !important;
+}
+.color-accent2 {
+  color: var(--bg-dark2) !important;
+}
+.color-accent3 {
+  color: var(--bg-accent1) !important;
+  /* color: salmon; */
 }
 .color-accent1-on-hover:hover {
   color: var(--bg-accent3) !important;
@@ -223,8 +236,14 @@ details > summary > span {
 }
 
 /* MEDIA QUERIES */
+
+@media screen and (min-width: 200px) {
+  .px36-xs { padding-left: 36px !important; padding-right: 36px !important; }
+  .mr0-xs { margin-right: 0px !important; }
+}
 @media screen and (min-width: 400px) {
   /* missing from Assembly */
+  .mx6-sm { margin-left: 6px !important; margin-right: 6px !important; }
   .txt-nowrap-sm { white-space: nowrap !important; }
   .inline-block-sm { display: inline-block !important; }
 }
