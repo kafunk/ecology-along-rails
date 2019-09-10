@@ -27,71 +27,26 @@ svg path { stroke-linejoin: round; }
 ul.show-bullets li { list-style: outside; }
 ul.show-bullets--square li { list-style: square; }
 
-/* details triangle marker position is absolute to legend-log-item (in chrome, anyway)*/
-#legend-log details > summary::-webkit-details-marker {
-  position: absolute;
-  top: 0.5; left: 8px;
-}
-/* hide details triangle marker until child content added */
-details.hide-triangle > summary {
+#legend-log details > summary,
+#legend-log details > summary::marker {
   list-style: none;
 }
-details.hide-triangle > summary::-webkit-details-marker {
+#legend-log details > summary::-webkit-details-marker {
   display: none;
 }
 
-
-details.show-triangle > summary::marker {
-  position: absolute;
-  font-size: 150%;
-  margin-bottom: -18px;
-  margin-left: 8px;
-  padding-top: 6px;
-  vertical-align: middle;
-}
-
-details.show-triangle > summary::-webkit-details-marker {
-  font-size: 125%; /* enlarges details triangle on chrome only */
-  margin-top: 8px;
-  vertical-align: middle;
-}
-@media screen and (min-width: 640px) and (max-width: 1199px) {
-  details.show-triangle > summary::-webkit-details-marker {
-    margin-top: 7px;
-    margin-left: -1px;
-  }
-  details.show-triangle > summary::marker {
-    margin-bottom: -20px;
-    margin-left: 6px;
-  }
-}
-@media screen and (min-width: 1200px) {
-  details.show-triangle > summary::-webkit-details-marker {
-    margin-top:  6px;
-    margin-left: -2px;
-  }
-  details.show-triangle > summary::marker {
-    margin-bottom: -22px;
-  }
-}
-
 /* adjust indent/border-l on child legend items only, while keeping all label text centered */
-.legend-log-child-item {
+/* .legend-log-child-item {
   margin-left: 12px
-}
-.legend-log-child-item label {  /*log-name*/
+} */
+/* log name */
+/* .legend-log-child-item label {
   margin-left: -12px
-}
+} */
 
-/* color summary symbol */
-details.color-symbol > summary,
-details.color-symbol > summary::-webkit-details-marker {
-  color: #2A4C48;
-}
-/* but not summary text */
-details > summary > span {
+/* details > summary > span {
   color: rgba(0,0,0,0.75);
-}
+} */
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
@@ -130,6 +85,8 @@ details > summary > span {
 .mb1 { margin-bottom: 1px; }
 .mr1 { margin-right: 1px; }
 .my9 { margin-top: 9px; margin-bottom: 9px; }
+.ml9 { margin-left: 9px; }
+.mr9 { margin-right: 9px; }
 .mb-neg9 { margin-bottom: -9px; }
 .mr-neg9 { margin-right: -9px; }
 .ml-neg9 { margin-left: -9px; }
@@ -143,6 +100,11 @@ details > summary > span {
 .point-all { pointer-events: all; }
 .horz-flip { transform: scale(-1, 1); }
 .rotate90 { transform: rotate(90deg); }
+
+.scroll-y-auto {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
 .bg-base { background: #2A4C48; }
 /* .bg-main {} */
@@ -158,10 +120,20 @@ details > summary > span {
 .txt-fancy { font-family: 'Fredericka the Great', cursive; }
 .txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
-.txt-xxs {
-  font-size: 8px;
-  line-height: 12px;
+
+.open {
+  transform: rotate(90deg);
+  transition: all 0.6s;
 }
+.closed {
+  transform: rotate(0deg);
+  transition: all 0.6s;
+}
+
+.middle-y {
+  vertical-align: middle;
+}
+
 /* adding on to assembly styling structure */
 .bg-accent1-on-hover:hover {
   background: var(--bg-accent3) !important;
@@ -218,10 +190,9 @@ details > summary > span {
 .txt-compact2 { line-height: 0.8em; }
 .pl9 { padding-left: 9px; }
 .pr9 { padding-right: 9px; }
+.pb9 { padding-bottom: 9px;}
+.pt9 { padding-top: 9px;}
 
-.unstyled {
- list-style: none;
-}
 
 .hmax-twothirds {
   max-height: calc(66vh - 60px);
@@ -282,6 +253,10 @@ details > summary > span {
   .flex3-mxl { order: 3; }
   .flex4-mxl { order: 4; }
   .mr26-mxl { margin-right: 26px !important; }
+
+  .middle-y-mxl {
+    vertical-align: middle !important;
+  }
 
   .txt-nowrap-mxl { white-space: nowrap !important; }
   /* missing from Assembly */

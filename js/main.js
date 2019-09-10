@@ -2219,8 +2219,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // still not totally clear why this makes the difference, but it seems to. having to do with projection.rotate()?
     return (["NE","SE"].includes(quadrant)) ? 90 - degrees : -90 - degrees;
 
-    // still not totally clear why this makes the difference, but it seems to. having to do with projection.rotate()?
-    return (["NE","SE"].includes(quadrant)) ? 90 - degrees : -90 - degrees;
   }
 
   function getSector(radians,radius,span = arcSpan,scale = projection.scale(),r0 = 0) {
@@ -3693,11 +3691,24 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               exit => exit
             )
 
-          // when child element, ensure caret-toggle of parent group is visible
-          if (!isParent) d3.select(`#${parentDivId}`).classed("hide-triangle",false).classed("show-triangle",true)
-
           // add fill to new HTML element within newItem
           let swatch = d3.select(`#${parentDivId}`).select(`#${group.divId}`).select(`#${symbolId}`)
+
+          // when child element, ensure caret-toggle of parent group is visible
+          if (isParent) {
+            swatch.append("span")
+              .classed("my-marker triangle triangle--r color-gray-dark point-none middle-y-mxl none",true) // node hidden until children added
+          } else { // ie, isChild
+            let parentSym = d3.select(`#${parentDivId}`).select("summary").select(".log-symbol");
+            parentSym.on("click",function() {
+              // children toggled automatically by details element; this function attending to visual of triangle marker only
+              let target = d3.select(this);
+              target.classed("open") ?
+                target.classed("open",false).classed("closed",true)
+              : target.classed("closed",false).classed("open",true)
+            })
+            parentSym.select(".my-marker").classed("none",false);
+          }
 
           // then iterate through keys
           Object.keys(symbol.styles).forEach(key => {
@@ -3751,12 +3762,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               s = 24 - padLeft;
 
             let html,
-              innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol"></span>
-              <label class="flex-child flex-child--grow log-name px3">${group.fullTxt}</label>
+              innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol align-center pt3 pt0-mm"></span>
+              <label class="flex-child flex-child--grow align-center log-name px3">${group.fullTxt}</label>
               <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
 
             if (isParent) {
-              html = `<details id="${group.divId}" class="flex-parent flex-parent--column hide-triangle">
+              html = `<details id="${group.divId}" class="flex-parent flex-parent--column">
                 <summary>
                   <div class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-t border-b border--dash">
                     ${innerHtml}
@@ -3764,7 +3775,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                 </summary>
               </details>`
             } else {
-              html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-l py3">
+              html = `<div id="${group.divId}" class="flex-parent flex-parent--space-between-main flex-parent--center-cross border-l ml12 py3">
                 ${innerHtml}
               </div>`
             }
