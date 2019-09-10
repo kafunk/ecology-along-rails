@@ -2,7 +2,6 @@
 
 ///////////////////////////
 //// SETUP ENVIRONMENT ////
-//// (global bindings) ////
 ///////////////////////////
 
 //// INITIATE DATA LOAD
@@ -30,7 +29,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   var experience = { initiated: false, animating: false, paused: false }
   var togglesOff = { info: false, select: false }
-  var panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
+  var panned; // = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
   var transitionResume = false;
   var reversing = { flag: false, i: 0, t: null, tPad: null }
   var currentBounds; // = {};
@@ -112,6 +111,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   var projectArray = function(unprojCoordArr) {
     return unprojCoordArr.map(d => (Array.isArray(d[0])) ? projectArray(d) : projection(d));
   }
+
   var cityState = d => {
     let region = d.state || d.province;
     return d.city + ", " + region;
@@ -180,7 +180,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // SET UP ZOOM BUTTON CONTROL
   let zoomStep = 1,
     zoomLevels = [0,12],
-   scaleExtent = [scale0*0.8, scale0*80],
+   scaleExtent = [scale0*0.8, scale0*96],
     zoomScales = d3.scalePow()
      .exponent(3)
      .domain(zoomLevels)
@@ -219,7 +219,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
      purpleRed = '#94417f',
      orangeRed = '#f94545',
    peachOrange = '#f9b640',
-   yellowPeach = '#ec934a',
+   peachPink = '#dd8069',
     yellowGold = '#c7993f',
      goldGreen = '#b5be6a',
     groupGreen = '#8bc188',
@@ -367,8 +367,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "lakes",
       fullTxt: "Lakes",
       textureType: "paths",
-      textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 18, lighter: 12, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 1.25, heavier: 12 }
+      // textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 18, lighter: 12, shapeRendering: "crispEdges"},
+      textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 24, lighter: 18, shapeRendering: "crispEdges"},
+      htmlAdjust: { thicker: 1.25, heavier: 10 }
+      // htmlAdjust: { thicker: 1.25, heavier: 12 }
       // no keywords, CATEGORY.startsWith("Lake")
     },
     "RIVER": {
@@ -382,7 +384,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "inv-roadless",
       fullTxt: "Inventoried Roadless Areas",
       textureType: "paths",
-      textureProps: {d: "nylon", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
+      textureProps: {d: "nylon", thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
+      ptTextureProps: {d: "nylon", thicker: 72, lighter: 48},
+      // textureProps: {d: "nylon", thicker: 36, lighter: 24, shapeRendering: "crispEdges"},
+      // ptTextureProps: {d: "nylon", thicker: 54, lighter: 36, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 0.8, heavier: 14, background: "#e6ece6" }
       // "#ecf2eb"
       // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
@@ -391,14 +396,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "grassland",
       fullTxt: "Grasslands",
       textureType: "lines",
-      textureProps: {thicker: 24, lighter: 24, orientation: "2/8"},
+      textureProps: {thicker: 48, lighter: 24, orientation: "2/8"},
+      // textureProps: {thicker: 24, lighter: 24, orientation: "2/8"},
       htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
     },
     "VOLCANO": {
       divId: "volcanoes",
       fullTxt: "Volcanoes",
       textureType: "paths",
-      textureProps: {d: "caps", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
+      textureProps: {d: "caps", thicker: 48, lighter: 24, shapeRendering: "crispEdges"},
+      // textureProps: {d: "caps", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
+      ptTextureProps: {d: "caps", thicker: 108, lighter: 48, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 1, heavier: 8, background: "#e6ece6" }
       // no keywords; CATEGORY.startsWith("Volcano")
     },
@@ -406,7 +414,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "other-np-geo",
       fullTxt: "Other Non-protected Geothermal Areas",
       textureType: "lines",
-      textureProps: {thicker: 24, lighter: 24, orientation: "6/8"},
+      textureProps: {thicker: 60, lighter: 12, orientation: "6/8"},      // textureProps: {thicker: 24, lighter: 24, orientation: "6/8"},
+      ptTextureProps: {thicker: 108, lighter: 60, orientation: "6/8"},
       htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
       // no keywords; CATEGORY === "Geothermal System"
     },
@@ -418,14 +427,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // kw2Slimmed: [park*, monument*, forest*, grassland*],
       weight: 1,
       textureType: "paths",
-      textureProps: {d: "hexagons", thicker: 36, lighter: 24, shapeRendering: "crispEdges"},
+      textureProps: {d: "hexagons", thicker: 72, lighter: 42, shapeRendering: "crispEdges"},
+      ptTextureProps: {d: "hexagons", thicker: 96, lighter: 48, shapeRendering: "crispEdges"},
+      // textureProps: {d: "hexagons", thicker: 72, lighter: 36, shapeRendering: "crispEdges"},
+      // ptTextureProps: {d: "hexagons", thicker: 96, lighter: 48, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 2, lighter: 0 },
       getStroke(d) {
         let description = d.properties.DESCRIPTION.toUpperCase();
         if (description.match("NATIONAL")) {
-          return "rgba(76, 83, 91, .6)";
+          return "rgba(76, 83, 91, 0.8)";
         } else if (description.match("STATE") || description.match("PROVINCIAL")) {
-          return "rgba(76, 83, 91, .3)"
+          return "rgba(76, 83, 91, 0.6)";
         }
       }
     },
@@ -436,8 +448,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // kwSlimmed: [park*, monument*, forest*, grassland*, conserv*, wetland*],
       weight: 2,
       textureType: "paths",
-      textureProps: {d: "crosses", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 1.2, lighter: 0 }
+      textureProps: {d: "crosses", thicker: 48, lighter: 30, shapeRendering: "crispEdges"},
+      ptTextureProps: {d: "crosses", thicker: 84, lighter: 48},
+      // textureProps: {d: "crosses", thicker: 54, lighter: 36, shapeRendering: "crispEdges"},
+      // ptTextureProps: {d: "crosses", thicker: 96, lighter: 48, shapeRendering: "crispEdges"},
+      htmlAdjust: { thicker: 1.2, lighter: 1 }
+      // htmlAdjust: { thicker: 1.2, lighter: 0 }
       // national, state, provincial, park, monument, etc matches will be disjoint from PA1 group above (matched only one keyword group, not both)
     },
     "PA3": {
@@ -445,8 +461,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       fullTxt: "Protected Areas - Group 3",  // remaining
       weight: 3,
       textureType: "circles",
-      textureProps: { complement: true, thicker: 48, lighter: 24 },
-      htmlAdjust: { thinner: 18, lighter: 0, radius: 1, size: 8 }
+      textureProps: { complement: true, thicker: 54, lighter: 24 },
+      ptTextureProps: { complement: true, thicker: 72, lighter: 36 },
+      // textureProps: { complement: true, thicker: 54, lighter: 24 },
+      // ptTextureProps: { complement: true, thicker: 72, lighter: 36 },
+      htmlAdjust: { thinner: 18, lighter: 0, radius: 2 , size: 8 }  // htmlAdjust: { thinner: 18, lighter: 0, radius: 1, size: 8 }
       // no keywords; CATEGORY === "Protected Area" && DESCRIPTION !== "Inventoried Roadless Area"
     }
   },
@@ -507,7 +526,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       keywords: ["reserve", "reserves", "preserve", "preserves", "conservation", "conservancy", "conservancies", "easement", "easements"].map(d => d.toUpperCase()),
       // kwSlimmed: [reserve*, preserve*, conserv*, easement*],
       weight: 7,
-      color: yellowPeach
+      color: peachPink
     },
     "general": {
       divId: "gen",
@@ -587,6 +606,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
            statesMesh = getMesh(sourceData.states.tj,"states"),
              lakeMesh = getMesh(sourceData.lakes.tj,"lakes"),
             urbanMesh = getMesh(sourceData.urbanAreas.tj,"urbanAreas");
+             // railSimp = sourceData.railways.gj.features.map(d => getSimpRoute(d,0.1))
 
     // define svg groups
     var baselayers = g.append("g")
@@ -637,7 +657,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("fill","gainsboro")
       // .attr("fill", chroma("#44443e").luminance(0.2))
       // .attr("stroke", chroma("#44443e").luminance(0.1))
-      .style("stroke-width",0.1)
+      .style("stroke-width",0.05)
       .style("opacity",0.6) // 0.8
 
     // STROKED MESH
@@ -646,15 +666,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("d", path(countriesMesh))
       .style("fill","none")
       .style("stroke","#222834")
-      .style("stroke-width", 0.42)
+      .style("stroke-width", 0.4)
 
     adminBase.append("path")
       .attr("id","state-mesh")
       .attr("d", path(statesMesh))
       .style("fill","none")
       .style("stroke","magenta")
-      .style("stroke-width",0.22)
-      .style("stroke-dasharray", "0.2 0.4")
+      .style("stroke-width",0.21)
+      .style("stroke-dasharray", "0.2 0.2")
 
     // STROKED FEATURES
     hydroBase.append("g")
@@ -672,12 +692,25 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("id", "railways")
       .selectAll("path")
       .data(sourceData.railways.gj.features)
+      // .data(railSimp)
       .enter().append("path")
         .attr("d", path)
-        .attr("stroke-width", d => { return (8/(d.properties.scalerank * 6)) })
+        .attr("stroke-width", d => { return (8/(d.properties.scalerank * 10)) })
         .attr("stroke","lightslategray")
         .style("fill", "none")
         .style("opacity",1)
+
+    // railBase.append("g")
+    //   .attr("id", "railway-ties")
+    //   .selectAll("path")
+    //   .data(railSimp)
+    //   .enter().append("path")
+    //     .attr("d", path)
+    //     .attr("stroke","darkslategray")
+    //     .attr("stroke-width", d => { return (8/(d.properties.scalerank * 5)) })
+    //     .style("fill", "none")
+    //     .style("opacity",0.8)
+    //     .style("stroke-dasharray", "0.1 0.5")
 
     // POINT FEATURES
     urbanBase.selectAll("circle")
@@ -743,11 +776,144 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
+  async function showLrgControls(childId,fnString = "flashClose",duration = 100) {
+
+    d3.select("#center-controls").classed("none",false)
+    if (childId) d3.select("#center-controls").select(`#${childId}`).classed("none",false)
+
+    let promise = new Promise(async (resolve, reject) => {
+      let innerPromise = new Promise(async (resolve1, reject1) => {
+        d3.timeout(async () => {
+          let gatekeeper = await eval(fnString)(childId)
+          resolve1()
+        }, duration);
+      })
+      let gatekeeper = await innerPromise;
+      resolve()
+    })
+
+    return await promise;
+
+    async function flashClose(childId) {
+
+      let promise = new Promise(async (resolve,reject) => {
+        d3.select("#center-controls")
+          .transition().duration(300)
+          .style("opacity",0)
+          .on("end",function() {
+            resolve();
+            d3.select(this)
+              .classed("none",true)
+              .style("opacity",1)
+            if (childId) d3.select(this).select(`#${childId}`).classed("none",true)
+          })
+      })
+
+      let gatekeeper = await promise;  // won't progress past this line until promise resolved
+      return true;
+
+    }
+
+    async function awaitUserInput(childId) {
+
+      let promise = new Promise(async (resolve,reject) => {
+
+        svg.on("click", async () => {
+          svg.on("click",null);
+          let gatekeeper = await animateCollapse(childId);
+          resolve();
+        })
+
+        window.onkeydown = function(e) {
+          if (e.isComposing || e.keyCode !== 32) return;
+          // else, set & unset additional listener
+          window.onkeyup = async function(e) {
+            if (e.isComposing || e.keyCode !== 32) return;
+            // else
+            window.onkeydown = null;
+            window.onkeyup = null;
+            let gatekeeper = await animateCollapse(childId);
+            resolve();
+          }
+        };
+
+      })
+
+      let gatekeeper = await promise;  // won't progress past this line until promise resolved
+
+      d3.select("#play-lrg")
+        .classed("opacity100",false)
+        .classed("opacity75",true)
+
+      return true;
+
+    }
+
+    async function animateCollapse(childId) {
+
+      var slideLeft = false;
+
+      var initBounds = d3.select("#center-controls").node().getBoundingClientRect()
+
+      var targetBounds = d3.select("#play-pause-btn").node().getBoundingClientRect();
+
+      var transform0 = `translate(0px,0px) scale(1,1)`,
+          transform1 = `translate(${(targetBounds.x - initBounds.x) + (targetBounds.width - initBounds.width)/2}px,${(targetBounds.y - initBounds.y) + (targetBounds.height - initBounds.height)/2}px) scale(${targetBounds.width/initBounds.width},${targetBounds.height/initBounds.height})`
+
+      var transformTween = d3.interpolateString(transform0,transform1);
+
+      if (d3.select("#lrg-control-text").node()) {
+        var textBounds = d3.select("#lrg-control-text").node().getBoundingClientRect(),
+            transform2 = `translate(${-window.innerWidth}px,0px)`;
+        slideLeft = d3.interpolateString(transform0,transform2)
+      }
+
+      let promise = new Promise(async (resolve,reject) => {
+        d3.select("#center-controls")
+          .transition().duration(1200)
+            .styleTween('transform', d => transformTween)
+            .on("start",function() {
+              if (slideLeft) {
+                d3.select("#lrg-control-text")
+                  .transition().duration(1200) // delay(600).duration(600)
+                  .styleTween('transform', d => slideLeft)
+                  .on("end", function() {
+                    d3.select(this)
+                      .classed("hide-visually none",true)
+                      .style("transform",null)
+                  })
+              }
+            })
+            .on("end",function() {
+              d3.select(this).transition().delay(300).duration(500) // .delay(750).duration(750)
+                .style("opacity",0)
+                .on("start", () => {
+                  d3.select("#play-pause-btn").transition().duration(300) // .duration(750)
+                    .style("opacity",1)  // in case previously hidden
+                })
+                .on("end", function() {
+                  resolve();
+                  d3.select(this)
+                    .classed("none",true)
+                    .style("transform",null)
+                    .style("opacity",1)
+                  if (childId) d3.select(this).select(`#${childId}`).classed("none",true)
+                })
+            })
+      })
+
+      let gatekeeper = await promise;  // won't progress past this line until promise resolved
+      return true;
+
+    }
+
+  }
+
 //// ON INITIAL LOAD
 
   function initPrompt() {
     // resetZoom();
-    d3.select("#modal-plus").classed("none",false)  // show prompt
+    d3.select("#modal").classed("none",false)  // show prompt
   }
 
   function populateOptions(allOptions) {
@@ -805,6 +971,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // STORE IN state0; make sure event listeners & data included
     state0.opt0 = d3.select("#getOption0").node().innerHTML;
     state0.opt1 = d3.select("#getOption1").node().innerHTML;
+
+    initPrompt();
 
     function onBlur() {
 
@@ -1433,15 +1601,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .enter().append("use")
             .attr("xlink:href", "#station-icon")
             .attr("x", d => {
-              let halfWidth = (d.flagged) ? 1.25 : 0.75;
+              let halfWidth = (d.flagged) ? 0.75 : 0.5;
               return projection([d.lng,d.lat])[0] - halfWidth;
             })
             .attr("y", d => {
-              let halfHeight = (d.flagged) ? 1.5 : 1;
+              let halfHeight = (d.flagged) ? 1 : 0.75;
               return projection([d.lng,d.lat])[1] - halfHeight;
             })
-            .attr("width", d => d.flagged ? 2.5 : 1.5)
-            .attr("height", d => d.flagged ? 3 : 2)
+            .attr("width", d => d.flagged ? 1.5 : 1)
+            .attr("height", d => d.flagged ? 2 : 1.5)
             .style("opacity", 0) // initially
             .style("fill", d => !d.flagged ? "black" : (d.toFrom === "from") ? "forestgreen" : "brown")
             .style("stroke", d => !d.flagged ? "dimgray" : "black")
@@ -1578,10 +1746,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
        lastIdentity = routeBoundsIdentity;
     }
 
-    // final user prompt/countdown??
-    // if (confirm("Ready?")) {
     getSet(); // initiate movement!
-    // }
 
     function getZoomFollow(routeObj) {
 
@@ -1651,6 +1816,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     svg.transition().duration(t).ease(zoomEase)
       .call(zoom.transform, firstIdentity)
       .on("start", () => {
+        // reset panned flags
+        resetPannedState();
+        // store currentBounds
         currentBounds = {
           bounds: path.bounds(data2).slice(),
           get domEdge() {
@@ -1684,14 +1852,37 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               });
             })
             .on("end", () => {
-              // final pause, then go!
-              d3.timeout(go, tPause);
+
+              if (!again) {
+                d3.select("#play-pause-btn")
+                  .style("opacity",0)
+                  .classed("none",false)
+                d3.select("#lrg-control-text")
+                  .style("opacity",0)
+                  .classed("hide-visually none",false)
+                  .transition().duration(750)
+                    .style("opacity",1)
+                    .on("start",() => {
+                      d3.select("#center-controls").select("#play-lrg")
+                        .classed("none",false)
+                      d3.select("#center-controls")
+                        .style("opacity",0)
+                        .classed("none",false)
+                        .transition().duration(750)
+                          .style("opacity",1)
+                    })
+              }
+
+              let promise = again ? Promise.resolve() : showLrgControls("play-lrg","awaitUserInput"); // ,750
+
+              promise.then(go)
+
             })
       })
 
     function dimBackground(t) {
 
-      let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#lake-mesh2"),d3.select("#urban-mesh"),d3.select("#country-mesh")],
+      let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),/*d3.select("#railway-ties").selectAll("path"),*/d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#lake-mesh2"),d3.select("#urban-mesh"),d3.select("#country-mesh")],
           dimLess = [d3.select("#state-mesh")];
 
       let dimGroup = dimMore.map(d => {
@@ -1774,20 +1965,20 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
       if (panned.updateFlag) {
 
-        if (!experience.paused) pauseAnimation();
+        if (experience.animating && !experience.paused) pauseAnimation();
 
         // reset
         panned.updateFlag = false;
 
         // get current center pt by working backwards through centerTransform() from stored panned.transform
-        let currentCenter = getCenterFromTransform(panned.transform); // zoomAlongOptions? COMBAK
+        let currentCenter = getCenterFromTransform(panned.transform);
+        // let currentCenter = getCenterFromTransform(panned.transform,zoomAlongOptions);
 
-        // get difference btween p and currentCenter
+        // get difference between p and currentCenter
         panned.centerAdjust = [currentCenter[0] - p.x, currentCenter[1] - p.y];
-        // console.log([p.x - currentCenter[0], p.y - currentCenter[1]])
 
         // resume again!
-        if (!experience.manuallyPaused) resumeAnimation();
+        if (experience.paused && !experience.manuallyPaused) resumeAnimation();
 
       }
       // once any pan event on record, adjust center according
@@ -1796,6 +1987,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     }
 
     zoomAlongOptions.scale = +d3.select("label#zoom").attr("value");
+    // COMBAK diff scale vs oScale?
 
     // calculate translate necessary to center data within extent
     return getCenterTransform([p.x,p.y],zoomAlongOptions);
@@ -1851,8 +2043,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     }
   })
 
-// LOAD EVENTS
-  d3.select(window).on("load", initPrompt)
+// // LOAD EVENTS
+//   d3.select(window).on("load", initPrompt)
 
 // RESIZE EVENTS
   d3.select(window).on("resize.map", adjustSize)
@@ -1869,7 +2061,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function adjustSize() {
 
-    // if (experience.animating && !experience.paused) pauseAnimation();
+    if (experience.animating && !experience.paused) pauseAnimation();
 
     // get updated dimensions
     let updated = calcSize();
@@ -1899,7 +2091,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // constrain zoom behavior (scale)
     // zoom.translateExtent(paddedExtent0)
 
-    // if (experience.animating && !experience.manuallyPaused) resumeAnimation();
+    if (experience.paused && !experience.manuallyPaused) resumeAnimation();
 
   }
 
@@ -2135,41 +2327,20 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("label#zoom").attr("value", tk)
 
     if (d3.event.sourceEvent && experience.initiated && d3.event.sourceEvent.type === "mousemove") {
-      // if user pans after animation has started, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
 
-      // if (!experience.paused) pauseAnimation();
+      if (experience.manuallyPaused) {
+        // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame) before resuming animation
+        transitionResume = true;
+      } else if (experience.animating) {
+        // if user pans after animation has started, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
+        if (!experience.paused) pauseAnimation();
+        panned.flag = true;
+        panned.updateFlag = true;
+        panned.transform = transform;
+        resumeAnimation();
+      } // else { /* panning after arrival */ }
 
-      panned.flag = true;
-      panned.updateFlag = true;
-      panned.transform = transform;
-
-      // if (!experience.manuallyPaused) resumeAnimation();
-
-      if (experience.manuallyPaused) transitionResume = true;  // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame) before resuming animation
     }
-
-    // if (d3.event.sourceEvent && d3.event.sourceEvent.type !== "resize") {
-    //   if (d3.event.sourceEvent.type === "click" && d3.event.sourceEvent.movementX === 0 && d3.event.sourceEvent.movementY === 0) {
-    //     return;
-    //   } else {
-    //     console.log("NOT CLEAN")
-    //     console.log(d3.event)
-    //     currentBounds.clean = false;
-    //     if (experience.initiated && d3.event.sourceEvent.type === "mousemove") {
-    //       // if user pans after animation has started, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
-    //
-    //       // if (!experience.paused) pauseAnimation();
-    //
-    //       panned.flag = true;
-    //       panned.updateFlag = true;
-    //       panned.transform = transform;
-    //
-    //       // if (!experience.manuallyPaused) resumeAnimation();
-    //
-    //       if (experience.manuallyPaused) transitionResume = true;  // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame) before resuming animation
-    //     }
-    //   }
-    // }
 
   }
 
@@ -2210,7 +2381,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     }
 
-    if (experience.animating && !experience.manuallyPaused) resumeAnimation();
+    if (experience.paused && !experience.manuallyPaused) resumeAnimation();
 
   }
 
@@ -2555,7 +2726,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // show play-pause btn & activate listeners
     d3.select("#play-pause-btn")
-      .classed("hide-visually none",false)
       .property("disabled", false)
       .on("click.pause", pauseAnimation)
       .on("click.play", null)
@@ -2578,11 +2748,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // stop animation
     timer.stop()
 
+    svg.on("click", null)
+    window.onkeydown = null;
+
     // reset several state variables
-    experience.animating = false;
-    experience.paused = false;
-    experience.manuallyPaused = false;
-    experience.pausedAt = null;
+    resetExperienceState(true); // initException == true
+    resetPannedState();
 
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
     svg.transition().duration(zoomDuration).ease(zoomEase)
@@ -2597,8 +2768,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
       })
       .on("end", () => {
-        // reset manual pan tracking
-        panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
         // re-allow free zooming
         svg.call(zoom)
       })
@@ -2624,9 +2793,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .selectAll(".icon-opt").classed("none",true)
     d3.select("#play-pause-icon")
       .select("#replay-icon").classed("none",false)
-
-    svg.on("click", null)
-    window.onkeydown = null;
 
     console.log("train arrived @ " + Math.floor(d3.now()))
     console.log("unique encounters",uniqueEncounters.size)
@@ -2654,8 +2820,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("#play-pause-icon")
       .select("#play-icon").classed("none",false)
 
-    // automatically restart animation from beginning?
-    d3.timeout(getSet(true),tPause * 12); // again = true; ensure quadtree encounters only triggering reveal, not readding to dom
+    // pause, then automatically restart animation from beginning
+    d3.timeout(() => {
+      getSet(true)
+    }, tPause); // again = true; ensure quadtree encounters only triggering reveal, not re-adding to dom
 
   }
 
@@ -2674,6 +2842,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     svg.transition().duration(750).ease(zoomEase)
       .call(zoom.transform, lastIdentity) // may already be here
       .on("start", () => {
+        // disable free zooming
+        svg.on("wheel.zoom",null)
+        svg.on("scroll.zoom",null)
         // prereverse() to adjust select values stored during preanimate();
         eased = (t, t1 = reversing.t) => trainEase(t/t1);
         prevExtent = [[prevExtent[0][0]-2.5,prevExtent[0][1]-2.5],[prevExtent[1][0]+2.5,prevExtent[1][1]+2.5]];
@@ -2698,6 +2869,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // start global timers
     let delay = 0,
          time = d3.now();
+
     reverseTimer = d3.timer(animate, delay, time);
 
     // quadtree with trigger appropriate 'unreveal' action via dispatch to unencountered() while reversing.flag
@@ -3172,8 +3344,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       return b.properties.orig_area - a.properties.orig_area;
     })
 
-    let ptOpacity = 0.6,
+    let ptOpacity = 0.8,
       ptStrokeOpacity = 0.6;
+
+    let darkStrokeGrp = ["inv-roadless","volcanoes","grassland","other-np-geo"];
 
     // update pts as group to allow for additional transitions on updating pts
     d3.select("#enrich-pts").selectAll(".enrich-pt")
@@ -3182,7 +3356,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .join(
         enter => enter.append("circle")
           .attr("id", d => d.properties.id)
-          .attr("r",0.1)
+          .attr("r",0.05)
           .attr("cx", d => projection(d.geometry.coordinates)[0])	          .attr("cy", d => projection(d.geometry.coordinates)[1])
           .attr("class", d => `enrich-pt ${d.properties.logGroup.divId}`)
           .property("name", formatName)
@@ -3193,8 +3367,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .property("sub-tag", d => d.properties.subTag)
           .property("orig-opacity", ptOpacity)
           .property("orig-stroke-opacity", ptStrokeOpacity)
-          .style("stroke", "whitesmoke")
-          .style("stroke-width", "0.05px")
+          .style("stroke", d =>  darkStrokeGrp.includes(d.properties.logGroup.divId) ? "#343434" : "whitesmoke")
+          .style("stroke-width", "0.025px")
           .style("opacity", 0)
           .style("stroke-opacity", 0)
           .call(async enter => {
@@ -3208,9 +3382,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             }
             if (enter.property("sub-tag")) enter.classed(enter.property("sub-tag").divId,true);
             enter.transition().duration(t)
-              .attr("r", d => d.properties.orig_area * 0.00000002 || 0.1)
-                // size of circle is a factor of planar (why did i do it this way?) area of polygon the circle is representing, or 0.1 minimum
-              .style("opacity", 1)    // COMBAK: aim for initial glow effect
+              .attr("r", d => Math.max(d.properties.orig_area * 0.00000001 || 0.1)) // size of circle is a factor of planar (why did i do it this way?) area of polygon the circle is representing, or 0.1 minimum
+              .style("opacity", 1)  // COMBAK: aim for initial glow effect
               .style("stroke-opacity", 1)
               .on("start", output(enter))
               .on("end", function() {
@@ -3389,41 +3562,46 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let featureId = this.properties.id,
          geomType = featureId.slice(0,2),
+         duration = geomAssoc[geomType].reverseT,
               col = geomAssoc[geomType].encounterCol,
-               gj = readyAndWaiting[featureId],
-                t = geomAssoc[geomType].reverseT;
+               gj = readyAndWaiting[featureId];
 
     uniqueEncounters.delete(featureId);
     geomAssoc[geomType].set.delete(gj);
 
     let feature = d3.select(geomAssoc[geomType].groupId).select(`#${featureId}`)
 
+    let watershedFlag = feature.property("category") === "Watershed",
+             feature2 = watershedFlag ? d3.select(geomAssoc[geomType].groupId).select(`#${featureId + "-2"}`) : null;
+
     if (feature && feature.node()) {
 
       switch(geomType) {
         case "pt":
-          feature.transition().duration(t)
+          feature.transition().duration(duration)
           .attr("r",0.1)
-          .on("end", () => {
-            feature.remove();
-          })
+          .on("end", () => feature.remove())
           break;
         case "ln":
-          // COMBAK NOT REMOVING LINES
-          // console.log(feature.node())
-          if (feature.property("category") === "Watershed") {
-            feature.transition().duration(t).ease(d3.easeCubicIn)
-              // .style("opacity",0)
+          if (watershedFlag) {
+            feature.transition().duration(duration) // .ease(d3.easeCubicIn)
               .styleTween("stroke-dashoffset", clearDashed)
+              .on("start", () => {
+                if (feature2.node()) {
+                  feature2.transition().duration(duration)
+                    .styleTween("stroke-dashoffset", clearDashed)
+                    .on("end", () => feature.remove())
+                }
+              })
               .on("end", () => feature.remove())
           } else {
-            feature.transition().duration(t).ease(d3.easeCubicIn)
+            feature.transition().duration(duration) // .ease(d3.easeCubicIn)
               .styleTween("stroke-dasharray", clearSolid)
               .on("end", () => feature.remove())
           }
           break;
         case "py":
-          feature.transition().duration(t)
+          feature.transition().duration(duration)
             .style("opacity", 0)
             .on("end", () => feature.remove())
           break;
@@ -3971,8 +4149,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function togglePause() {
-    if (experience.animating && !experience.manuallyPaused) manualPause();
-    else if (experience.animating) resumeAnimation();
+    if (experience.animating && !experience.manuallyPaused) {
+      // manual pause control feedback
+      showLrgControls("pause-lrg")
+      manualPause();
+    } else if (experience.animating) {
+      // manual resume control feedback
+      showLrgControls("play-lrg").then(resumeAnimation)
+    }
   }
 
   function awaitSpaceBar(e) {
@@ -4026,8 +4210,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       let transform = getZoomAlongTransform(experience.pausedAt,t1,tP)
 
-      svg.transition().duration(400).ease(zoomEase)
+      svg.transition().duration(750).ease(zoomEase)
         .call(zoom.transform, getIdentity(transform))
+        .on("start", resetPannedState)
         .on("end",continueResume)
 
     } else {
@@ -4088,9 +4273,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       if (experience.animating) manualPause(); // CANCEL?
 
       zoomArc = null;
-      experience = { initiated: false, animating: false, paused: false, manuallyPaused: false, pausedAt: null }
+      resetExperienceState();
       // togglesOff = { info: false, select: false }
-      panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
+      // resetPannedState()
       logBackgrounds = {};
       transitionResume = false;
       reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
@@ -4198,7 +4383,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let texture,
       props = (d instanceof d3.selection) ? d.datum().properties : d.properties,  // shorthand
       geomType = props.id.slice(0,2),
-      textureProps = htmlFlag ? {...props.logGroup.textureProps, ...props.logGroup.htmlAdjust} : props.logGroup.textureProps;
+      textureProps = htmlFlag ? {...props.logGroup.textureProps, ...props.logGroup.htmlAdjust} : geomType === "pt" ? props.logGroup.ptTextureProps : props.logGroup.textureProps;
     if (geomType === "ln") {
       texture = getLinedTexture(d,padLeft);
     } else if (props.subTag && props.subTag.color) {
@@ -4207,7 +4392,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         if (props.logGroup.textureType === "circles") textureOpts.fill = "whitesmoke";
         texture = getNewTexture(props.logGroup.textureType,textureOpts)
       } else { // svg polygons
-        let textureOpts = {...textureProps, ...{stroke: chroma(props.subTag.color).darken().hex() }};
+        let textureOpts = {...textureProps, ...{stroke: textureProps.d === "hexagons" ? chroma(props.subTag.color).brighten().hex() : textureProps.d === "crosses" ? chroma(props.subTag.color).hex() : chroma(props.subTag.color).darken().hex() }};
         if (!textureProps.hasOwnProperty("d") && !textureProps.hasOwnProperty("orientation")) {  // circles
           // textureOpts.stroke = props.subTag.color;
           // textureOpts.fill = chroma(props.subTag.color).darken().hex();
@@ -4333,11 +4518,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function getStrokeWidth(d) {
     if (d.properties.STROKEWIDTH) {
-      return d.properties.STROKEWIDTH * 0.6 + "px";
+      return d.properties.STROKEWIDTH * 0.25 + "px";
     } else if (d.properties.LEVEL) {
-      return +(0.25 - 0.05 * unromanize(d.properties.LEVEL)).toFixed(4) + "px";
+      return +(0.2 - 0.04 * unromanize(d.properties.LEVEL)).toFixed(4) + "px";
     } else {
-      return 0.05 + "px";
+      return 0.04 + "px";
     }
   }
 
@@ -4613,6 +4798,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function getCenter(bounds) {
     bounds = standardizeBounds(bounds);
     return [(bounds[1][0] - bounds[0][0])/2, (bounds[1][1] - bounds[0][1])/2];  // domain y (input)
+  }
+
+  function resetPannedState() {
+    panned = { flag: false, updateFlag: false, transform: null, centerAdjust: null }
+  }
+
+  function resetExperienceState(initException = false) {
+    experience = { initiated: initException, animating: false, paused: false, manuallyPaused: false, pausedAt: null }
   }
 
   // PARSE, CONVERT, ASSOCIATE
@@ -4907,16 +5100,24 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // make sure manual-close class removed as appropriate
     // no details triangles visible within legend-log (firefox)
 
+// done:
+  //change otherwise preserved/reserved color (icky orange)
+  // cues to click or hit spacebar for pause
+  // fixed: safai 'select new' cut off
+  // some pts have dark border
+  // legend-log summary content not on one line (see partial fix noted)
+
 // todo:
-  // points with texture have solid/dark back/border to distinguish? recalc texture to avoid blending?
   // rid of failure/feelings language
   // form smoothness
   // clicking on log name while animated paused/stopped zooms to feature
-  // cues to click or hit spacebar for pause
   // cross browser testing: Judges will use the current versions of Firefox, Safari, or Chrome with a true color monitor with a resolution of at least 1280 x 800.
+  // sieve R2R extra station errors via intersect query
+  // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
+  // TODO remove more of smallest pts and polygons?
+  // update zoom level upon transitionResume?
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
-  // legend-log summary content not on one line (see partial fix noted)
   // lines appear on left when opening details elements / data sources (disappear again on scroll)
   // no resize event dispatched upon second tab opened/closed (tab bar revealed)
   // watershed html texture doesn't render (legend-log, narrative) (also firefox)
@@ -4937,3 +5138,5 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // station updates:
     // REMOVE: Port Kent, NY
     // remove ann arbor?
+    // remove alliance, OH?
+    // atlanta giving issues again
