@@ -252,24 +252,62 @@
                                   <div class="flex-child flex-child--no-shrink h6 bg-darken25 py3 color-lighten75 round-tl round-tr"></div>
 
                                   <!-- content -->
-                                  <div class="flex-child flex-child--grow bg-lighten75 px6 py6 scroll-auto flex-parent flex-parent--center-cross h-full">
-                                    <div id="widgets" class="flex-parent flex-parent--stretch-cross flex-parent--space-between-main w-full h-full hmax180 grid round-full bg-darken50">
+                                  <div class="flex-child bg-lighten75 px6 py6 flex-parent flex-parent--center-cross flex-parent--center-main scroll-auto h-full">
+                                    <div id="widgets" class="flex-child w-full h-full hmax140 grid round-full bg-darken50">
                                       <!-- row1 -->
                                       <div class="col col--12 grid">
-                                        <div id="elevation-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pb3">
-                                          <div id="elevation" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        <div id="elevation-wrapper" class="col col--6 pr3 pb3">
+                                          <div id="elevation" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--end-main align-r pb6 pr9 pb9-mxl pr18-mxl">
+                                            <div class="none">
+                                              <span id="elevation-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <!-- pr10 -->
+                                              <span class="flex-child txt-mono txt-compact">feet</span>
+                                              <!-- pl1 -->
+                                              <span class="flex-child txt-mono txt-compact">
+                                                <!-- pl18 -->
+                                                <abbr title='Above Sea Level' class='txt-abbr'>ASL</abbr>
+                                              </span>
+                                            </div>
+                                          </div>
                                         </div>
-                                        <div id="odometer-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pb3">
-                                          <div id="odometer" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        <div id="odometer-wrapper" class="col col--6 pl3 pb3">
+                                          <div id="odometer" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--end-main pb6 pl9 pb9-mxl pl18-mxl">
+                                            <div class="none">
+                                              <span id="odometer-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <!-- pl9 -->
+                                              <span class="flex-child txt-mono txt-compact">miles</span>
+                                              <!-- pl1 -->
+                                              <span class="flex-child txt-mono txt-compact">elapsed</span>
+                                              <!-- pr12 -->
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
                                       <!-- row2 -->
                                       <div class="col col--12 grid">
-                                        <div id="compass-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pt3">
-                                          <div id="compass" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        <div id="compass-wrapper" class="col col--6 pr3 pt3">
+                                          <div id="compass" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--start-main align-r pt3 pr9 pt6-mxl pr18-mxl">
+                                            <div class="none">
+                                              <span id="compass-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <!-- pl12 -->
+                                              <span class="flex-child txt-mono txt-compact">degrees</span>
+                                              <!-- pr1 -->
+                                              <span id="current-quadrant" class="flex-child txt-mono txt-compact">N</span>
+                                              <!-- pr9 -->
+                                            </div>
+                                          </div>
                                         </div>
-                                        <div id="clock-wrapper" class="flex-child flex-child--no-shrink col col--6 px3 pt3">
-                                          <div id="clock" class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main h-full txt-mono align-center scroll-auto"></div>
+                                        <div id="clock-wrapper" class="col col--6 pl3 pt3">
+                                          <div id="clock" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--start-main pt3 pl9 pt6-mxl pl18-mxl">
+                                            <div class="none">
+                                              <span id="clock-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <!-- pr12 -->
+                                              <span class="flex-child txt-mono txt-compact">minutes</span>
+                                              <!-- pl3 -->
+                                              <span class="flex-child txt-mono txt-compact">elapsed</span>
+                                              <!-- pl10 -->
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -695,7 +733,7 @@
                       </button>
 
                       <!-- about expand triangle--l -->
-                      <button id="about-left-btn" class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround ml-neg2 border-r border--black px0 none block-mxl z2'>
+                      <button id="about-left-btn" class='absolute top bottom btn color-lighten100 bg-transparent bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active unround ml-neg2 border-r border--black px0 none block-mxl z3'>
                         <span class='icon triangle-l triangle-l--l'></span>
                       </button>
 

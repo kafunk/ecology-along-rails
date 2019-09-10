@@ -137,6 +137,8 @@ details > summary > span {
 .mt-neg21 { margin-top: -21px; }
 .mt-neg10 { margin-top: -10px; }
 
+.hmax140 { max-height: 140px; }
+
 .point-none { pointer-events: none; }
 .point-all { pointer-events: all; }
 .horz-flip { transform: scale(-1, 1); }
@@ -156,7 +158,10 @@ details > summary > span {
 .txt-fancy { font-family: 'Fredericka the Great', cursive; }
 .txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
 .color-symbol { color: #2A4C48; }
-
+.txt-xxs {
+  font-size: 8px;
+  line-height: 12px;
+}
 /* adding on to assembly styling structure */
 .bg-accent1-on-hover:hover {
   background: var(--bg-accent3) !important;
@@ -211,6 +216,8 @@ details > summary > span {
 .txt-xxs { font-size: 0.5em; }
 .txt-compact { line-height: 1.2em; }
 .txt-compact2 { line-height: 0.8em; }
+.pl9 { padding-left: 9px; }
+.pr9 { padding-right: 9px; }
 
 .unstyled {
  list-style: none;

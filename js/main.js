@@ -54,7 +54,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
-    maxFollowZoom = 36,
+    maxFollowZoom = 54, // 36,
     zoomDuration = tPause,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     trainEase = d3.easeSinInOut,
@@ -1418,16 +1418,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         function initElevation() {
 
+          d3.select("#elevation").select("div").classed("none",false)
+
           getElevation([received.from.lng,received.from.lat]).then(elevation => {
 
-            d3.select("#elevation").append("span")
-              .attr("id","current-feet")
-              .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto",true)
-              .text(elevation)
+            d3.select("#elevation-val").text(elevation)
 
-            d3.select("#elevation").append("span")
-              .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
-              .html("feet<br /> <abbr title='Above Sea Level' class='txt-abbr'>ASL</abbr>")
+            d3.select("#asl-abbr")
               .on("mouseover", function() {
                 d3.select(this).append("div")
                   .attr("class","tooltip px6 pt6 pb3 bg-darken75 color-lighten75 z5 point-none")
@@ -1448,58 +1445,35 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         function initOdometer() {
 
+          d3.select("#odometer").select("div").classed("none",false)
+
           totalMiles = Math.round(received.totalDistance);
 
           d3.select("#total-miles").append("text")
             .text(`${totalMiles} miles`)
 
-          d3.select("#odometer").append("span")
-            .attr("id","current-miles")
-            .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto",true)
-            .text("0")
-
-          d3.select("#odometer").append("span")
-            .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
-            .html("miles<br> elapsed")
-
         }
 
         function initClock() {
 
-          totalTime = Math.round(received.totalTime),  // in minutes
+          d3.select("#clock").select("div").classed("none",false)
+
+          totalTime = Math.round(received.totalTime);  // in minutes
          minPerMile = totalTime / totalMiles;
 
           d3.select("#total-time").append("text")
             .text(`${totalTime} minutes`)
 
-          d3.select("#clock").append("span")
-            .attr("id","current-time")
-            .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto",true)
-            .text("0")
-
-          d3.select("#clock").append("span")
-            .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
-            .html("minutes<br> elapsed")
-
         }
 
         function initCompass() {
 
+          d3.select("#compass").select("div").classed("none",false)
+
           let azimuth0 = getAzimuth(0);
 
-          d3.select("#compass").append("span")
-            .attr("id","current-bearing")
-            .classed("flex-child txt-s txt-m-mxl txt-mono mx-auto mt-neg3",true)
-            .text(azimuth0)
-
-          d3.select("#compass").append("span")
-            .classed("flex-child txt-compact txt-xs txt-s-mxl mx-auto",true)
-            .text("degrees")
-
-          d3.select("#compass").append("span")
-            .attr("id", "current-quadrant")
-            .classed("flex-child txt-xs txt-s-mxl mx-auto mt-neg3 mb-neg6",true)
-            .text(getQuadrant(azimuth0))
+          d3.select("#compass-val").text(azimuth0)
+          d3.select("#current-quadrant").text(getQuadrant(azimuth0))
 
         }
 
@@ -2733,14 +2707,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // avoid slight tracker disconnects at end
     let finalCoords = geoMM[geoMM.length - 1];
     getElevation(finalCoords).then(elevation => {
-      d3.select("#current-feet").text(elevation)
+      d3.select("#elevation-val").text(elevation)
     });
     let finalAzimuth = getAzimuth(geoMM.length - 1);
-    d3.select("#current-bearing").text(finalAzimuth)
+    d3.select("#compass-val").text(finalAzimuth)
     d3.select("#current-quadrant").text(getQuadrant(finalAzimuth))
     // miles and clock too
-    d3.select("#current-miles").text(totalMiles)
-    d3.select("#current-time").text(totalTime)
+    d3.select("#odometer-val").text(totalMiles)
+    d3.select("#clock-val").text(totalTime)
 
     // update play-pause btn and listeners
     d3.select("#play-pause-btn")
@@ -2764,8 +2738,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     reversing.flag = false;
 
     // avoid slight tracker disconnects at end
-    d3.select("#current-miles").text("0")
-    d3.select("#current-time").text("0")
+    d3.select("#odometer-val").text("0")
+    d3.select("#clock-val").text("0")
 
     // reenable and update play-pause btn
     d3.select("#play-pause-btn")
@@ -3244,7 +3218,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
 
         let canvasWithMirror = await drawFlipped();
-        return canvasWithMirror; // need only be "true"?
+        return canvasWithMirror;
 
         async function drawFlipped() {
           // GET FLIPPED IMG OF CURRENT CANVAS
@@ -3872,17 +3846,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     if (coordsNow) {  // avoids error at end
 
       getElevation(coordsNow).then(elevation => {
-        d3.select("#current-feet").text(elevation)
+        d3.select("#elevation-val").text(elevation)
       });
 
       let azimuth = getAzimuth(i);
-      d3.select("#current-bearing").text(azimuth)
+      d3.select("#compass-val").text(azimuth)
       d3.select("#current-quadrant").text(getQuadrant(azimuth))
 
     }
 
-    d3.select("#current-miles").text(miles)
-    d3.select("#current-time").text(time)
+    d3.select("#odometer-val").text(miles)
+    d3.select("#clock-val").text(time)
 
   }
 
@@ -4276,10 +4250,19 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       d3.select("#from-to").select("#to").selectAll("span").remove()
       d3.select("#from-to").select("#via").selectAll("div").remove()
       d3.select("#from-to").select("#totals").selectAll("span").remove()
-      d3.select("#elevation").selectAll("span").remove()
-      d3.select("#odometer").selectAll("span").remove()
-      d3.select("#compass").selectAll("span").remove()
-      d3.select("#clock").selectAll("span").remove()
+      // d3.select("#elevation").selectAll("span").remove()
+      // d3.select("#odometer").selectAll("span").remove()
+      // d3.select("#compass").selectAll("span").remove()
+      // d3.select("#clock").selectAll("span").remove()
+      d3.select("#elevation").select("div").classed("none",true)
+      d3.select("#odometer").select("div").classed("none",true)
+      d3.select("#compass").select("div").classed("none",true)
+      d3.select("#clock").select("div").classed("none",true)
+      d3.select("#elevation-val").text("0")
+      d3.select("#odometer-val").text("0")
+      d3.select("#compass-val").text("0")
+      d3.select("#clock-val").text("0")
+      d3.select("#current-quadrant").text("N")
       d3.select("#total-miles").selectAll("text").remove()
       d3.select("#total-time").selectAll("text").remove()
 
@@ -5070,6 +5053,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
   // TODO remove more of smallest pts and polygons?
   // update zoom level upon transitionResume?
+  // place large control icon/text in true center using bottom pad? (avoids overlap with dash on short screens; absolute bottom = bottom - dash)
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (disappear again on scroll)
