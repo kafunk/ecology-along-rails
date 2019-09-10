@@ -2085,6 +2085,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           d3.select("#dash-content").classed("px30-mxl",true)
           d3.select("#dash").select(".resizer")
             .classed("ml-neg36-mxl",true)
+          d3.select("#center-controls").classed("mr-neg24",true)
+          d3.select("#lrg-control-text").classed("mr-neg24",true)
           // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
@@ -2124,6 +2126,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           d3.select("#attribution").classed("mr26-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
+          d3.select("#center-controls").classed("mr-neg24",false)
+          d3.select("#lrg-control-text").classed("mr-neg24",false)
         }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
         d3.select("#about").classed("disappear-right", false)
@@ -3968,6 +3972,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           d3.select("#attribution").classed("mr26-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
+          d3.select("#center-controls").classed("mr-neg24",false)
+          d3.select("#lrg-control-text").classed("mr-neg24",false)
         } else {
           d3.select("#dash-up").classed("mt-neg21", true)
           d3.select("#dash-up").classed("mt-neg10", false)
@@ -4003,6 +4009,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       if (window.innerWidth >= 1200) {
         d3.select("#section-wrapper").classed("relative", false)
+        d3.select("#center-controls").classed("mr-neg24",true)
+        d3.select("#lrg-control-text").classed("mr-neg24",true)
         d3.select("#attribution").classed("mr26-mxl", true)
         d3.select("#dash-content").classed("px30-mxl",true)
         d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
