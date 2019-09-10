@@ -21,11 +21,22 @@ a:hover { text-decoration: line; opacity: 0.8; }
 li { list-style: none; }
 
 svg path { stroke-linejoin: round; }
-  /* shape-rendering: geometricPrecision; } <-- Firebox SVG is blurry on zoom?? */
-  /* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
+/* shape-rendering: geometricPrecision; } <-- Firebox SVG is blurry on zoom?? */
+/* shape-rendering: optimizeSpeed; } <-- doesn't seem to make much difference in performance and looks very grainy */
 
 ul.show-bullets li { list-style: outside; }
 ul.show-bullets--square li { list-style: square; }
+
+/* color summary symbol */
+details.color-symbol > summary,
+details.color-symbol > summary::marker,
+details.color-symbol > summary::-webkit-details-marker {
+  color: #2A4C48;
+}
+/* but not summary text */
+details > summary > span {
+  color: rgba(0,0,0,0.75);
+}
 
 #legend-log details > summary,
 #legend-log details > summary::marker {
@@ -34,19 +45,6 @@ ul.show-bullets--square li { list-style: square; }
 #legend-log details > summary::-webkit-details-marker {
   display: none;
 }
-
-/* adjust indent/border-l on child legend items only, while keeping all label text centered */
-/* .legend-log-child-item {
-  margin-left: 12px
-} */
-/* log name */
-/* .legend-log-child-item label {
-  margin-left: -12px
-} */
-
-/* details > summary > span {
-  color: rgba(0,0,0,0.75);
-} */
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
 #dash { transition: 0.6s; } /* not doing much */
@@ -93,6 +91,10 @@ ul.show-bullets--square li { list-style: square; }
 .mt-neg9 { margin-top: -9px; }
 .mt-neg21 { margin-top: -21px; }
 .mt-neg10 { margin-top: -10px; }
+.pl9 { padding-left: 9px; }
+.pr9 { padding-right: 9px; }
+.pb9 { padding-bottom: 9px;}
+.pt9 { padding-top: 9px;}
 
 .hmax140 { max-height: 140px; }
 
@@ -130,10 +132,6 @@ ul.show-bullets--square li { list-style: square; }
   transition: all 0.6s;
 }
 
-.middle-y {
-  vertical-align: middle;
-}
-
 /* adding on to assembly styling structure */
 .bg-accent1-on-hover:hover {
   background: var(--bg-accent3) !important;
@@ -157,6 +155,7 @@ ul.show-bullets--square li { list-style: square; }
 .color-accent2-on-active:active {
   color: var(--bg-dark2) !important;
 }
+
  /* transition: 0.6s all; */
 .disappear-up {
   max-height: 360px; position: fixed; top: -400px;
@@ -170,10 +169,7 @@ ul.show-bullets--square li { list-style: square; }
 .disappear-left {
   max-width: 360px; position: fixed; left: -400px;
 }
-.widget {
-  border: 1px solid #6B7063;
-  border-radius: 0 0 0 2px;
-}
+
 .tooltip {
   position: absolute;
   text-align: center;
@@ -182,17 +178,12 @@ ul.show-bullets--square li { list-style: square; }
   background: honeydew;
   border: 2px;
 }
+
 .hover { stroke-opacity: 1; opacity: 1 }
 .visible { visibility: visible; }
 .hidden { visibility: hidden; }
-.txt-xxs { font-size: 0.5em; }
 .txt-compact { line-height: 1.2em; }
 .txt-compact2 { line-height: 0.8em; }
-.pl9 { padding-left: 9px; }
-.pr9 { padding-right: 9px; }
-.pb9 { padding-bottom: 9px;}
-.pt9 { padding-top: 9px;}
-
 
 .hmax-twothirds {
   max-height: calc(66vh - 60px);
@@ -215,25 +206,15 @@ ul.show-bullets--square li { list-style: square; }
 
 /* MEDIA QUERIES */
 
-@media screen and (min-width: 200px) {
-  .px36-xs { padding-left: 36px !important; padding-right: 36px !important; }
-  .mr0-xs { margin-right: 0px !important; }
-}
+/* @media screen and (min-width: 200px) { } */
 @media screen and (min-width: 400px) {
   /* missing from Assembly */
   .mx6-sm { margin-left: 6px !important; margin-right: 6px !important; }
   .txt-nowrap-sm { white-space: nowrap !important; }
-  .inline-block-sm { display: inline-block !important; }
 }
 @media screen and (min-width: 640px) {
   #resizable { height: 180px; }
   .normal-order-mm { direction: ltr; }
-  .widget {
-    border: 4px solid #6B7063;
-    border-radius: 5px;
-    box-shadow: 1px 1px 1px 1px #2A4C48;
-  }
-  .mt11-mm { margin-top: 11px !important; }
   /* missing from Assembly */
   .txt-nowrap-mm { white-space: nowrap !important; }
   .align-l-mm { text-align: left !important; }
@@ -248,24 +229,19 @@ ul.show-bullets--square li { list-style: square; }
   .reverse-order-mxl { direction: rtl; }
   .reverse-order-mxl li a,
   .reverse-order-mxl li .nevermind-reverse {
-    direction: ltr; unicode-bidi: embed;
+    direction: ltr;
+    unicode-bidi: embed;
   }
   .flex3-mxl { order: 3; }
   .flex4-mxl { order: 4; }
   .mr26-mxl { margin-right: 26px !important; }
-
-  .middle-y-mxl {
-    vertical-align: middle !important;
-  }
-
-  .txt-nowrap-mxl { white-space: nowrap !important; }
+  .middle-y-mxl { vertical-align: middle !important; }
+  .mr-neg9-mxl { margin-right: -9px !important; }
+  .mt-neg9-mxl { margin-top: -9px !important; }
   /* missing from Assembly */
   .align-l-mxl { text-align: left !important; }
   .align-r-mxl { text-align: right !important; }
-  .ml-neg9-mxl { margin-right: -9px !important; }
-  .mr-neg9-mxl { margin-right: -9px !important; }
-  .mt-neg9-mxl { margin-top: -9px !important; }
-  .mb-neg9-mxl { margin-bottom: -9px !important; }
+  .txt-nowrap-mxl { white-space: nowrap !important; }
 }
 
 /* ANIMATION */
