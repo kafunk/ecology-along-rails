@@ -4948,10 +4948,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // fixed: pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
   // automatic ordering of legend-log category (so pa-grp3 does not appear above pa-grp1, even if that is the order in which features were encountered)
   // logBackground river should be taller than wide? interweave with mirrored dashed line?
-
-// WORKING ON
   // debugging RESET functionality (how to clone without rendering, including bound event listeners and data at select state?) and making less hacksome
-    // ensure select new route btn in particular maintains original event listeners
+  // ensure select new route btn in particular maintains original event listeners
+  // visual affordance/invitation: large transparent play btn simulates 'click' upon animation begin, then visually collapses into much smaller play/pause button in top left corner
 
 // PRIORITY FIXES (COMING ASAP)
   // make form fields like responsive like butter
@@ -4963,11 +4962,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 // MINOR FIXES (COMING SOON)
   // have textured backgrounds recalculate from group up on each render
   // grossly pair down accompanying text (esp all that "overly dramatic" stuff)
-  // station updates:
-    // REMOVE: Port Kent, NY
 
 // ADDITIONS (COMING SOON)
-  // visual affordance/invitation: large transparent play btn simulates 'click' upon animation begin, then visually collapses into much smaller play/pause button in top left corner
   // add automatic highlighting or otherwise improve visual linking of currently passing list with actual rendered features (temporarily align color? thumbnail of shape => dash background?)
 
 // MAYBE
