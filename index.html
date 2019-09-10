@@ -227,9 +227,8 @@
                                   <div class="flex-child resizer sibling-resizer h3 w-full opacity50 bg-yellow-light-on-hover z3 point-all"></div>
 
                                   <!-- main content / dynamically populated legend items  -->
-                                  <div id="log-content-wrapper" class="flex-child flex-child--grow align-center w-full bg-lighten75 px12 py6 scroll-auto">
-                                    <div id="legend-log-content" class="flex-parent flex-parent--column flex-parent--center-main border-t border-b border--dash scroll-auto unstyled">
-                                    </div>
+                                  <div id="log-content-wrapper" class="flex-child flex-child--grow w-full bg-lighten75 px12 py6 scroll-auto">
+                                    <div id="legend-log-content" class="flex-parent flex-parent--column flex-parent--center-main border-t border-b border--dash scroll-auto"></div>
                                   </div>
 
                                   <!-- legend-log footer -->
@@ -257,28 +256,26 @@
                                       <!-- row1 -->
                                       <div class="col col--12 grid">
                                         <div id="elevation-wrapper" class="col col--6 pr3 pb3">
-                                          <div id="elevation" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--end-main align-r pb6 pr9 pb9-mxl pr18-mxl">
+                                          <div id="elevation" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--end-main align-r pb6 pr9 pb9-mxl pr18-mxl txt-compact">
                                             <div class="none">
-                                              <span id="elevation-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
-                                              <!-- pr10 -->
-                                              <span class="flex-child txt-mono txt-compact">feet</span>
-                                              <!-- pl1 -->
-                                              <span class="flex-child txt-mono txt-compact">
-                                                <!-- pl18 -->
+                                              <span id="elevation-val" class="txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <br />
+                                              <span class="txt-mono txt-compact">feet</span>
+                                              <br />
+                                              <span class="txt-mono txt-compact">
                                                 <abbr title='Above Sea Level' class='txt-abbr'>ASL</abbr>
                                               </span>
                                             </div>
                                           </div>
                                         </div>
                                         <div id="odometer-wrapper" class="col col--6 pl3 pb3">
-                                          <div id="odometer" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--end-main pb6 pl9 pb9-mxl pl18-mxl">
+                                          <div id="odometer" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--end-main pb6 pl9 pb9-mxl pl18-mxl txt-compact">
                                             <div class="none">
-                                              <span id="odometer-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
-                                              <!-- pl9 -->
-                                              <span class="flex-child txt-mono txt-compact">miles</span>
-                                              <!-- pl1 -->
-                                              <span class="flex-child txt-mono txt-compact">elapsed</span>
-                                              <!-- pr12 -->
+                                              <span id="odometer-val" class="txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <br />
+                                              <span class="txt-mono txt-compact">miles</span>
+                                              <br />
+                                              <span class="txt-mono txt-compact">elapsed</span>
                                             </div>
                                           </div>
                                         </div>
@@ -286,26 +283,24 @@
                                       <!-- row2 -->
                                       <div class="col col--12 grid">
                                         <div id="compass-wrapper" class="col col--6 pr3 pt3">
-                                          <div id="compass" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--start-main align-r pt3 pr9 pt6-mxl pr18-mxl">
+                                          <div id="compass" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--start-main align-r pt6 pr9 pt9-mxl pr18-mxl txt-compact">
                                             <div class="none">
-                                              <span id="compass-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
-                                              <!-- pl12 -->
-                                              <span class="flex-child txt-mono txt-compact">degrees</span>
-                                              <!-- pr1 -->
-                                              <span id="current-quadrant" class="flex-child txt-mono txt-compact">N</span>
-                                              <!-- pr9 -->
+                                              <span id="compass-val" class="txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <br />
+                                              <span class="txt-mono txt-compact">degrees</span>
+                                              <br />
+                                              <span id="current-quadrant" class="txt-mono txt-compact">N</span>
                                             </div>
                                           </div>
                                         </div>
                                         <div id="clock-wrapper" class="col col--6 pl3 pt3">
-                                          <div id="clock" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--start-main pt3 pl9 pt6-mxl pl18-mxl">
+                                          <div id="clock" class="h-full w-full txt-xs txt-s-mxl flex-parent flex-parent--column flex-parent--start-main pt6 pl9 pt9-mxl pl18-mxl txt-compact">
                                             <div class="none">
-                                              <span id="clock-val" class="flex-child txt-mono txt-compact txt-s txt-m-mxl">0</span>
-                                              <!-- pr12 -->
-                                              <span class="flex-child txt-mono txt-compact">minutes</span>
-                                              <!-- pl3 -->
-                                              <span class="flex-child txt-mono txt-compact">elapsed</span>
-                                              <!-- pl10 -->
+                                              <span id="clock-val" class="txt-mono txt-compact txt-s txt-m-mxl">0</span>
+                                              <br />
+                                              <span class="txt-mono txt-compact">minutes</span>
+                                              <br />
+                                              <span class="txt-mono txt-compact">elapsed</span>
                                             </div>
                                           </div>
                                         </div>
@@ -336,7 +331,7 @@
 
                                   <div id="narration-txt" class="h-full flex-child flex-child--grow bg-lighten75 scroll-always"> <!-- scroll-always for firefox -->
                                     <div class="grid h-full">
-                                      <div id="encounters-A" class="h-full col col--4 scroll-auto flex-parent flex-parent--column"> <!-- removed column-reverse for firefox -->
+                                      <div id="encounters-A" class="h-full col col--4 flex-parent flex-parent--column scroll-y-auto"> <!-- removed column-reverse for firefox -->
                                         <canvas id="pts" class="none"></canvas>
                                         <div class="flex-child mx3 my3 placeholder encounter px6 py6">
                                           <span>Traversing special places</span>
@@ -348,7 +343,7 @@
                                           <span>Beholding the world made fresh again</span>
                                         </div>
                                       </div>
-                                      <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column align-center scroll-auto">
+                                      <div id="encounters-B" class="h-full col col--4 flex-parent flex-parent--column align-center scroll-y-auto">
                                         <canvas id="polys" class="none"></canvas>
                                         <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
                                           <span>Encountering incredible things</span>
@@ -360,7 +355,7 @@
                                           <span>Traversing special places</span>
                                         </div>
                                       </div>
-                                      <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column align-r scroll-auto">
+                                      <div id="encounters-C" class="h-full col col--4 flex-parent flex-parent--column align-r scroll-y-auto">
                                         <canvas id="lines" class="none"></canvas>
                                         <div class="flex-child flex-child--no-shrink placeholder mx3 my3 px6 py6 encounter">
                                           <span>Beholding the world made fresh again</span>
