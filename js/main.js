@@ -54,7 +54,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
-    // maxInitZoom = 36, //  30, // 24, // 18,  // hard coded scale seems to be widely appropriate given constant bufferExtent; ~12-18 good
     maxFollowZoom = 36,
     zoomDuration = tPause,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
@@ -132,9 +131,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     .attr("id", "svg")
     .attr("width", width)
     .attr("height", height)
-    // .attr("viewBox", `0 0 ${width} ${height}`)
-    // // .attr("preserveAspectRatio", "xMidYMid slice")
-    // .attr("preserveAspectRatio", "xMidYMid meet")
 
   svgLoaded = true;
 
@@ -164,7 +160,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     .rotate([96,0])
     .parallels([20,60])
     .translate([width/2, height/2])
-    // .clipExtent(extent0)
 
   var reflectedY = d3.geoIdentity()
     .reflectY(true)
@@ -367,10 +362,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "lakes",
       fullTxt: "Lakes",
       textureType: "paths",
-      // textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 18, lighter: 12, shapeRendering: "crispEdges"},
       textureProps: {d: "waves", background: lakeBlue, stroke: "mediumseagreen", thicker: 24, lighter: 18, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 1.25, heavier: 10 }
-      // htmlAdjust: { thicker: 1.25, heavier: 12 }
       // no keywords, CATEGORY.startsWith("Lake")
     },
     "RIVER": {
@@ -386,8 +379,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       textureType: "paths",
       textureProps: {d: "nylon", thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
       ptTextureProps: {d: "nylon", thicker: 72, lighter: 48},
-      // textureProps: {d: "nylon", thicker: 36, lighter: 24, shapeRendering: "crispEdges"},
-      // ptTextureProps: {d: "nylon", thicker: 54, lighter: 36, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 0.8, heavier: 14, background: "#e6ece6" }
       // "#ecf2eb"
       // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
@@ -397,7 +388,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       fullTxt: "Grasslands",
       textureType: "lines",
       textureProps: {thicker: 48, lighter: 24, orientation: "2/8"},
-      // textureProps: {thicker: 24, lighter: 24, orientation: "2/8"},
       htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
     },
     "VOLCANO": {
@@ -405,7 +395,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       fullTxt: "Volcanoes",
       textureType: "paths",
       textureProps: {d: "caps", thicker: 48, lighter: 24, shapeRendering: "crispEdges"},
-      // textureProps: {d: "caps", thicker: 24, lighter: 24, shapeRendering: "crispEdges"},
       ptTextureProps: {d: "caps", thicker: 108, lighter: 48, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 1, heavier: 8, background: "#e6ece6" }
       // no keywords; CATEGORY.startsWith("Volcano")
@@ -414,7 +403,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "other-np-geo",
       fullTxt: "Other Non-protected Geothermal Areas",
       textureType: "lines",
-      textureProps: {thicker: 60, lighter: 12, orientation: "6/8"},      // textureProps: {thicker: 24, lighter: 24, orientation: "6/8"},
+      textureProps: {thicker: 60, lighter: 12, orientation: "6/8"},
       ptTextureProps: {thicker: 108, lighter: 60, orientation: "6/8"},
       htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
       // no keywords; CATEGORY === "Geothermal System"
@@ -429,8 +418,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       textureType: "paths",
       textureProps: {d: "hexagons", thicker: 72, lighter: 42, shapeRendering: "crispEdges"},
       ptTextureProps: {d: "hexagons", thicker: 96, lighter: 48, shapeRendering: "crispEdges"},
-      // textureProps: {d: "hexagons", thicker: 72, lighter: 36, shapeRendering: "crispEdges"},
-      // ptTextureProps: {d: "hexagons", thicker: 96, lighter: 48, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 2, lighter: 0 },
       getStroke(d) {
         let description = d.properties.DESCRIPTION.toUpperCase();
@@ -450,10 +437,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       textureType: "paths",
       textureProps: {d: "crosses", thicker: 48, lighter: 30, shapeRendering: "crispEdges"},
       ptTextureProps: {d: "crosses", thicker: 84, lighter: 48},
-      // textureProps: {d: "crosses", thicker: 54, lighter: 36, shapeRendering: "crispEdges"},
-      // ptTextureProps: {d: "crosses", thicker: 96, lighter: 48, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 1.2, lighter: 1 }
-      // htmlAdjust: { thicker: 1.2, lighter: 0 }
       // national, state, provincial, park, monument, etc matches will be disjoint from PA1 group above (matched only one keyword group, not both)
     },
     "PA3": {
@@ -463,9 +447,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       textureType: "circles",
       textureProps: { complement: true, thicker: 54, lighter: 24 },
       ptTextureProps: { complement: true, thicker: 72, lighter: 36 },
-      // textureProps: { complement: true, thicker: 54, lighter: 24 },
-      // ptTextureProps: { complement: true, thicker: 72, lighter: 36 },
-      htmlAdjust: { thinner: 18, lighter: 0, radius: 2 , size: 8 }  // htmlAdjust: { thinner: 18, lighter: 0, radius: 1, size: 8 }
+      htmlAdjust: { thinner: 18, lighter: 0, radius: 2 , size: 8 }
       // no keywords; CATEGORY === "Protected Area" && DESCRIPTION !== "Inventoried Roadless Area"
     }
   },
@@ -543,7 +525,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       weight: 9,
       color: purple
     }
-    // ANYTHING LEFTOVER??
   },
       paKeys = Object.keys(paTags),
     tagWords = Object.values(paTags).map(d => d.keywords);
@@ -606,7 +587,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
            statesMesh = getMesh(sourceData.states.tj,"states"),
              lakeMesh = getMesh(sourceData.lakes.tj,"lakes"),
             urbanMesh = getMesh(sourceData.urbanAreas.tj,"urbanAreas");
-             // railSimp = sourceData.railways.gj.features.map(d => getSimpRoute(d,0.1))
 
     // define svg groups
     var baselayers = g.append("g")
@@ -692,25 +672,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("id", "railways")
       .selectAll("path")
       .data(sourceData.railways.gj.features)
-      // .data(railSimp)
       .enter().append("path")
         .attr("d", path)
         .attr("stroke-width", d => { return (8/(d.properties.scalerank * 10)) })
         .attr("stroke","lightslategray")
         .style("fill", "none")
         .style("opacity",1)
-
-    // railBase.append("g")
-    //   .attr("id", "railway-ties")
-    //   .selectAll("path")
-    //   .data(railSimp)
-    //   .enter().append("path")
-    //     .attr("d", path)
-    //     .attr("stroke","darkslategray")
-    //     .attr("stroke-width", d => { return (8/(d.properties.scalerank * 5)) })
-    //     .style("fill", "none")
-    //     .style("opacity",0.8)
-    //     .style("stroke-dasharray", "0.1 0.5")
 
     // POINT FEATURES
     urbanBase.selectAll("circle")
@@ -1718,8 +1685,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
 
-      // let bottomPad = (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 18 : 21,
-
       let bottomPad = d3.select("#dash").node().clientHeight / 2,
            options0 = { scalePad: 0.5, padBottom: bottomPad };
 
@@ -2443,20 +2408,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     //
     let opts = {...defaultOptions.centerTransform, ...options};
 
-    // // account for any padding
-    // opts.width -= (opts.padLeft + opts.padRight);
-    // opts.height -= (opts.padTop + opts.padBottom);
-
+    // account for any padding
     opts.width += (opts.padLeft + opts.padRight);
     opts.height += (opts.padTop + opts.padBottom);
-
-    // let k = opts.scale,
-    //    tx = -k * x + opts.width/2,  // no need to divide -k * x by 2 since given as center
-    //    ty = -k * y + opts.height/2; // no need to divide -k * y by 2 since given as center
-
-    // let k = opts.scale,
-    //    tx = -k * x + opts.width/2 - opts.padLeft + opts.padRight,
-    //    ty = -k * y + opts.height/2 - opts.padTop + opts.padBottom //2
 
     let k = opts.scale,
        tx = -k * x + opts.width/2 + opts.padLeft - opts.padRight,
@@ -4275,11 +4229,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       zoomArc = null;
       resetExperienceState();
       // togglesOff = { info: false, select: false }
-      // resetPannedState()
       logBackgrounds = {};
       transitionResume = false;
       reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
-      // data1 = null, data2 = null, data3 = null;
       readyAndWaiting = {};
 
       encounteredPts = new Set(),
@@ -5099,11 +5051,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // credit bar (bottom right) gets cut off by dash expand on all screen sizes (firefox)
     // make sure manual-close class removed as appropriate
     // no details triangles visible within legend-log (firefox)
-
-// done:
-  //change otherwise preserved/reserved color (icky orange)
+    // safari 'select new' cut off
+  // change otherwise preserved/reserved color (icky orange)
   // cues to click or hit spacebar for pause
-  // fixed: safai 'select new' cut off
   // some pts have dark border
   // legend-log summary content not on one line (see partial fix noted)
 
