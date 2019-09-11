@@ -32,9 +32,19 @@ details.color-symbol > summary,
 details.color-symbol > summary::marker,
 details.color-symbol > summary::-webkit-details-marker {
   color: #2A4C48;
+  margin-bottom: 1px;
 }
+
+@media screen and (min-width: 1200px) {
+  details.unnudge-symbol-mxl > summary,
+  details.unnudge-symbol-mxl > summary::marker,
+  details.unnudge-symbol-mxl > summary::-webkit-details-marker {
+    margin-bottom: 0px;
+  }
+}
+
 /* but not summary text */
-details > summary > span {
+details.color-symbol > summary > span {
   color: rgba(0,0,0,0.75);
 }
 
@@ -121,7 +131,6 @@ details > summary > span {
 .bg-dark2 { background: var(--bg-dark2); }
 .txt-fancy { font-family: 'Fredericka the Great', cursive; }
 .txt-fancy2 { font-family: 'Sirin Stencil', cursive; }
-.color-symbol { color: #2A4C48; }
 
 .open {
   transform: rotate(90deg);
