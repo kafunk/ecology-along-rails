@@ -5064,16 +5064,22 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // cues to click or hit spacebar for pause
   // some pts have dark border
   // legend-log summary content not on one line (see partial fix noted)
+  // add autocomplete/suggestions to R2R search (fixed a few some others)
+  // address remaining PROBLEM CITIES (R2R issue)
+  // improve center calculations of lrg control icons/text
+  // fixed cities: atlanta, grand junction, ann arbor, memphis, burlington IA, Greenville SC, cincinnatti, charleston, saskatoon
 
 // todo:
   // rid of failure/feelings language
   // form smoothness
   // clicking on log name while animated paused/stopped zooms to feature
-  // cross browser testing: Judges will use the current versions of Firefox, Safari, or Chrome with a true color monitor with a resolution of at least 1280 x 800.
   // sieve R2R extra station errors via intersect query
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
   // TODO remove more of smallest pts and polygons?
   // update zoom level upon transitionResume?
+  // PROBLEM CITIES REMAINING:
+    // seem ok now? port kent, alliance (but maybe remove anyway)
+    // sault ste marie, UNFIXABLE
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
@@ -5081,23 +5087,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 // FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
   // everything blurry upon zoom (ie entire animation..)
-  // aberdeen amherst overzooms on small screens?
+  // aberdeen amherst overzooms on small screens? -- routeBoundsIdentity cannot overzoom firstIdentity (latter INCL bottomPad)
 
 // performance:
   // remove elevation query? (see network tab -- slows me down!)
   // enrich data in dynamo DB? --> query?
   // truncate coordinates and other values wherever possible
   // slim library imports / take only what I need
+    // turf - check
+    // d3 !
+    // chroma ?
   // dynamically simplify map geometries
-
-// most recent done:
-  // address PROBLEM CITIES (R2R issue)
-  // add autocomplete/suggestions to R2R search (fixed a few some others)
-  // improve center calculations of lrg control icons/text
-
-// FIXED CITIES (add 'amtrak station' or similar to query...)
-// atlanta, grand junction, ann arbor, memphis, burlington IA, Greenville SC, cincinnatti, charleston, saskatoon
-// seem ok now? port kent, alliance (but maybe remove anyway)
-
-// UNFIXABLE
-// ie remove for real: sault ste marie
