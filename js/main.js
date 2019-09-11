@@ -848,6 +848,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                     d3.select(this)
                       .classed("hide-visually none",true)
                       .style("transform",null)
+                    d3.select("#center-controls-parent").classed("mb60",false)
                   })
               }
             })
@@ -1023,38 +1024,46 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function onSubmit(opt0,opt1) {
-    // opt0 == from, opt1 == to
 
-    let testOpt0 = opt0.split(', '),  // note space after comma
-        testOpt1 = opt1.split(', ');
+    // fixable problem list:
+    let fixable = [{ name: "grand junction" },{ name: "ann arbor" },{   name: "atlanta" },{ name: "memphis" },{ name: "charleston" },{ name: "cincinnatti", addition: "Amtrak" },{ name: "greenville" },{ name: "saskatoon", addition: "VIA Station" },{ name: "burlington" }]
 
-    // remove "CHI" (Chichuacame) as state to align with R2R returns
-    if (testOpt0[testOpt0.length-1] === 'CHI') {
-      opt0 = testOpt0.slice(0, testOpt0.length-1).join(" ");
-    }
-    if (testOpt1[testOpt1.length-1] === 'CHI') {
-      opt1 = testOpt1.slice(0, testOpt1.length-1).join(" ");
-    }
+    let index0 = fixable.findIndex(d => opt0.toLowerCase().startsWith(d.name)),
+        index1 =  fixable.findIndex(d => opt1.toLowerCase().startsWith(d.name));
 
-    let selection = queryAPI(opt0,opt1);
+    if (index0 >= 0) opt0 = capitalize(fixable[index0].name) + " " + (fixable[index0].addition || "Amtrak Station");
+    if (index1 >= 0) opt1 = capitalize(fixable[index1].name) + " " + (fixable[index1].addition || "Amtrak Station");
 
-    Promise.all([selection]).then(function(returned) {
+    let from = d3.json(`https://free.rome2rio.com/api/1.4/json/Autocomplete?key=&query=${opt0}`).then(extractCrux,onError),
+          to = d3.json(`https://free.rome2rio.com/api/1.4/json/Autocomplete?key=&query=${opt1}`).then(extractCrux,onError);
 
-      // if no rail-only routes found, reprompt user;
-      // otherwise, proceed with drawing/zooming to chosen route
-      if (returned[0] == null) {
+    let selection = Promise.all([from,to]).then(queryAPI,onError);
+
+    selection.then(data => {
+      if (data == null) {  // if no rail-only routes found, reprompt user;
         d3.select("#submit-btn-load").classed("none",true);
         d3.select("#submit-btn-txt").classed("none",false);
         initPrompt()
-      } else {
+      } else {  // otherwise, proceed with drawing/zooming to chosen route
         toggleLoading();
-        let processed = processReceived(returned[0]);
-        Promise.all([processed]).then(function(received) {
-          if (!experience.initiated) initExp(received[0]);
+        let processed = processReceived(data);
+        Promise.all([processed]).then(function(data) {
+          if (!experience.initiated) initExp(data[0]);
         }, onError);
       }
-
     }, onError);
+
+    function extractCrux(results) {
+      let topMatch = results.places[0];
+      return topMatch ? {
+        name: `${topMatch.shortName}`,
+        coords: `${topMatch.lat},${topMatch.lng}`
+      } : null;
+    }
+
+    function fightBack(opt0,opt1) {
+
+    }
 
   }
 
@@ -1080,14 +1089,16 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 //// API / DATA-PROCESSING RELATED
 
-  function queryAPI(opt0,opt1) {
+  function queryAPI([opt0,opt1]) {
 
     // save and parse user input
-    var a = replaceCommas(opt0),
-        b = replaceCommas(opt1);
+    var posA = opt0 ? replaceCommas(opt0.coords) : null,
+        posB = opt1 ? replaceCommas(opt1.coords) : null,
+       nameA = opt0 ? replaceCommas(opt0.name) : null,
+       nameB = opt1 ? replaceCommas(opt1.name) : null;
 
     // define Rome2Rio API query string
-    let apiCall = `https://free.rome2rio.com/api/1.4/json/Search?key=V8yzAiCK&oName=${a}&dName=${b}&oKind=station&dKind=station&noAir&noAirLeg&noBus&noFerry&noCar&noBikeshare&noRideshare&noTowncar&noMinorStart&noMinorEnd&noPrice`
+    let apiCall = `https://free.rome2rio.com/api/1.4/json/Search?key=V8yzAiCK&oPos=${posA}&dPos=${posB}&oName=${nameA}&dName=${nameB}&oKind=station&dKind=station&noAir&noAirLeg&noBus&noFerry&noCar&noBikeshare&noRideshare&noTowncar&noMinorStart&noMinorEnd&noPrice`
 
     let received = d3.json(apiCall).then(validate,onError);
 
@@ -1320,7 +1331,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         let scale1 = Math.min(maxFollowZoom,k1),
            options = { scale: scale1, padBottom: bottomPad };
 
-        return getIdentity(getTransform(bounds1,options));
+        let toReturn = getIdentity(getTransform(bounds1,options));
+
+        return toReturn;
 
       }
 
@@ -1793,9 +1806,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             .on("end", () => {
 
               if (!again) {
+
                 d3.select("#play-pause-btn")
                   .style("opacity",0)
                   .classed("none",false)
+                d3.select("#center-controls-parent")
+                  .classed("mb60",true)
                 d3.select("#lrg-control-text")
                   .style("opacity",0)
                   .classed("hide-visually none",false)
@@ -3933,11 +3949,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     if (d3.event && d3.event.defaultPrevented) return; // dragged
 
     // if window too short to reasonably fit more content, expand modal instead
-    if (window.innerHeight < 500) {
+    if (window.innerHeight < 500 && elementStr === "about") {
 
-      if (elementStr === "about") {
-        toggleModal("modal-about")
-      }
+      // if (elementStr === "about") {
+      toggleModal("modal-about")
+      // }
 
     } else {
 
@@ -3969,6 +3985,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         adjustSize();
 
       } else if (elementStr === "dash") {
+        let dashHeight = d3.select("#dash").node().clientHeight;
+        d3.select("#center-controls-parent").style("bottom",`${dashHeight}px`)
+        d3.select("#lrg-control-text").style("bottom",`${dashHeight}px`)
         d3.select("#attribution").classed("mt-neg18 mt-neg24 mt-neg24-mxl mb24", false)
         d3.select("#attribution").classed("mt-neg6 mb6", true)
       }
@@ -4009,6 +4028,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       if (svgLoaded) adjustSize();
 
     } else if (elementStr === "dash") {
+      d3.select("#lrg-control-text").style("bottom","18px")
+      d3.select("#center-controls-parent").style("bottom","18px")
       d3.select("#attribution").classed("mt-neg6 mb6",false)
       d3.select("#attribution").classed("mb24",true)
       if (d3.select("#about").classed("disappear-down")) {
@@ -4363,22 +4384,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       s = 24 - padLeft;
 
     if (d.property("category") === "Watershed") {
-
-      // let arr = d.style("stroke-dasharray").split(', ').slice(0,4).map(d => +(d.replace("px",""))),
-        // parts = arr.length * 2 + 1;
-
-      // let pathSequence = `
-      //     M 0,${s}
-      //     l ${arr[0] * (s/parts)},-${arr[0] * (s/parts)}
-      //     m ${2 * (s/parts)},-${2 * (s/parts)}
-      //     l ${arr[1] * (s/parts)},-${arr[1] * (s/parts)}
-      //     m ${2 * (s/parts)},-${2 * (s/parts)}
-      //     l ${arr[2] * (s/parts)},-${arr[2] * (s/parts)}
-      //     m ${2 * (s/parts)},-${2 * (s/parts)}
-      //     l ${arr[3] * (s/parts)},-${arr[3] * (s/parts)}
-      //     m ${2 * (s/parts)},-${2 * (s/parts)}
-      //     L ${s},0
-      //   `;
 
       // hardcoded because this is really all that makes sense for a small swatch, and ensures compatability with safari
 
@@ -4748,6 +4753,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 //// OTHER HELPER FUNCTIONS
 
+  function capitalize(str) {
+    return str.split(" ").map(word => word[0].toUpperCase() + word.slice(1)).join(" ");
+  }
+
   function standardizeBounds(bounds) {
     // accept bbox, path.bounds(), or SVG bbox
     if (bounds.length === 4) {
@@ -4898,7 +4907,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // toggle layers on/off: eco, hydro, geo, protected areas
   // user chosen sort of origin/destination options?
     // random shuffle, by distance, alphabetical
-  // add autocomplete/suggestions to R2R search (using their API; maybe this would fix some problem cities?)
   // more interesting icons for point data
     // maki: all -11, -15: volcano, mountain, park, park-alt1, information, marker, marker-stroked, circle, circle-stroked, bridge, heart
     // assembly: #icon-mountain (for mount, mountain, mt, mtn)
@@ -4917,16 +4925,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // keep zindexes in line on small screen sizes (modal vs attribution, toggle buttons)
   // remaining open github issues (form focus issue: use focus-within?)
   // several more interspersed COMBAKs, FIXMEs
-  // PROBLEM CITIES (R2R issue)
-    // FIX?? they are important ones:
-      // Sault Ste Marie, ON
-      // Charleston, SC
-      // Cincinnatti, OH
-      // Greenville, SC
-      // Grand Junction, CO
-      // Saskatoon, SK
-      // Memphis, TN
-      // Burlington, IA
+
 
 // MAAAAYBE
   // new color for modal?
@@ -4961,7 +4960,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // fixed: pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
   // automatic ordering of legend-log category (so pa-grp3 does not appear above pa-grp1, even if that is the order in which features were encountered)
   // logBackground river should be taller than wide? interweave with mirrored dashed line?
-  // debugging RESET functionality (how to clone without rendering, including bound event listeners and data at select state?) and making less hacksome
+  // debug RESET functionality (how to clone without rendering, including bound event listeners and data at select state?) and making less hacksome
   // ensure select new route btn in particular maintains original event listeners
   // visual affordance/invitation: large transparent play btn simulates 'click' upon animation begin, then visually collapses into much smaller play/pause button in top left corner
 
@@ -4970,7 +4969,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // also:
       // origin !!= destination (!!= = cannot)
       // get rid of down arrows
-  // integrate R2R autocomplete API or otherwise resolve big but error-returning cities (Denver, Atlanta, etc)
 
 // MINOR FIXES (COMING SOON)
   // have textured backgrounds recalculate from group up on each render
@@ -5061,6 +5059,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // make sure manual-close class removed as appropriate
     // no details triangles visible within legend-log (firefox)
     // safari 'select new' cut off
+    // watershed html texture doesn't render (legend-log, narrative) (safari and firefox)
   // change otherwise preserved/reserved color (icky orange)
   // cues to click or hit spacebar for pause
   // some pts have dark border
@@ -5075,17 +5074,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
   // TODO remove more of smallest pts and polygons?
   // update zoom level upon transitionResume?
-  // place large control icon/text in true center using bottom pad? (avoids overlap with dash on short screens; absolute bottom = bottom - dash)
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
-  // lines appear on left when opening details elements / data sources (disappear again on scroll)
+  // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
   // no resize event dispatched upon second tab opened/closed (tab bar revealed)
-  // watershed html texture doesn't render (legend-log, narrative) (also firefox)
 
 // FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
   // everything blurry upon zoom (ie entire animation..)
   // aberdeen amherst overzooms on small screens?
-  // watershed html texture doesn't render (legend-log, narrative) (also safari)
 
 // performance:
   // remove elevation query? (see network tab -- slows me down!)
@@ -5093,10 +5089,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // truncate coordinates and other values wherever possible
   // slim library imports / take only what I need
   // dynamically simplify map geometries
-// low priority:
-  // integrate R2R autocomplete
-  // station updates:
-    // REMOVE: Port Kent, NY
-    // remove ann arbor?
-    // remove alliance, OH?
-    // atlanta giving issues again
+
+// most recent done:
+  // address PROBLEM CITIES (R2R issue)
+  // add autocomplete/suggestions to R2R search (fixed a few some others)
+  // improve center calculations of lrg control icons/text
+
+// FIXED CITIES (add 'amtrak station' or similar to query...)
+// atlanta, grand junction, ann arbor, memphis, burlington IA, Greenville SC, cincinnatti, charleston, saskatoon
+// seem ok now? port kent, alliance (but maybe remove anyway)
+
+// UNFIXABLE
+// ie remove for real: sault ste marie
