@@ -108,6 +108,8 @@ details.color-symbol > summary > span {
 
 .hmax140 { max-height: 140px; }
 
+.pointer { cursor: pointer; }
+
 .point-none { pointer-events: none; }
 .point-all { pointer-events: all; }
 .horz-flip { transform: scale(-1, 1); }

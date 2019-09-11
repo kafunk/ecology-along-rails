@@ -194,7 +194,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     .on('mouseleave', removeHighlight)
 
   var zoom = d3.zoom()
-    .scaleExtent(scaleExtent)
+    // .scaleExtent(scaleExtent)
     .on("zoom", zoomed)
     .filter(() => {
       // dbl-clicking on background does not trigger zoom (actually resets it)
@@ -848,7 +848,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                     d3.select(this)
                       .classed("hide-visually none",true)
                       .style("transform",null)
-                    d3.select("#center-controls-parent").classed("mb60",false)
+                    d3.timeout(() => {
+                      d3.select("#center-controls-parent").classed("mb60",false)
+                    },750);  // avoids flicker upon collapse
                   })
               }
             })
@@ -1941,8 +1943,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       p.y += panned.centerAdjust[1];
     }
 
-    zoomAlongOptions.scale = +d3.select("label#zoom").attr("value");
-    // COMBAK diff scale vs oScale?
+    let currentScale = +d3.select("label#zoom").attr("value");
+    if (currentScale < zoomAlongOptions.scale) zoomAlongOptions.scale = currentScale; // adjust base scale if zooming out, but not if zooming in
+    // COMBAK alt, have flag for resetting vs respecting new scale?
 
     // calculate translate necessary to center data within extent
     return getCenterTransform([p.x,p.y],zoomAlongOptions);
@@ -2716,6 +2719,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .on("end", () => {
         // re-allow free zooming
         svg.call(zoom)
+        // invite user to click on outputted feature names to zoom to bounds
+        d3.selectAll(".encounter").classed("pointer",true)
       })
 
     // avoid slight tracker disconnects at end
@@ -3596,9 +3601,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function output(encountered) {
 
-    // let darkText = "#333",
-    //    lightText = "#ddd";
-
     if (encountered.property("name")) {
 
       // get encountered group A, B, or C
@@ -3627,10 +3629,40 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               .property("assocId", d => d.attr("id"))
               .style("opacity", 1)
               .on("mouseover", highlightAssoc)
-              .on("mouseout", unhighlight),
-              // .call(enter => enter.transition(t)),
+              .on("mouseout", unhighlight)
+              .on("click", function() {  // if animation paused or ended, zoom to feature
+
+                if (experience.animating && !experience.manuallyPaused) return;
+
+                let featureId = d3.select(this).property("assocId"),
+                      feature = g.select("#enrich-layer").select(`#${featureId}`),
+                           gj = feature.datum(),
+                      bounds;
+
+                // dash will necessarily be open since user just clicked on it
+                let bottomPad = d3.select("#dash").node().clientHeight,
+                     rightPad = (window.innerWidth >= 1200 && d3.select("#about").classed("disappear-right")) ? -24 : 0,
+                      options = { scalePad: 0.1, padRight: rightPad, padBottom: bottomPad };
+
+                if (gj.geometry.type === "Point") {
+                  // getCenterTransform must pass predetermined zoom level... lacking this, pad projected point with radius pixels and zoom to bounds
+                  let pt0 = projection(gj.geometry.coordinates), // often feature.attr("cx/cy"), but not always
+                   radius = +feature.attr("r") * 5;
+                  bounds = [[pt0[0]-radius,pt0[1]-radius],[pt0[0]+radius,pt0[1]+radius]];
+                } else {
+                  bounds = path.bounds(feature.datum());
+                }
+
+                let zoomIdentity = getIdentity(getTransform(bounds,options));
+
+                // flag to transitionResume
+                transitionResume = true;
+
+                svg.transition().duration(zoomDuration/2).ease(zoomEase)
+                  .call(zoom.transform,zoomIdentity)
+
+              }),
             update => update,
-              // .call(update => update.transition(t)),
             exit => exit
               .call(exit => exit.transition(t)
                 .style("opacity", 0))
@@ -4118,6 +4150,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       showLrgControls("pause-lrg")
       manualPause();
     } else if (experience.animating) {
+      d3.selectAll(".encounter").classed("pointer",false)
       // manual resume control feedback
       showLrgControls("play-lrg").then(resumeAnimation)
     }
@@ -4155,6 +4188,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function manualPause() {
     experience.manuallyPaused = true;
     pauseAnimation();
+    d3.selectAll(".encounter").classed("pointer",true)
   }
 
   function resumeAnimation(delay = 0) {
@@ -5080,6 +5114,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // PROBLEM CITIES REMAINING:
     // seem ok now? port kent, alliance (but maybe remove anyway)
     // sault ste marie, UNFIXABLE
+  // INSTEAD OF ONLY APPLYING RIGHTPAD WITHIN FEATURE ZOOM CLICK, ADJUST WHOLE OF MAP WHEN window.innerWidth >= 1200 && d3.select("#about").classed("disappear-right")
+  // WATERSHEDS AND RIVERS ON HOVER: thicken
+  // aberdeen amherst etc overzooms on small screens? -- routeBoundsIdentity  cannot overzoom firstIdentity (latter INCL bottomPad)
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
@@ -5087,7 +5124,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 // FIREFOX FIXES (ENSURE CURRENT, NOT DEV)
   // everything blurry upon zoom (ie entire animation..)
-  // aberdeen amherst overzooms on small screens? -- routeBoundsIdentity cannot overzoom firstIdentity (latter INCL bottomPad)
 
 // performance:
   // remove elevation query? (see network tab -- slows me down!)
