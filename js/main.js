@@ -3731,10 +3731,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               return symbol;
             }
 
-            // if (["#000","#000000","rgb(0,0,0)","rgba(0,0,0,0.75)","rgb(0, 0, 0)","black","none"].includes(symbol.styles.background)) {
-            //   symbol.styles.background = "#e1e2e2" // chroma("#e1e2e2").alpha(0.8)
-            // }
-
             let geomType = d.attr("id").slice(0,2),
               key = (d.classed("patterned")) ? d.attr("patternKey") : d.property("category").toLowerCase() + "-" + (d.property("sub-tag") ? d.property("sub-tag").divId : d.property("log-group").divId) + "-" + geomType;
 
@@ -3745,7 +3741,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               // if watershed, don't assume that legend-log-item-sym === legend-log-child-item-sym; recalc avoids flawed offset of dashed line within single child drain symbol
               let textureArr = getTextures(d,key,geomType,padLeft);
 
-              // assign all srcs & urls to patterns object; COULD skip actual svg url() some in this case only.. (only lines reach this point)
+              // assign all srcs & urls to patterns object; COULD skip actual svg url() call in this case only.. (only lines reach this point)
               pattern = assignPatterns(textureArr,key);
 
             }
@@ -4368,7 +4364,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     if (d.property("category") === "Watershed") {
 
-      let arr = d.style("stroke-dasharray").split(', ').slice(0,4).map(d => +d),
+      let arr = d.style("stroke-dasharray").split(', ').slice(0,4).map(d => +(d.replace("px",""))),
         parts = arr.length * 2 + 1;
       // arr.slice().reduce((a,b) => a+b);
 
@@ -4432,14 +4428,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let xml = `<svg xmlns="http://www.w3.org/2000/svg" height="${h}" width="${w}">${pattern.node().innerHTML}</svg>` // avoids actually/unnecessarily appending to DOM tree
 
-    let src = (type !== "base64") ? getRaw(xml) : getBase64(xml);
+    // let src = (type !== "base64") ? getRaw(xml) : getBase64(xml);
+    // return src;
 
-    return src;
+    return getBase64(xml);
 
-    function getRaw(xml) {
-      // https://css-tricks.com/probably-dont-base64-svg/
-      return 'data:image/svg+xml;utf-8,' + xml;
-    }
+    // function getRaw(xml) {
+    //   // https://css-tricks.com/probably-dont-base64-svg/
+    //   return 'data:image/svg+xml;utf-8,' + xml;
+    // }
 
     function getBase64(xml) {
       // reduced from https://jsfiddle.net/Wijmo5/h2L3gw88/
