@@ -1180,7 +1180,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           return [...stopSet];
 
         },
-        overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
+        // overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
         arcPts: projectArray(truncateCoords(getSteps(arcSteps))),
         geoMM: getSteps(Math.round(inMiles))
       }
@@ -4364,21 +4364,35 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     if (d.property("category") === "Watershed") {
 
-      let arr = d.style("stroke-dasharray").split(', ').slice(0,4).map(d => +(d.replace("px",""))),
-        parts = arr.length * 2 + 1;
-      // arr.slice().reduce((a,b) => a+b);
+      // let arr = d.style("stroke-dasharray").split(', ').slice(0,4).map(d => +(d.replace("px",""))),
+        // parts = arr.length * 2 + 1;
+
+      // let pathSequence = `
+      //     M 0,${s}
+      //     l ${arr[0] * (s/parts)},-${arr[0] * (s/parts)}
+      //     m ${2 * (s/parts)},-${2 * (s/parts)}
+      //     l ${arr[1] * (s/parts)},-${arr[1] * (s/parts)}
+      //     m ${2 * (s/parts)},-${2 * (s/parts)}
+      //     l ${arr[2] * (s/parts)},-${arr[2] * (s/parts)}
+      //     m ${2 * (s/parts)},-${2 * (s/parts)}
+      //     l ${arr[3] * (s/parts)},-${arr[3] * (s/parts)}
+      //     m ${2 * (s/parts)},-${2 * (s/parts)}
+      //     L ${s},0
+      //   `;
+
+      // hardcoded because this is really all that makes sense for a small swatch, and ensures compatability with safari
+
+      let l = s > 18 ? 1.5 : 2;
 
       pathSequence = `
           M 0,${s}
-          l ${arr[0] * (s/parts)},-${arr[0] * (s/parts)}
-          m ${2 * (s/parts)},-${2 * (s/parts)}
-          l ${arr[1] * (s/parts)},-${arr[1] * (s/parts)}
-          m ${2 * (s/parts)},-${2 * (s/parts)}
-          l ${arr[2] * (s/parts)},-${arr[2] * (s/parts)}
-          m ${2 * (s/parts)},-${2 * (s/parts)}
-          l ${arr[3] * (s/parts)},-${arr[3] * (s/parts)}
-          m ${2 * (s/parts)},-${2 * (s/parts)}
-          L ${s},0
+          l ${l},-${l}
+          m 6,-6
+          l ${l},-${l}
+          m 6,-6
+          l ${l},-${l}
+          m 6,-6
+          l ${l},-${l}
         `;
 
     } else if (d.property("category").startsWith("River")) {
