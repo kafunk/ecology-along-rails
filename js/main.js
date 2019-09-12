@@ -54,12 +54,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
-    maxFollowZoom = 54, // 36,
+    maxInitZoom = 54,
     zoomDuration = tPause,  // zoom to frame transition duration
     zoomEase = d3.easeCubicIn,
     trainEase = d3.easeSinInOut,
     relativeDim = 0.4,  // dimBackground level; lower values => greater dim
-    reverseCut = 2 // 12;
+    reverseCut = 2, // 12
+    pyIgnore = ["grassland","lakes"],
+    ptIgnore = ["pa-grp1","pa-grp2","pa-grp3"],
+    symInvert = ["volcanoes","inv-roadless","other-np-geo"];  // logGroups.divIds; specific to converting styles -> legend-log swatches and narrative output backgrounds
 
 // AS YET EMPTY, ZERO, OR UNDEFINED
 
@@ -71,7 +74,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // eg "jupiter": CanvasPattern {}
   }
 
-  var zoomAlongOptions = {};
+  var zoomAlongOptions, firstLastOptions; // = {};
 
   var prevTranslate, prevRotate, prevExtent, searchExtent;
 
@@ -144,7 +147,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     .attr("height", "100%")
     .style("fill", "none")
     .classed("point-all opacity75 bg-lighten25 no-zoom absolute top left",true)
-    .on("dblclick", resetZoom)
+    .on("dblclick", () => {
+      d3.event.stopPropagation();  // don't also play/pause/etc if other active svg click event listeners
+      resetZoom();
+    })
 
   var g = svg.append("g")
 
@@ -213,9 +219,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   const purple = '#c97b9f',
      purpleRed = '#94417f',
      orangeRed = '#f94545',
+       darkRed = '#7a290e',
    peachOrange = '#f9b640',
-   peachPink = '#dd8069',
+     peachPink = '#dd8069',
     yellowGold = '#c7993f',
+      darkGold = '#785d2b',
      goldGreen = '#b5be6a',
     groupGreen = '#8bc188',
      groupBlue = '#09a094';
@@ -269,7 +277,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     get boundsTransform() { return {...this.init, ...this.spec.bounds} },
     get centerTransform() { return {...this.init, ...this.spec.center} },
     spec: {
-      bounds: { scalePad: 0.05 },
+      bounds: { scalePad: 0.05 }, // needs to stay here for zoom0
       center: { }
     },
     quadtree: {
@@ -377,35 +385,40 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "inv-roadless",
       fullTxt: "Inventoried Roadless Areas",
       textureType: "paths",
-      textureProps: {d: "nylon", thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
-      ptTextureProps: {d: "nylon", thicker: 72, lighter: 48},
-      htmlAdjust: { thicker: 0.8, heavier: 14, background: "#e6ece6" }
-      // "#ecf2eb"
+      // textureProps: {d: "nylon", background: yellowGold, thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
+      // ptTextureProps: {d: "nylon", thicker: 72, lighter: 48, stroke: yellowGold},
+      textureProps: {d: "nylon", stroke: yellowGold, thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
+      ptTextureProps: {d: "nylon", thicker: 72, lighter: 48, background: yellowGold},
+      htmlAdjust: { thicker: 0.8, heavier: 14 }
       // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
     },
     "GRASSLAND": {
       divId: "grassland",
       fullTxt: "Grasslands",
       textureType: "lines",
-      textureProps: {thicker: 48, lighter: 24, orientation: "2/8"},
-      htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
+      textureProps: {thicker: 48, lighter: 24, stroke: darkGold, orientation: "2/8"},
+      htmlAdjust: { thicker: 2, heavier: 6 }
     },
     "VOLCANO": {
       divId: "volcanoes",
       fullTxt: "Volcanoes",
       textureType: "paths",
-      textureProps: {d: "caps", thicker: 48, lighter: 24, shapeRendering: "crispEdges"},
-      ptTextureProps: {d: "caps", thicker: 108, lighter: 48, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 1, heavier: 8, background: "#e6ece6" }
+      // textureProps: {d: "caps", thicker: 48, lighter: 24, background: darkRed, shapeRendering: "crispEdges"},
+      // ptTextureProps: {d: "caps", thicker: 108, lighter: 48, stroke: darkRed, shapeRendering: "crispEdges"},
+      textureProps: {d: "caps", thicker: 48, lighter: 24, stroke: darkRed, shapeRendering: "crispEdges"},
+      ptTextureProps: {d: "caps", thicker: 108, lighter: 48, background: darkRed, shapeRendering: "crispEdges"},
+      htmlAdjust: { thicker: 1, heavier: 8 }
       // no keywords; CATEGORY.startsWith("Volcano")
     },
     "GEOTHERMAL": {
       divId: "other-np-geo",
       fullTxt: "Other Non-protected Geothermal Areas",
       textureType: "lines",
-      textureProps: {thicker: 60, lighter: 12, orientation: "6/8"},
-      ptTextureProps: {thicker: 108, lighter: 60, orientation: "6/8"},
-      htmlAdjust: { thicker: 2, heavier: 6, background: "#e6ece6" }
+      // textureProps: {thicker: 60, lighter: 12, background: "greenyellow", orientation: "6/8"},
+      // ptTextureProps: {thicker: 108, lighter: 60, stroke: "greenyellow", orientation: "6/8"},
+      textureProps: {thicker: 60, lighter: 12, stroke: "greenyellow", orientation: "6/8"},
+      ptTextureProps: {thicker: 108, lighter: 60, background: "greenyellow", orientation: "6/8"},
+      htmlAdjust: { thicker: 2, heavier: 6 }
       // no keywords; CATEGORY === "Geothermal System"
     },
     "PA1": {  // must match one of EACH keyword category
@@ -418,15 +431,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       textureType: "paths",
       textureProps: {d: "hexagons", thicker: 72, lighter: 42, shapeRendering: "crispEdges"},
       ptTextureProps: {d: "hexagons", thicker: 96, lighter: 48, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 2, lighter: 0 },
-      getStroke(d) {
-        let description = d.properties.DESCRIPTION.toUpperCase();
-        if (description.match("NATIONAL")) {
-          return "rgba(76, 83, 91, 0.8)";
-        } else if (description.match("STATE") || description.match("PROVINCIAL")) {
-          return "rgba(76, 83, 91, 0.6)";
-        }
-      }
+      htmlAdjust: { thicker: 2, lighter: 0 }
     },
     "PA2": {
       divId: "pa-grp2",
@@ -460,7 +465,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       keywords: ["geothermal", "geologic", "geological", "volcano", "volcanoes", "volcanic", "stratovolcano", "stratovolanic", "stratovolcanoes", "lava", "lavas", "dome", "domes", "cone", "cones", "cinder", "cinders", "maar", "maars", "caldera", "calderas", "tuff ring", "tuff rings", "pyroclastic", "geyser", "geysers", "hot spring", "hot springs", "hot well", "hot wells", "sulphur", "sulphuric", "boiling", "mount", "mt"].map(d => d.toUpperCase()),
       // kwSlimmed: [geo*, volcan*, strato*, lava*, dome*, cone*, cinder*, maar*, caldera*, tuff*, geyser*, pyro*, sulphur*, /^(hot)\s+/, /\s+(cone)\s*/],  // these regexes don't necessarily work yet!
       weight: 1,
-      color: orangeRed
+      color: darkRed // orangeRed
     },
     "hab": {
       divId: "hab",
@@ -849,7 +854,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                       .classed("hide-visually none",true)
                       .style("transform",null)
                     d3.timeout(() => {
-                      d3.select("#center-controls-parent").classed("mb60",false)
+                      d3.select("#center-controls-parent").classed("mb36",false)
                     },750);  // avoids flicker upon collapse
                   })
               }
@@ -882,7 +887,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 //// ON INITIAL LOAD
 
   function initPrompt() {
-    // resetZoom();
     d3.select("#modal").classed("none",false)  // show prompt
   }
 
@@ -1179,9 +1183,21 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
           }
 
+          toFromStns.forEach(d => d.toFrom = d.shortName.startsWith(this.to.shortName) ? "to" : "from")
+
+          let oTos = toFromStns.filter(d => d.toFrom === "to"),
+            oFroms = toFromStns.filter(d => d.toFrom === "from"),
+               tos = (oTos.length > 1) ? oTos.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oTos,
+             froms = (oFroms.length > 1) ? oFroms.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oFroms;
+
+          // avoid overfiltering
+          if (tos.length < 1) tos = oTos;
+          if (froms.length < 1) froms = oFroms;
+
+          toFromStns = tos.concat(froms);
+
           toFromStns.forEach(d => {
             d.flagged = true;
-            d.toFrom = (d.shortName.startsWith(this.to.shortName)) ? "to" : "from";
             stopSet.add(d);
           })
 
@@ -1193,7 +1209,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           return [...stopSet];
 
         },
-        // overallBearing: turf.bearing([raw.places[0].lng,raw.places[0].lat],[raw.places[1].lng,raw.places[1].lat]),
         arcPts: projectArray(truncateCoords(getSteps(arcSteps))),
         geoMM: getSteps(Math.round(inMiles))
       }
@@ -1324,18 +1339,21 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       let routeBoundsIdentity = () => {
 
+        // bottomPad0 == scale accommodation; bottomPad == actual shift
         let bounds1 = path.bounds(data1).slice(),
           bottomPad = (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 18 : 21,
-           options0 = { scalePad: 0.15, padBottom: bottomPad };
+         dashHeight = d3.select("#dash").node().clientHeight,
+         bottomPad0 = height < dashHeight * 2 ? bottomPad : dashHeight;  // map height must be at least twice that of dash to impact scale calculations
 
-        let k1 = getTransform(bounds1,options0).k;  // initial run used to confirm not overzooming
+        // if fitting taller route into taller screen, no need for scalePad (bottomPad > 21 will take care of this)
+        let scalePad = (bottomPad0 > 21 && bounds1[1][0] - bounds1[0][0] < bounds1[1][1] - bounds1[0][1]) ? 0 : 0.1,
+            options0 = { scalePad: scalePad, padBottom: bottomPad0 },
+                  k1 = getTransform(bounds1,options0).k;  // initial run used to confirm not overzooming
 
-        let scale1 = Math.min(maxFollowZoom,k1),
-           options = { scale: scale1, padBottom: bottomPad };
+        let scale1 = Math.min(maxInitZoom,k1),
+          options1 = { scale: scale1, padBottom: bottomPad };
 
-        let toReturn = getIdentity(getTransform(bounds1,options));
-
-        return toReturn;
+        return getIdentity(getTransform(bounds1,options1));
 
       }
 
@@ -1672,32 +1690,68 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       zoomLength = zoomArc.node().getTotalLength();
     }
 
+    // FIRST/LAST IDENTITY CALCULATIONS //
+
+    // recalculated for first/last identities
+    firstLastOptions = {
+      get padBottom() {
+        let dashHeight = d3.select("#dash").node().clientHeight;
+        return (height < dashHeight * 2) ? ((window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 18 : 21) : dashHeight;  // map height must be at least twice that of dash to impact scale calculations
+      },
+      get scale() {
+        let options0 = { scalePad: 0.5, padBottom: this.padBottom };
+        // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
+        let k2 = getTransform(path.bounds(data2),options0).k,
+            k3 = getTransform(path.bounds(data3),options0).k,
+          avgK = (k2 + k3)/2;
+        return Math.ceil(Math.min(maxInitZoom,avgK));
+      }
+    }
+
     if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
 
-      let bottomPad = d3.select("#dash").node().clientHeight / 2,
-           options0 = { scalePad: 0.5, padBottom: bottomPad };
+      // let options1 = { padBottom: bottomPad }, // default scalePad
+      //           k2 = getTransform(path.bounds(data2),options1).k,
+      //           k3 = getTransform(path.bounds(data3),options1).k,
+      //         avgK = (k2 + k3)/2;
 
-      // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
-      let k2 = getTransform(path.bounds(data2).slice(),options0).k,
-          k3 = getTransform(path.bounds(data3).slice(),options0).k;
-
-      let zoomScale = Math.ceil(Math.min(maxFollowZoom,((k2 + k3)/2)));  // almost always returns maxFollowZoom
-
-      zoomAlongOptions = { scale: zoomScale, padBottom: bottomPad }
+      // assuming same scalePad, same bottomPad, same k2/k3/avgK
+      // zoomAlongOptions less responsive/recalculating than firstLast for performance reasons
+      // zoomAlongOptions = firstLastOptions;
+      zoomAlongOptions = {
+        get padBottom() {
+          if (!this._padBottom) this.setPadBottom();
+          return this._padBottom;
+        },
+        get scale() {
+          if (!this._scale) this.setScale();
+          return this._scale;
+        },
+        setPadBottom() {
+          this._padBottom = firstLastOptions.padBottom;
+        },
+        setScale() {
+          this._scale = firstLastOptions.scale;
+        }
+      }
 
       let p0 = zoomArc.node().getPointAtLength(0),
           p1 = zoomArc.node().getPointAtLength(zoomLength);
 
       // then calc final first/last frames at constant scale with center centered! (note diff fn call)
-      firstIdentity = () => getIdentity(getCenterTransform([p0.x,p0.y],zoomAlongOptions))
+      firstIdentity = () => getIdentity(getCenterTransform([p0.x,p0.y],firstLastOptions))
 
-      lastIdentity = () => getIdentity(getCenterTransform([p1.x,p1.y],zoomAlongOptions))
+      lastIdentity = () => getIdentity(getCenterTransform([p1.x,p1.y],firstLastOptions))
 
       tPad = zoomFollow.tpsm * zoomFollow.focus;  // use tpsm to delay zoomFollow until train hits mm <zoomFollow.focus>; tps(implified)m because focusPt is calculated from simplified route
 
     } else {
-      firstIdentity = routeBoundsIdentity,
-       lastIdentity = routeBoundsIdentity;
+      // even if zoomFollow unnecessary, zoom in a little more & adjust bottomPad to accommodate dash
+      // firstIdentity = routeBoundsIdentity,
+      //  lastIdentity = routeBoundsIdentity;
+      sharedIdentity = () => getIdentity(getTransform(path.bounds(data1),firstLastOptions));
+      firstIdentity = sharedIdentity;
+      lastIdentity = sharedIdentity;
     }
 
     getSet(); // initiate movement!
@@ -1741,6 +1795,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         // short route, first/last frames identical; no zoomAlong necessary
         zoomFollow.necessary = false;
+        data2 = data1;
+        data3 = data1;
 
       }
 
@@ -1813,7 +1869,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                   .style("opacity",0)
                   .classed("none",false)
                 d3.select("#center-controls-parent")
-                  .classed("mb60",true)
+                  .classed("mb36",true)
                 d3.select("#lrg-control-text")
                   .style("opacity",0)
                   .classed("hide-visually none",false)
@@ -2074,12 +2130,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           // make sure section-wrapper not "relative"
           d3.select("#section-wrapper").classed("relative",false)
           // adjust dash (& associated) padding so long as #about collapsed on mxl
+          svg.attr("transform","translate(13,0)")
           d3.select("#attribution").classed("mr26-mxl", true)
           d3.select("#dash-content").classed("px30-mxl",true)
-          d3.select("#dash").select(".resizer")
-            .classed("ml-neg36-mxl",true)
-          d3.select("#center-controls").classed("mr-neg24",true)
-          d3.select("#lrg-control-text").classed("mr-neg24",true)
+          d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
+          d3.select("#center-controls").classed("mr-neg26",true)
+          d3.select("#lrg-control-text").classed("mr-neg26",true)
           // if #about was *manually* hidden on smaller window
           if (d3.select("#about").classed("manual-close")) {
             // keep collapsed; do nothing
@@ -2105,6 +2161,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       if (d3.select("#aside").classed("mxl")) {
         // remove mxl flag, then reset a variety of styles
         d3.select("#aside").classed("mxl", false)
+        // if svg had been adjusted on @screen mxl
+        svg.attr("transform",null)
         // reset #about-wrapper height
         d3.select("#about-wrapper").style("height", null);
         // if #about was manually collapsed on screen mxl
@@ -2119,12 +2177,22 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           d3.select("#attribution").classed("mr26-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
-          d3.select("#center-controls").classed("mr-neg24",false)
-          d3.select("#lrg-control-text").classed("mr-neg24",false)
+          d3.select("#center-controls").classed("mr-neg26",false)
+          d3.select("#lrg-control-text").classed("mr-neg26",false)
         }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
         d3.select("#about").classed("disappear-right", false)
         collapse("about", "down")
+      }
+
+      // entering/exiting small screen; adjust center-controls and lrg-control-text bottoms (COMBAK could integrate #attribution and any other bottom-aligned overlay buttons here)
+      let dash = d3.select("#dash-plus");
+      if (window.innerWidth < 640 && !dash.classed("sm")) {
+        dash.classed("sm",true);
+        attuneMapBottomDashTop(dash);
+      } else if (window.innerWidth >= 640 && dash.classed("sm")) {
+        dash.classed("sm",false);  // reset
+        attuneMapBottomDashTop(dash);
       }
 
       // if window too short to show #about content, collapse automatically
@@ -2133,12 +2201,18 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // map height calculation includes #aside
       calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#aside").node().clientHeight - d3.select("#footer").node().clientHeight;
 
-      calculated.width = d3.select("#about-plus").node().clientWidth;
+      calculated.width = window.innerWidth; // d3.select("#about-plus").node().clientWidth;
 
     }
 
     return calculated;
 
+  }
+
+  function attuneMapBottomDashTop(dash = d3.select("#dash-plus")) {
+    let dashHeight = dash.node().clientHeight;
+    d3.select("#center-controls-parent").style("bottom",`${dashHeight}px`)
+    d3.select("#lrg-control-text").style("bottom",`${dashHeight}px`)
   }
 
   function longerEdge(bounds) {
@@ -2423,7 +2497,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let options = { padBottom: (window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24) ? 18 : 21 }
 
     currentBounds = {
-      bounds: path.bounds(data0).slice(),
+      get bounds() { return path.bounds(data0).slice(); },
       get domEdge() {
         if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
         return this._domEdge;
@@ -3298,8 +3372,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let ptOpacity = 0.8,
       ptStrokeOpacity = 0.6;
 
-    let darkStrokeGrp = ["inv-roadless","volcanoes","grassland","other-np-geo"];
-
     // update pts as group to allow for additional transitions on updating pts
     d3.select("#enrich-pts").selectAll(".enrich-pt")
       .data(sortedPts, d => d.properties.id)
@@ -3310,6 +3382,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .attr("r",0.05)
           .attr("cx", d => projection(d.geometry.coordinates)[0])	          .attr("cy", d => projection(d.geometry.coordinates)[1])
           .attr("class", d => `enrich-pt ${d.properties.logGroup.divId}`)
+          .classed("shadow-darken25",true)
           .property("name", formatName)
           .property("category", d => d.properties.CATEGORY)
           .property("description", d => d.properties.DESCRIPTION)
@@ -3318,18 +3391,25 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .property("sub-tag", d => d.properties.subTag)
           .property("orig-opacity", ptOpacity)
           .property("orig-stroke-opacity", ptStrokeOpacity)
-          .style("stroke", d =>  darkStrokeGrp.includes(d.properties.logGroup.divId) ? "#343434" : "whitesmoke")
+          .property("orig-stroke-width", "0.025px")
           .style("stroke-width", "0.025px")
           .style("opacity", 0)
           .style("stroke-opacity", 0)
           .call(async enter => {
             let fill = await getFill(enter.datum());
             if (fill.key) { // typeof fill === "Object"
+              let stroke = chroma(patterns[fill.key].primaryHex).brighten().hex();
               enter.attr("patternKey",fill.key)
               enter.classed("patterned",true)
               enter.style("fill", patterns[fill.key].url)
+                   .style("stroke", stroke)
+                   .property("orig-stroke", stroke)
             } else {
+              console.log(enter.datum().properties.logGroup.divId)
+              let stroke = chroma(fill).brighten().hex();
               enter.style("fill", fill)
+                   .style("stroke", stroke)
+                   .property("orig-stroke", stroke)
             }
             if (enter.property("sub-tag")) enter.classed(enter.property("sub-tag").divId,true);
             enter.transition().duration(t)
@@ -3373,7 +3453,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function revealLine(gj,baseT) {
 
     let t = Math.max(minT,baseT * tpm),
-      lineOpacity = 0.8;
+      props = gj.properties,
+      lineOpacity = 0.8,
+      strokeColor = props.CATEGORY.startsWith("River") ? riverBlue
+                    // : (props.CATEGORY.startsWith("Lake")) ? lakeBlue
+                    : colorAssignments.watersheds[props.OCEAN_ID].base,
+      strokeWidth = getStrokeWidth(gj);
 
     encounteredLines.add(gj)
 
@@ -3390,10 +3475,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                     .property("sub-tag", d => d.properties.subTag)
                     .property("orig-opacity", lineOpacity)
                     .property("orig-stroke-opacity", lineOpacity)
+                    .property("orig-stroke", strokeColor)
+                    .property("orig-stroke-width", strokeWidth)
                     .style("fill", "none") // default
-                    .style("stroke", getStroke)
-                    .style("fill", "none") // default
-                    .style("stroke-width", getStrokeWidth)
+                    .style("stroke", strokeColor)
+                    .style("stroke-width", strokeWidth)
                     .style("stroke-dasharray", "none")
                     .style("stroke-linecap", "round")
                     .style("opacity", lineOpacity)
@@ -3469,18 +3555,27 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .property("orig-opacity", polyOpacity)
           .property("orig-stroke-opacity", polyStrokeOpacity)
           .property("hover-opacity", d => Math.min(0.9,+Math.max(0.5,polyOpacity(d) * 1.5).toFixed(2)))
-          .style("stroke", getStroke)
-          .style("stroke-width", getStrokeWidth)
           .style("stroke-opacity", polyStrokeOpacity)
           .style("opacity", 0)
           .call(async enter => {
+            let strokeWidth = getStrokeWidth(enter.datum()); // added here to reduce repetitive calls
+            enter.style("stroke-width",strokeWidth)
+                 .property("orig-stroke-width",strokeWidth)
             let fill = await getFill(enter.datum());
             if (fill.key) { // typeof fill === "Object"
+              // let stroke = chroma(patterns[fill.key].primaryHex).brighten().hex();
+              let stroke = patterns[fill.key].primaryHex;
               enter.attr("patternKey",fill.key)
               enter.classed("patterned",true)
               enter.style("fill", patterns[fill.key].url)
+                   .style("stroke", stroke)
+                   .property("orig-stroke", stroke)
             } else {
+              // let stroke = chroma(colorAssignments.ecoregions[enter.datum().properties.ECOZONE].base).brighten();
+              let stroke = colorAssignments.ecoregions[enter.datum().properties.ECOZONE].base;
               enter.style("fill", fill)
+                   .style("stroke", stroke)
+                   .property("orig-stroke", stroke)
             }
             if (enter.property("sub-tag")) enter.classed(enter.property("sub-tag").divId,true);
             enter.transition().duration(t).ease(d3.easeLinear)
@@ -3639,13 +3734,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                            gj = feature.datum(),
                       bounds;
 
-                // dash will necessarily be open since user just clicked on it
-                let bottomPad = d3.select("#dash").node().clientHeight,
-                     rightPad = (window.innerWidth >= 1200 && d3.select("#about").classed("disappear-right")) ? -24 : 0,
-                      options = { scalePad: 0.1, padRight: rightPad, padBottom: bottomPad };
-
                 if (gj.geometry.type === "Point") {
-                  // getCenterTransform must pass predetermined zoom level... lacking this, pad projected point with radius pixels and zoom to bounds
+                  // getCenterTransform requires predetermined zoom level... lacking this, pad projected point with radius pixels and zoom to bounds
                   let pt0 = projection(gj.geometry.coordinates), // often feature.attr("cx/cy"), but not always
                    radius = +feature.attr("r") * 5;
                   bounds = [[pt0[0]-radius,pt0[1]-radius],[pt0[0]+radius,pt0[1]+radius]];
@@ -3653,10 +3743,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                   bounds = path.bounds(feature.datum());
                 }
 
+                // dash will necessarily be open since user just clicked on it
+                let bottomPad = d3.select("#dash").node().clientHeight,
+                      options = { scalePad: 0.1, padBottom: bottomPad };
+
                 let zoomIdentity = getIdentity(getTransform(bounds,options));
 
                 // flag to transitionResume
-                transitionResume = true;
+                transitionResume = true; //separate scale and translate?
 
                 svg.transition().duration(zoomDuration/2).ease(zoomEase)
                   .call(zoom.transform,zoomIdentity)
@@ -3780,7 +3874,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             }
 
             let geomType = d.attr("id").slice(0,2),
-              key = (d.classed("patterned")) ? d.attr("patternKey") : d.property("category").toLowerCase() + "-" + (d.property("sub-tag") ? d.property("sub-tag").divId : d.property("log-group").divId) + "-" + geomType;
+              divId = d.property("log-group").divId,
+              key = (d.classed("patterned")) ?
+                  d.attr("patternKey")
+                : d.property("category").toLowerCase() + "-" + (d.property("sub-tag") ?
+                  d.property("sub-tag").divId
+                : divId) + "-" + geomType;
 
             let pattern = patterns[key];
 
@@ -3794,7 +3893,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
             }
 
-            symbol.src = (geomType === "py") ? pattern.invertedSrc : pattern.src
+            symbol.src = ((geomType === "py" && !pyIgnore.includes(divId)) || (geomType === "pt" && !ptIgnore.includes(divId))) ? pattern.invertedSrc : pattern.src;
 
             return symbol;
 
@@ -4001,8 +4100,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           d3.select("#attribution").classed("mr26-mxl", false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
-          d3.select("#center-controls").classed("mr-neg24",false)
-          d3.select("#lrg-control-text").classed("mr-neg24",false)
+          d3.select("#center-controls").classed("mr-neg26",false)
+          d3.select("#lrg-control-text").classed("mr-neg26",false)
+          svg.attr("transform",null)
         } else {
           d3.select("#dash-up").classed("mt-neg21", true)
           d3.select("#dash-up").classed("mt-neg10", false)
@@ -4017,9 +4117,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         adjustSize();
 
       } else if (elementStr === "dash") {
-        let dashHeight = d3.select("#dash").node().clientHeight;
-        d3.select("#center-controls-parent").style("bottom",`${dashHeight}px`)
-        d3.select("#lrg-control-text").style("bottom",`${dashHeight}px`)
+        attuneMapBottomDashTop();
         d3.select("#attribution").classed("mt-neg18 mt-neg24 mt-neg24-mxl mb24", false)
         d3.select("#attribution").classed("mt-neg6 mb6", true)
       }
@@ -4041,11 +4139,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       if (window.innerWidth >= 1200) {
         d3.select("#section-wrapper").classed("relative", false)
-        d3.select("#center-controls").classed("mr-neg24",true)
-        d3.select("#lrg-control-text").classed("mr-neg24",true)
+        d3.select("#center-controls").classed("mr-neg26",true)
+        d3.select("#lrg-control-text").classed("mr-neg26",true)
         d3.select("#attribution").classed("mr26-mxl", true)
         d3.select("#dash-content").classed("px30-mxl",true)
         d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
+        svg.attr("transform","translate(13,0)")
       } else {
         d3.select("#dash-up").classed("mt-neg10", true)
         d3.select("#dash-up").classed("mt-neg21", false)
@@ -4060,8 +4159,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       if (svgLoaded) adjustSize();
 
     } else if (elementStr === "dash") {
-      d3.select("#lrg-control-text").style("bottom","18px")
-      d3.select("#center-controls-parent").style("bottom","18px")
+      // d3.select("#lrg-control-text").style("bottom","24px")
+      // d3.select("#center-controls-parent").style("bottom","24px")
+      attuneMapBottomDashTop();
       d3.select("#attribution").classed("mt-neg6 mb6",false)
       d3.select("#attribution").classed("mb24",true)
       if (d3.select("#about").classed("disappear-down")) {
@@ -4260,9 +4360,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     function resetConfirmed() {
 
-      // COMBAK TODO
-      // restore orig opacity levels of dimmed base?
-      // work below into cohensive reset method attached to currentState obj
+      // COMBAK TODO:
+        // restore orig opacity levels of dimmed base?
+        // work below into cohensive reset method attached to currentState obj
 
       // reset listeners..?
       svg.on("click", null)
@@ -4385,31 +4485,82 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function processTexture(d,htmlFlag = false,invertFlag = false,padLeft = 0) { // d may be gj feature or selected dom node
+
     let texture,
+      textureOpts = {},
+      primaryHex,
       props = (d instanceof d3.selection) ? d.datum().properties : d.properties,  // shorthand
       geomType = props.id.slice(0,2),
-      textureProps = htmlFlag ? {...props.logGroup.textureProps, ...props.logGroup.htmlAdjust} : geomType === "pt" ? props.logGroup.ptTextureProps : props.logGroup.textureProps;
+      textureProps = htmlFlag ?
+          {...props.logGroup.textureProps, ...props.logGroup.htmlAdjust}
+        : geomType === "pt" ?
+          props.logGroup.ptTextureProps || props.logGroup.textureProps
+        : props.logGroup.textureProps;
+
     if (geomType === "ln") {
       texture = getLinedTexture(d,padLeft);
-    } else if (props.subTag && props.subTag.color) {
-      if (invertFlag || geomType === "pt") {
-        let textureOpts = {...textureProps, ...{background: props.subTag.color, stroke: "whitesmoke"}};
-        if (props.logGroup.textureType === "circles") textureOpts.fill = "whitesmoke";
-        texture = getNewTexture(props.logGroup.textureType,textureOpts)
-      } else { // svg polygons
-        let textureOpts = {...textureProps, ...{stroke: textureProps.d === "hexagons" ? chroma(props.subTag.color).brighten().hex() : textureProps.d === "crosses" ? chroma(props.subTag.color).hex() : chroma(props.subTag.color).darken().hex() }};
-        if (!textureProps.hasOwnProperty("d") && !textureProps.hasOwnProperty("orientation")) {  // circles
-          // textureOpts.stroke = props.subTag.color;
-          // textureOpts.fill = chroma(props.subTag.color).darken().hex();
-          textureOpts.background = "transparent";
+      primaryHex = chroma(d.style("stroke")).hex(); // can use d.style because line textures only processed based on pre-rendered DOM nodes
+    } else {
+
+      // defaults:
+      textureOpts.stroke = textureProps.stroke;
+      textureOpts.background = textureProps.background;
+
+      // adjustments & primaryHex assignment:
+      if (props.subTag && props.subTag.color) {
+        primaryHex = props.subTag.color;
+        if (geomType === "pt") {
+          textureOpts.background = props.subTag.color;
+          textureOpts.stroke = "whitesmoke"; // will be assignment automatically
+        } else { // svg polygons
+          // adjusting strokes below to increase contrast with underlayer
+          textureOpts.stroke = (htmlFlag || textureProps.d === "crosses") ?
+              primaryHex
+            : textureProps.d === "hexagons" ?
+              chroma(primaryHex).brighten().hex()
+            : chroma(primaryHex).darken().hex();
         }
-        texture = getNewTexture(props.logGroup.textureType,textureOpts)
+      } else { // pre-determined textured lines (pys & pts: lakes, grasslands, volcanoes, other-np-geo, inventoried roadless)
+        // assumes at least one of either background or stroke defined in textureProps
+
+        // !symInvert.includes()
+        primaryHex = ((geomType === "pt" && ptIgnore.includes(props.logGroup.divId)) || !pyIgnore.includes(props.logGroup.divId)) ?
+            (textureProps.background ? textureProps.background.slice() : textureProps.stroke.slice())  // prefer background
+          : (textureProps.stroke ? textureProps.stroke.slice() : textureProps.background.slice())
+
       }
-    } else { // pre-determined textured lines (lakes, grasslands, volcanoes, other-np-geo, inventoried roadless)
-      texture = getNewTexture(props.logGroup.textureType,textureProps);
+
+      if (invertFlag) {
+        // pts typically invert from dark background, light stroke to light background, dark stroke
+        // pys typically invert from transparent background, dark stroke to dark background, light stroke
+        let origBackground = textureOpts.background ? textureOpts.background.slice() : undefined,
+                origStroke = textureOpts.stroke ? textureOpts.stroke.slice() : undefined;
+        textureOpts.background = origStroke;
+        textureOpts.stroke = origBackground;
+      }
+
+      // address remaining blanks
+      if (!textureOpts.stroke) textureOpts.stroke = "whitesmoke";  // most likely post-invert where background was transparent/undefined
+      if (htmlFlag && !textureOpts.background) textureOpts.background = "#e6ece6";
+      if (props.logGroup.textureType === "circles") textureOpts.fill = textureOpts.stroke;
+
+      // store!
+      texture = getNewTexture(props.logGroup.textureType,{...textureProps,...textureOpts})
+
     }
+
+    // make texture urls accessible
     htmlFlag ? hiddenSvg.call(texture) : svg.call(texture);
-    return texture;
+
+    // troubleshooting
+    if (!primaryHex) console.log("undefined: " + geomType + " : " + props.logGroup.divId)
+    if (primaryHex === "whitesmoke") console.log("whitesmoke: " + geomType + " : " + props.logGroup.divId)
+
+    return {
+      texture: texture,
+      primaryHex: primaryHex // || "#343434"
+    };
+
   }
 
   function getLinedTexture(d,padLeft) {
@@ -4451,9 +4602,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function getTextures(d,key,geomType,padLeft) {
-    let texture0 = processTexture(d),  // element-spec: htmlFlag == false, invertFlag == false; padLeft N/A
-        texture1 = processTexture(d,true,false,padLeft),  // output-bgs: htmlFlag == true, invertFlag == false;
-        texture2 = (geomType === "py") ? processTexture(d,true,true) : null;  // for specially inverted polygon legend-log swatches: htmlFlag == true, invertFlag == true; padLeft N/A?
+    let texture0 = processTexture(d),  // element-spec: htmlFlag == false, invertFlag == false, padLeft N/A
+        texture1 = processTexture(d,true,false,padLeft),  // output-bgs: htmlFlag == true, invertFlag == false
+        texture2 = (geomType === "py" || geomType === "pt") ? processTexture(d,true,true) : null;  // for specially inverted polygon legend-log swatches: htmlFlag == true, invertFlag == true; padLeft N/A;
     return [texture0,texture1,texture2];
   }
 
@@ -4463,9 +4614,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         // src === standard, invertedSrc only for polygons (used selectively)
         // keep distinction between geomTypes in case I bring canvas back in (pt/py sources different for same sub-group)
       // url for svg use only
-      src: textureToSrc(texture1),
-      invertedSrc: (texture2) ? textureToSrc(texture2) : null,
-      url: texture0.url()
+      src: textureToSrc(texture1.texture),
+      invertedSrc: (texture2) ? textureToSrc(texture2.texture) : null,
+      url: texture0.texture.url(),
+      primaryHex: texture0.primaryHex
     }
     return patterns[key];
   }
@@ -4498,27 +4650,27 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-  function getStroke(d) {
-    let props = d.properties; // shorthand
-    if (props.logGroup.divId === "pa-grp1") {
-      return props.logGroup.getStroke(d);
-    } else if (props.CATEGORY === "Watershed") {
-      return colorAssignments.watersheds[props.OCEAN_ID].base;
-    } else if (props.CATEGORY === "Ecoregion") {
-      return chroma(colorAssignments.ecoregions[props.ECOZONE].base).brighten(2)
-    } else if (props.CATEGORY.startsWith("River")) {
-      return riverBlue;
-    } else if (props.CATEGORY.startsWith("Lake")) {
-      return lakeBlue;
-    } else if (props.subTag && props.subTag.color) {
-      return props.subTag.color;
-    } else if (props.CATEGORY.startsWith("Grass")) {
-      return yellowGold;
-    } else {
-      // a few remaining Inventoried Roadless Areas
-      return purple; // paletteScale(random());
-    }
-  }
+  // function getStroke(d) {
+  //   let props = d.properties; // shorthand
+  //   if (props.logGroup.divId === "pa-grp1") {
+  //     return props.logGroup.getStroke(d);
+  //   } else if (props.CATEGORY === "Watershed") {
+  //     return colorAssignments.watersheds[props.OCEAN_ID].base;
+  //   } else if (props.CATEGORY === "Ecoregion") {
+  //     return chroma(colorAssignments.ecoregions[props.ECOZONE].base).brighten()
+  //   } else if (props.CATEGORY.startsWith("River")) {
+  //     return riverBlue;
+  //   } else if (props.CATEGORY.startsWith("Lake")) {
+  //     return lakeBlue;
+  //   } else if (props.subTag && props.subTag.color) {
+  //     return props.subTag.color;
+  //   } else if (props.CATEGORY.startsWith("Grass")) {
+  //     return yellowGold;
+  //   } else {
+  //     // a few remaining Inventoried Roadless Areas
+  //     return purple; // paletteScale(random());
+  //   }
+  // }
 
   function getStrokeWidth(d) {
     if (d.properties.STROKEWIDTH) {
@@ -4702,11 +4854,21 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let associated = g.select("#enrich-layer").selectAll(`${selector}`);
 
-    associated.transition()
+    associated // .transition()
+      .style("stroke", function(d) {
+        return d.geometry.type === "Point" ?
+          chroma(d3.select(this).style("stroke")).darken().hex() // (2)
+        : chroma(d3.select(this).style("stroke")).brighten().hex();
+      })
+      .style("stroke-width", function(d) {
+        let currentWidth = d3.select(this).style("stroke-width");
+        return ["LineString","MultiLineString"].includes(d.geometry.type) ? currentWidth * 1.2 : currentWidth;
+      })
       .style("stroke-opacity",1)
       .style("opacity", function() {
         return d3.select(this).property("hover-opacity") || 0.9
       })
+      .raise();
 
     // highlight text node container
     let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
@@ -4717,12 +4879,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       let fillVal = g.select("#enrich-layer").select(`${selector}`).style("fill");
 
-      if (fillVal.startsWith("url")) {  // textured
+      if (fillVal.startsWith("url")) {  // textured; use existing pattern src (for html, not svg)
 
-        // get pattern src (for html, not svg) from existing patterns obj
-        let pattern = patterns[associated.attr("patternKey")];
+        let divId = associated.property("log-group").divId,
+         geomType = associated.attr("id").slice(0,2),
+          pattern = patterns[associated.attr("patternKey")],
+           imgSrc = (geomType === "pt" && symInvert.includes(divId)) ? pattern.invertedSrc : pattern.src;
 
-        d3.select(hoverNode).style("background-image", `url(${pattern.src})`) // avoids [object Object]? // always uninverted
+        d3.select(hoverNode).style("background-image", `url(${imgSrc})`) // avoids [object Object]
 
       } else if (fillVal === "none") {  // lines
 
@@ -4761,7 +4925,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let selection = d3.select(this),
       selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
 
-    g.select("#enrich-layer").selectAll(`${selector}`).transition()
+    g.select("#enrich-layer").selectAll(`${selector}`) // .transition()
+      .style("stroke", function() {
+        return d3.select(this).property("orig-stroke") || "whitesmoke";
+      })
+      .style("stroke-width", function() {
+        return d3.select(this).property("orig-stroke-width") || 0;
+      })
       .style("stroke-opacity", function() {
         return d3.select(this).property("orig-stroke-opacity") || 0
       })
@@ -5109,14 +5279,38 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // clicking on log name while animated paused/stopped zooms to feature
   // sieve R2R extra station errors via intersect query
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
-  // TODO remove more of smallest pts and polygons?
+  // TODO remove more of smallest polygons? ( eg eagle inventored roadless -> pt )
   // update zoom level upon transitionResume?
   // PROBLEM CITIES REMAINING:
     // seem ok now? port kent, alliance (but maybe remove anyway)
     // sault ste marie, UNFIXABLE
-  // INSTEAD OF ONLY APPLYING RIGHTPAD WITHIN FEATURE ZOOM CLICK, ADJUST WHOLE OF MAP WHEN window.innerWidth >= 1200 && d3.select("#about").classed("disappear-right")
   // WATERSHEDS AND RIVERS ON HOVER: thicken
-  // aberdeen amherst etc overzooms on small screens? -- routeBoundsIdentity  cannot overzoom firstIdentity (latter INCL bottomPad)
+  // reorient to firstIdentity if panned before click/spacebar start
+  // MORE OPTS -> GETS? ie get padBottom()
+  // svg drop shadow on pts?
+  // integrate #attribution and any other bottom-aligned overlay buttons with attuneMapBottomDashTop();
+  // keep highlightassoc consistent with mouseover
+  // random station intruders related to persistent, ill-placed mouseover while processing?
+  // symbol styling+:
+    // thicken nylon pt stroke
+    // change stroke of volcanoes
+    // reduce circle log symbol size
+    // py stroke too wide
+  // set max zoom on zoom to feature
+  // hover over legend-log categories offers insight into categorziation process
+
+// most recent done:
+  // instead of only applying rightPad within feature zoom click, adjust whole of map when (window.innerWidth >= 1200 && d3.select("#about").classed("disappear-right")) via slight svg transform
+  // change strokes on enrich data (incorporate primaryHex of pattern)
+  // fixed initial routeBoundsIdentity overzooming issues (occured when k2 < k1 || k3 < k1) by having transform take bottomPad into account when calculating scale, but *not applying* bottomPad in actual shift
+  // even if !zoomFollow.necessary, still adjust zoom (x <= maxInitZoom) and accommodate dash via padBottom
+  // reintegrate explicit scalePad values on calculated identity transforms
+  // more sophisticated highlighting (and unhighlighting) within highlightAssoc (stroke and stroke-width)
+  // fixed double station stop/starts showing
+  // removed need for getStroke function, reduced repetititve calculations in highlight/unhighlight
+  // set bottom tether slightly further down for center-controls (bundled in attuneMapBottomDashTop())
+  // invert geothermal, volcanoes, & inv-roadless pts within html encounters background
+  // tweak texture processing calculations
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
