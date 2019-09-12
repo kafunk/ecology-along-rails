@@ -5090,9 +5090,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // effectively turn #dash, #about, and #modal expand/collapse into transitions (ESP switch between dash/about at begin) (*)
 
 // MEDIUM TASKS
-  // automatically order legend log categories
   // better clarity/communication of protected areas classifications; their own group with further togglable subgroups? or combine all PAs? (but I rely on their separation in determining symbology)
-  // ensure contrast of texture features maintains sufficient visibility
   // clean up code:
     // be super consistent and clear including '' vs "", use of var/const/let, spacing, semicolons, etc
     // refactor, optimize, condense, DRY, improve structure
@@ -5103,7 +5101,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // elevation grid/tracker
     // compass needle
     // better clock/odometer visual approximations
-  // mousing over log/narration elements highlights all within map
   // polygon radial animation / so fancy (see styling notes below; must first make a determination re: transitioning to canvas) (*)
   // add underlying shaded relief terrain layer (*)
     // http://www.shadedrelief.com/birds_eye/gallery.html?
@@ -5130,10 +5127,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // remaining open github issues (form focus issue: use focus-within?)
   // several more interspersed COMBAKs, FIXMEs
 
-
 // MAAAAYBE
   // new color for modal?
-  // new train icon that rotates along with headlights
   // verbose console errors (in Chrome)
     // "[Violation] Forced reflow while executing JavaScript took 39ms"
       // https://gist.github.com/paulirish/5d52fb081b3570c81e3a
@@ -5145,38 +5140,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 ////// NEWER NOTES /////
 
-// CHANGES / HAVE DONE
-  // fixed legend-log symbol issue
-  // textures.js svg textures => img srcs that can be rendered in canvas and other html divs
-  // start of pause functionality (pause works; resuming the issue)
-  // start of effective reset()
-  // added categorical background-images to currently passing div (communicates differences without relying on intrusive column headings)
-  // when select new route form not visible, select new route btn !== disabled (plus opposite)
-  // trainPt, headlights, and fullPath now animations (vs transitions) coordinated with d3.timer
-  // more improvements to zoom bx and user panning responsivity
-  // pause functionality
-  // basic reset functionality
-  // reverse/replay functionality!
-  // keep state lines subtly visible through polygon feature reveal
-  // while animating, single click on map PAUSES (in addition to explicit button)
-  // double size of background-images that populate sections of "currently passing" by flipping down mirrored version of first, then set background-image to repeat for continuous coverage
-  // fixed: undisable play/pause visual
-  // fixed: pa-grp3 count doesn't update appropriately; sometimes pa-grp3 style equivalent to pa-grp2
-  // automatic ordering of legend-log category (so pa-grp3 does not appear above pa-grp1, even if that is the order in which features were encountered)
-  // logBackground river should be taller than wide? interweave with mirrored dashed line?
-  // debug RESET functionality (how to clone without rendering, including bound event listeners and data at select state?) and making less hacksome
-  // ensure select new route btn in particular maintains original event listeners
-  // visual affordance/invitation: large transparent play btn simulates 'click' upon animation begin, then visually collapses into much smaller play/pause button in top left corner
-
-// PRIORITY FIXES (COMING ASAP)
+// MINOR FIXES (COMING SOON)
+  // have textured backgrounds recalculate from group up on each render?
+  // grossly pair down accompanying text (esp all that "overly dramatic" stuff)
   // make form fields like responsive like butter
     // also:
       // origin !!= destination (!!= = cannot)
       // get rid of down arrows
-
-// MINOR FIXES (COMING SOON)
-  // have textured backgrounds recalculate from group up on each render
-  // grossly pair down accompanying text (esp all that "overly dramatic" stuff)
 
 // ADDITIONS (COMING SOON)
   // add automatic highlighting or otherwise improve visual linking of currently passing list with actual rendered features (temporarily align color? thumbnail of shape => dash background?)
@@ -5196,82 +5166,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 // LATEST NOTES
   // BASE & ENRICH POLYGONS = CANVAS ELEMENTS?
   // background gradient N->S brightest mid continent
-  // further order legend:
-    // hydrological
-    // geological
-    // ecoregions
-    // protected area
-    // remaining stations turn greyscale
-    // train = greyish, aerial?
-    // arrow-out to expand about section
-    // start/stop stations remain large and color-coded
-    // roadless areas being interpreted as pa-grp3; fix (nylon)
 
-// if Canvas:
-  // have done:
-    // all baselayer elements == canvas
-    // enrich lines = svg
-    // remaining enrich = canvas
-    // all toplayer and hidden elements == svg (full-route, zoomalong, headlights, trainpt, quadtree data)
-    // integrate canvas and svg seamlessly with one another
-    // restructure render/zoom/reveal appropriately
-    // STRUCTURE
-      // layerGroup order:
-        // background (separate canvas) (OR SVG?)
-        // baselayers (context)
-        // midlayers (enrich pool: polygons, lines, then pts)
-        // toplayers (journey/route) ==> SVG?
-        // hover elements (separate canvas)
-      // additionally possible canvas classes: line spread split background base mid over mesh map icon
-    // RENDERING USING CANVAS VS SVG
-      // rotate values in radians vs degrees
-      // path, line etc make actual context call / return null vs returning path string
-      // background vs fill url
-    // MOUSEOVER: get mouse coordinate via layerX,Y and/or offsetX,y
-    // query canvas state to return current feature at coords
-    // select and update feature with visual highlights / tooltip
-  // RESOURCES
-    // Stardust.js: https://www.cs.ucsb.edu/~holl/pubs/Ren-2017-EuroVis.pdf
-    // https://html.spec.whatwg.org/multipage/canvas.html#canvasimagesource
-    //  + SVG??: https://css-tricks.com/rendering-svg-paths-in-webgl/
-    // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Drawing_DOM_objects_into_a_canvas
-    // https://beta.observablehq.com/@mbostock/randomized-flood-fill
-    // blockbuilder.org/larsvers/6049de0bcfa50f95d3dcbf1e3e44ad48
-    // https://medium.freecodecamp.org/d3-and-canvas-in-3-steps-8505c8b27444
-    // https://www.datamake.io/blog/d3-zoom#geo-canvas!
-
-// recently done:
-  // show all of north america (data updates)
-  // remove projection.fitExtent in favor of zoomToBounds
-  // adjust strokewidths and icon sizes accordingly
-  // fix zoom calculations once again (routeBounds, first, last)
-  // fix reset and adjustSize functions (use currentBounds)
-  // timeout on tooltips
-  // slightly simplify train path (improves rrties viz); now train and headlights follow route exactly (rid of semiSimp)
-  // ensure 'select new route' correctly expands dash
-  // fix selectnewroute glitches // REMAKE QUADTREE
-  // fix glitchiness on sibling drag within legend log (due to recent h-full addition?)
-  // fix zoom jump on about collapse
-  // adjustsize/reset multiple times to avoid stalling before cache occurs
-  // first/last identity calculated dynamically, as all other centerTransforms (avoids miszoom if screen size adjusted in the meantime -- esp relevant on reverse)
-  // browser stuff fixed:
-    // firefox: journey log extends container
-    // play-pause icons compatible (safari)
-    // safari: about down and expand up arrows get cut off / tucked behind other content
-    // about pane reopen right DOES NOT WORK; on first open, collapse bar misaligned (fixed on adjustsize()...); subsequently opening causes entire pane to pop off screen (safari)
-    // credit bar (bottom right) gets cut off by dash expand on all screen sizes (firefox)
-    // make sure manual-close class removed as appropriate
-    // no details triangles visible within legend-log (firefox)
-    // safari 'select new' cut off
-    // watershed html texture doesn't render (legend-log, narrative) (safari and firefox)
-  // change otherwise preserved/reserved color (icky orange)
-  // cues to click or hit spacebar for pause
-  // some pts have dark border
-  // legend-log summary content not on one line (see partial fix noted)
-  // add autocomplete/suggestions to R2R search (fixed a few some others)
-  // address remaining PROBLEM CITIES (R2R issue)
-  // improve center calculations of lrg control icons/text
-  // fixed cities: atlanta, grand junction, ann arbor, memphis, burlington IA, Greenville SC, cincinnatti, charleston, saskatoon
+/////// NO FOR REAL, THIS WHERE I'M AT ///////
 
 // todo:
   // rid of failure/feelings language
@@ -5298,19 +5194,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // py stroke too wide
   // set max zoom on zoom to feature
   // hover over legend-log categories offers insight into categorziation process
-
-// most recent done:
-  // instead of only applying rightPad within feature zoom click, adjust whole of map when (window.innerWidth >= 1200 && d3.select("#about").classed("disappear-right")) via slight svg transform
-  // change strokes on enrich data (incorporate primaryHex of pattern)
-  // fixed initial routeBoundsIdentity overzooming issues (occured when k2 < k1 || k3 < k1) by having transform take bottomPad into account when calculating scale, but *not applying* bottomPad in actual shift
-  // even if !zoomFollow.necessary, still adjust zoom (x <= maxInitZoom) and accommodate dash via padBottom
-  // reintegrate explicit scalePad values on calculated identity transforms
-  // more sophisticated highlighting (and unhighlighting) within highlightAssoc (stroke and stroke-width)
-  // fixed double station stop/starts showing
-  // removed need for getStroke function, reduced repetititve calculations in highlight/unhighlight
-  // set bottom tether slightly further down for center-controls (bundled in attuneMapBottomDashTop())
-  // invert geothermal, volcanoes, & inv-roadless pts within html encounters background
-  // tweak texture processing calculations
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
