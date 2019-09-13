@@ -1,6 +1,22 @@
 ## IN NO HUGELY SPECIFIC ORDER  
 ### _just have to get these notes out of my main.js_
 
+- clicking on log name while animated paused/stopped zooms to feature
+- disabling panning while waiting for user input
+- refactored zoomClick function
+- remove reliance on label#zoomBtns value
+- scaleExtent set and updated in adjustSize and resetZoom
+- no need for limit-reached class
+- recalc scaleExtent on adjustSize?
+- FIXED: post zoomclick button press, spacebar triggers further zoom? (chrome); fixed with prevent default
+- pannedState => transformAdjustments with zoom property for zoomRespect flagging
+- remove need for 'active' var
+- setup (and comment out again) transformAdjustments.zoomed.strayFlag to track user departure from zoom0, prompting adjustSize() to calculate new transform vs call resetZoom
+  - related to above (done then undone):
+  - resolved issues when using with aside collapse/expand (thrown with click sourceEvents)
+  - zoomclick doesn't fire zoomevent (dispatch custom)
+- filter dblclicks from svg.on('click') to ensure reset background still accessible
+- resetting zoom during animation triggers zoomRespect/transitionResume flags like anything other transform
 - take only what i need from turf.js
 - automatically order legend log categories
 - new train icon that rotates along with headlights
