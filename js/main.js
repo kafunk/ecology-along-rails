@@ -73,7 +73,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     ptIgnore = ["pa-grp1","pa-grp2","pa-grp3"],
     symInvert = ["volcanoes","inv-roadless","other-np-geo"],  // logGroups.divIds; specific to converting styles -> legend-log swatches and narrative output backgrounds
     dimMore = ["#continent-mesh",["#railways","path"],["#rivers","path"],"#lake-mesh","#lake-mesh2","#country-mesh","#urban-mesh"],
-    dimLess = ["#state-mesh"]
+    dimLess = ["#state-mesh"],
+    zoomInFactor = 1.5,
+    zoomOutFactor = 0.5;
 
   // FUNCTION EXPRESSIONS
   var cityState = d => {
@@ -138,13 +140,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     .projection(reflectedY)
 
 // PAN/ZOOM BEHAVIOR
-
-  // SET UP ZOOM BUTTON CONTROL
-  let zoomStep = 1,
-    zoomLevels = [1,24],
-    zoomScales = d3.scalePow().exponent(3)
-      .domain(zoomLevels)
-      .clamp(true);
 
   d3.select("button#zoom-in")
     .on('click', zoomClick)
@@ -2364,68 +2359,25 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // pauseTimer();
 
-    // COMBAK implement in new commit
-    // zoomInFactor = 2,
-    // zoomOutFactor = 0.5
-    // can get ride of zoomScales
-    //
-    // let currentScale = d3.zoomTransform(svg.node()).k,
-    //      targetScale = this.id === "zoom-in" ? currentScale * zoomInFactor : currentScale * zoomOutFactor;
-    //
-    // // if scale already clamped at min/max, offer visual feedback (little shake) that zoom limit reached
-    // if (targetScale === currentScale) {
-    //   d3.select(this).classed("animation-shake",true)
-    //   d3.timeout(() => {
-    //     d3.select(this).classed("animation-shake",false);
-    //   }, 400);
-    // } else {  // otherwise, store/apply new scale values
-    //   if (experience.animating && !experience.manuallyPaused) {
-    //     // flag for purposes of continuity within zoomAlongTransform and other on-the-fly transform calculations
-    //     transformAdjustments.zoomed.respectFlag = true;
-    //     this.id === "zoom-in" ? svg.call(zoom.scaleBy, zoomInFactor) : svg.call(zoom.scaleBy, zoomOutFactor)
-    //   } else {
-    //     this.id === "zoom-in" ?
-    //       svg.transition().duration(500)
-    //          .call(zoom.scaleBy, zoomInFactor)
-    //     : svg.transition().duration(500)
-    //          .call(zoom.scaleBy, zoomOutFactor)
-    //   }
-    // }
-
-    // this.parentNode holds current zoom scale (actual scale, NOT level)
-    let currentTransform = d3.zoomTransform(svg.node()),
-                  oScale = currentTransform.k,
-                  oLevel = +zoomScales.invert(oScale),
-               direction = (this.id === "zoom-in") ? 1 : -1,
-                newLevel = oLevel + zoomStep * direction,
-                newScale = +zoomScales(newLevel).toFixed(2);
-
     // if scale already clamped at min/max, offer visual feedback (little shake) that zoom limit reached
-    if (oScale === newScale) {
-
+    let currentScale = d3.zoomTransform(svg.node()).k;
+    if ((this.id === "zoom-in" && currentScale === scaleExtent[1]) || (this.id === "zoom-out" && currentScale === scaleExtent[0])) {
       d3.select(this).classed("animation-shake",true)
       d3.timeout(() => {
         d3.select(this).classed("animation-shake",false);
       }, 400);
-
-    } else {
-
-      // get current center pt by working backwards through centerTransform() from currentTransform
-      let currentCenter = getCenterFromTransform(currentTransform);
-
-      // get identity of centered transform at new scale
-      let zoomIdentity = getIdentity(getCenterTransform(currentCenter,{scale:newScale}));
-
-      // store/apply new scale values
+    } else {  // otherwise, store/apply new scale values
       if (experience.animating && !experience.manuallyPaused) {
-        svg.call(zoom.transform, zoomIdentity)
         // flag for purposes of continuity within zoomAlongTransform and other on-the-fly transform calculations
         transformAdjustments.zoomed.respectFlag = true;
+        this.id === "zoom-in" ? svg.call(zoom.scaleBy, zoomInFactor) : svg.call(zoom.scaleBy, zoomOutFactor)
       } else {
-        svg.transition().duration(500)
-           .call(zoom.transform, zoomIdentity)
+        this.id === "zoom-in" ?
+          svg.transition().duration(500)
+             .call(zoom.scaleBy, zoomInFactor)
+        : svg.transition().duration(500)
+             .call(zoom.scaleBy, zoomOutFactor)
       }
-
     }
 
     // if (experience.paused && !experience.manuallyPaused) resumeTimer();
@@ -2549,7 +2501,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function updateScaleExtent(scale0 = getTransform(path.bounds(data0),{ padBottom: getBottomPad() }).k) {
     scaleExtent = [scale0 * 0.8, scale0 * scaleExtentFactor];
-    zoomScales.range(scaleExtent)
     zoom.scaleExtent(scaleExtent)
   }
 
@@ -5258,10 +5209,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 /////// NO FOR REAL, THIS WHERE I'M AT ///////
 
-// todo:
+// done:
+  // readd flex-child--no-shrink to all encounters
   // add pointer class to parent legend-log symbols
+  // simplify zoomclick
+  
+// todo:
   // confirm new zoom ok
-  // fix zoomclick
   // d3 scale for pt sizing
   // clicking on map zooms to feature?
   // clicking on legend log zooms to feature group
