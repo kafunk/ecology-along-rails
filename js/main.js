@@ -74,8 +74,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     symInvert = ["volcanoes","inv-roadless","other-np-geo"],  // logGroups.divIds; specific to converting styles -> legend-log swatches and narrative output backgrounds
     dimMore = ["#continent-mesh",["#railways","path"],["#rivers","path"],"#lake-mesh","#lake-mesh2","#country-mesh","#urban-mesh"],
     dimLess = ["#state-mesh"],
-    zoomInFactor = 1.5,
-    zoomOutFactor = 0.5;
+    zoomInFactor = 1.25,
+    zoomOutFactor = 0.75;
 
   // FUNCTION EXPRESSIONS
   var cityState = d => {
@@ -2359,9 +2359,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // pauseTimer();
 
-    // if scale already clamped at min/max, offer visual feedback (little shake) that zoom limit reached
     let currentScale = d3.zoomTransform(svg.node()).k;
-    if ((this.id === "zoom-in" && currentScale === scaleExtent[1]) || (this.id === "zoom-out" && currentScale === scaleExtent[0])) {
+
+    if ((this.id === "zoom-in" && currentScale === scaleExtent[1]) || (this.id === "zoom-out" && currentScale === scaleExtent[0])) {  // if currentScale already clamped at min/max, offer visual feedback (little shake) that zoom limit reached
       d3.select(this).classed("animation-shake",true)
       d3.timeout(() => {
         d3.select(this).classed("animation-shake",false);
@@ -5213,7 +5213,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // readd flex-child--no-shrink to all encounters
   // add pointer class to parent legend-log symbols
   // simplify zoomclick
-  
+
 // todo:
   // confirm new zoom ok
   // d3 scale for pt sizing
