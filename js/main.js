@@ -1266,6 +1266,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     experience.initiated = true;
 
+    // prevent stray mouseover from upsetting opacity on stations I need to disappear
+    g.select("#rail-stations").selectAll("use")
+      .classed("point-none",true)
+
     prepareEnvironment().then(() => { // proceed
 
       currentRoute.views.routeBoundsIdentity = storedFlag ? currentRoute.views.routeBoundsIdentity : () => {
@@ -1277,7 +1281,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
          bottomPad0 = height < dashHeight * 2 ? bottomPad : dashHeight;  // map height must be at least twice that of dash to impact scale calculations
 
         // if fitting taller route into taller screen, no need for scalePad (bottomPad > 24 will take care of this)
-        let scalePad = (bottomPad0 > 24 && bounds1[1][0] - bounds1[0][0] < bounds1[1][1] - bounds1[0][1]) ? 0 : 0.1,
+        let scalePad = bottomPad0 > 24 && longerEdge(bounds1) === "height" ? 0 : 0.1,
             options0 = { scalePad: scalePad, padBottom: bottomPad0 },
                   k1 = getTransform(bounds1,options0).k;  // initial run used to confirm not overzooming
 
@@ -1552,9 +1556,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       g.select("#rail-stations").selectAll("use")
         .transition().duration(t)
           .style("opacity", 0)
-          .on("end", function() {
-            d3.select(this).remove();
-          })
+          // .on("end", function() {
+          //   d3.select(this).remove();
+          // })
 
       // simultaneous-ish; cannot append as callback to a "start" listener above b/c then EACH use element would trigger new selectAll transition ( => crash)
       g.select("#station-stops").selectAll("use")
@@ -1606,6 +1610,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         return (height < dashHeight * 2) ? getBottomPad() : dashHeight;  // map height must be at least twice that of dash to impact scale calculations
       },
       get scale() {
+        // // IF FITTING TALL ROUTE INTO WIDE SCREEN, ADJUST SCALEPAD
+        // let bounds2 = path.bounds(currentRoute.views.data2),
+        //     bounds3 = path.bounds(currentRoute.views.data3);
+        //    scalePad = this.padBottom > 24 && (longerEdge(bounds2) === "height" || longerEdge(bounds3) === "height") ? 0.6 : 0.5,
+        //    options0 = { scalePad: scalePad, padBottom: this.padBottom };
+        // console.log(scalePad)
         let options0 = { scalePad: 0.5, padBottom: this.padBottom };
         // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
         let k2 = getTransform(path.bounds(currentRoute.views.data2),options0).k,
@@ -1614,11 +1624,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         return Math.ceil(Math.min(maxInitZoom,avgK));
       }
     }
-
-    //COMBAK FIRSTLASTOPTIONS? ADJUST SCALE PAD IF TALL ROUTE/WIDE SCREEN
-      // // if fitting taller route into taller screen, no need for scalePad (bottomPad > 24 will take care of this)
-      // let scalePad = (bottomPad0 > 24 && bounds1[1][0] - bounds1[0][0] < bounds1[1][1] - bounds1[0][1]) ? 0 : 0.1,
-      //     options0 = { scalePad: scalePad, padBottom: bottomPad0 },
 
     if (currentRoute.zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
 
@@ -4469,16 +4474,20 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       window.onkeydown = null;
       // reset view
       undimBackground()
-      geomGrpIds.forEach(selector => d3.select(selector).style("background-image", null))
+      g.select("#rail-stations").selectAll("use")
+        .classed("point-none", false)
+        .transition().duration(500)
+          .style("opacity", 0.8)
+      d3.selectAll('.one-life').remove();
       d3.selectAll(".toggle-none").classed("none",true)
       d3.selectAll(".reset-0").text("0")
       d3.select("#current-quadrant").text("N")
-      d3.selectAll('.one-life').remove();
+      geomGrpIds.forEach(selector => d3.select(selector).style("background-image", null))
       // reset additional state & stored content
       transitionResume = false;
     }
 
-    function undimBackground(t = 400) {
+    function undimBackground(t = 500) {
       let dimGroup = dimMore.concat(dimLess);
       dimGroup.forEach(d => {
         let selection = Array.isArray(d) ? d3.select(d[0]).selectAll(d[1]) : d3.select(d);
@@ -4846,13 +4855,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let resetStrokeOpacity = d3.select(this).property("orig-stroke-opacity") || 0,
       resetOpacity = d3.select(this).property("orig-opacity") || 1;
 
-    d3.select(this) // .classed("hover", false) // .lower();
+    d3.select(this)  // .classed("hover", false) // .lower();
       .transition().duration(750)
         .style("stroke-opacity", resetStrokeOpacity)
         .style("opacity", resetOpacity)
 
     // access existing
-    let tooltip = d3.select("body").selectAll(".tooltip") // don't bother matching by id; should only ever be one tooltip open at a time
+    let tooltip = d3.select("#map").selectAll(".tooltip") // don't bother matching by id; should only ever be one tooltip open at a time
 
     // transition tooltip away
     tooltip.transition().duration(300)
@@ -5213,9 +5222,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // readd flex-child--no-shrink to all encounters
   // add pointer class to parent legend-log symbols
   // simplify zoomclick
+  // FIXED: random station leftovers intruding related to persistent, ill-placed mouseover while processing
 
 // todo:
-  // confirm new zoom ok
   // d3 scale for pt sizing
   // clicking on map zooms to feature?
   // clicking on legend log zooms to feature group
@@ -5230,7 +5239,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // center control buttons get animation-fade-in-out class ?
   // nouns/states better as fn expressions? e.g isToggleable
   // PRIORITY:
-    // fix firstlast overzoom
     // keep highlightassoc consistent with mouseover
     // symbol styling+:
       // thicken nylon pt stroke
@@ -5240,8 +5248,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // set max zoom on zoom to feature
   // rid of failure/feelings language
   // form smoothness
-  // sieve R2R extra station errors via intersect query
-    // OR: random station intruders related to persistent, ill-placed mouseover while processing?
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
   // TODO remove more of smallest polygons? ( eg eagle inventored roadless -> pt )
   // PROBLEM CITIES REMAINING:
@@ -5251,7 +5257,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // svg drop shadow on pts?
   // integrate #attribution and any other bottom-aligned overlay buttons with attuneMapBottomDashTop();
   // hover over legend-log categories offers insight into categorziation process
-  // sometimes padbottom too much for NS firstlastidentities; adjust scalepad up if domBoundsEdge fitting into !domScreenEdge
+
+// maybe? (having trouble finding examples of this now):
+  // sometimes padbottom too much for NS firstlastidentities; adjust scalepad up / fix firstlast overzoom
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
