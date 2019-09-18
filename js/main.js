@@ -3778,7 +3778,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .data(encounters, d => d.property("id"))
           .join(
             enter => enter.append("div")
-              .classed(`flex-child encounter ${geomType}-encounter one-life color-black txt-compact mx3 my3 px6 py6 ${pairedFlag}`, true)
+              .classed(`flex-child flex-child--no-shrink encounter ${geomType}-encounter one-life color-black txt-compact mx3 my3 px6 py6 ${pairedFlag}`, true)
               .html(getHtml)
               .property("assocId", d => d.attr("id"))
               .on("mouseover", highlightAssoc)
@@ -3907,6 +3907,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               .classed("my-marker triangle triangle--r color-gray-dark point-none middle-y-mxl none",true) // node hidden until children added
           } else { // ie, isChild
             let parentSym = d3.select(`#${parentDivId}`).select("summary").select(".log-symbol");
+            parentSym.classed("pointer",true)
             parentSym.on("click",function() {
               // children toggled automatically by details element; this function attending to visual of triangle marker only
               let target = d3.select(this);
@@ -5257,21 +5258,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 /////// NO FOR REAL, THIS WHERE I'M AT ///////
 
-// havedone:
-  // resolve bug interfering with click off modal (trying to stop event propagation in resetZoom)
-  // resolve bug throwing loop if user tried to select new route during reverseAnimation
-  // store currentRoute -> routeHx upon selectNew
-  // call upon (session-limited) routeHx if possible before querying R2R and processing all new data
-  // flag all to remove as one-life
-  // refactor resetConfirmed() and add restoreState0()
-  // improve pause/resume timing, esp when pause triggered by selectnew or similar
-  // ensure all of split watersheds highlighted and including in zoomToBounds calculation (created combinedBounds fn)
-  // rid of excess segment / stored details
-  // make reverse animation fully pausable
-  // integrate depart and reverseDepart (previously reversed()) functions
-  // rid of need for separate reverseTImer and associated checks
-
 // todo:
+  // add pointer class to parent legend-log symbols
+  // confirm new zoom ok
+  // fix zoomclick
   // d3 scale for pt sizing
   // clicking on map zooms to feature?
   // clicking on legend log zooms to feature group
