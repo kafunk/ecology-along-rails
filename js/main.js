@@ -13,7 +13,6 @@
        lakes = d3.json("data/final/lakes.json"),
    urbanBase = d3.json("data/final/urban_areas.json"),
       places = d3.json("data/final/places.json"),
-     // terrain = d3.buffer("data/final/terrain.tif"),
   // rail
     railBase = d3.json("data/final/railways.json"),
     railStns = d3.json("data/final/na_rr_stns.json"),
@@ -25,29 +24,36 @@
 quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   triggerPts = d3.json("data/final/enrich_trigger_pts.json");
 
-//// CURRENT STATE MANAGEMENT (NOT IDEAL)
+//// STATE MANAGEMENT & SEMI-GLOBALS
 
-  var experience = { initiated: false, animating: false, paused: false }
-  var togglesOff = { info: false, select: false }
-  var transformAdjustments; // { panned:{}, zoomed: {}}
-  var transitionResume = false;
-  var reversing = { flag: false, i: 0, t: null, tPad: null }
-  var currentBounds; // = {};
-  var svgLoaded = false; // prevents errors if initial screen load is < 500 (via size adjustments within collapse of about pane)
+  // SET/RESET WITHIN restoreState0
+  var timer, currentRoute, zoomAlongState, experience, transformAdjustments, togglesOff, transitionResume, encounteredPts, encounteredLines, encounteredPolys, uniqueEncounters, allEncounters, logGroups, tagTypes, symbolSet, logBackgrounds;
+
+  // SET/RESET ELSEWHERE
+  var currentBounds;
   var clickedOnce = false;
   var dblclickFilter;
+  var svgLoaded = false; // prevents errors if initial screen load is < 500 (via size adjustments within collapse of about pane)
+  var zoomAlongOptions;
+  var trainPt, headlights, zoomArc, fullPath;  // nodes
+  var fullLength, zoomLength, tFull, tPad;  // node properties
+  var eased, routeDashInterpolator;  // interpolator fns
+  // var accumReset = 0;  // (if I try to make train speed adjustable)
 
   // PERSISTENT ACROSS ROUTES
   var quadtree0;
   var state0 = {}; // restorable?
+  var routeHx = {};
+  var patterns = {};
+  var data0;
+  var bounds0;
+  var firstLastOptions;
 
- // OTHER WORTHWHILE
-
+  // OTHER WORTHWHILE
   const miles = { units: "miles" }  // used repeatedly within turf.js method calls
   const tau = 2 * Math.PI;
 
-//// KEEP ADJUSTABLE VARIABLES ACCESSIBLE: eventually some of these could be user-controlled via sliders and such
-
+  // ADJUSTABLE VARIABLES: eventually some of these could be user-controlled via sliders and such
   var scaleExtentFactor = 128, // breadth of scaleExtent
     arcSteps = 500,  // how fine tuned SVG path animation
     headlightRadius = 2,
@@ -60,69 +66,19 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     maxInitZoom = 56,
     maxFollowZoom = 64, // limit active zoomAlongTransform scale
     zoomDuration = tPause,  // zoom to frame transition duration
-    zoomEase = d3.easeCubicIn,
     trainEase = d3.easeSinInOut,
     relativeDim = 0.4,  // dimBackground level; lower values => greater dim
-    reverseCut = 2, // 12
+    reverseCut = 2, // duration of reversed experience relative to typical experience
     pyIgnore = ["grassland","lakes"],
     ptIgnore = ["pa-grp1","pa-grp2","pa-grp3"],
-    symInvert = ["volcanoes","inv-roadless","other-np-geo"];  // logGroups.divIds; specific to converting styles -> legend-log swatches and narrative output backgrounds
+    symInvert = ["volcanoes","inv-roadless","other-np-geo"],  // logGroups.divIds; specific to converting styles -> legend-log swatches and narrative output backgrounds
+    dimMore = ["#continent-mesh",["#railways","path"],["#rivers","path"],"#lake-mesh","#lake-mesh2","#country-mesh","#urban-mesh"],
+    dimLess = ["#state-mesh"]
 
-// AS YET EMPTY, ZERO, OR UNDEFINED
-
-  var timer, reverseTimer;
-
-  var patterns = {
-    // eg "jupiter": CanvasPattern {}
-  }
-
-  var zoomAlongOptions, firstLastOptions; // = {};
-
-  var prevTranslate, prevRotate, prevExtent, searchExtent;
-
-  var pt0;
-
-  var mm = 0, accumReset = 0, geoMM;
-
-  var totalMiles, totalTime, minPerMile;
-
-  var routeQuadtree;
-
-  var routeBoundsIdentity, firstIdentity, lastIdentity;
-
-  // all unprojected: init bounds (ie continent), full route, first route frame, last route frame
-  let data0, data1, data2, data3;
-
-  var trainPt, headlights;
-
-  var fullPath, fullLength, tFull;
-
-  var zoomArc, zoomLength, tPad;
-
-  var labels = [];
-
-  var routeDashInterpolator;
-
-  var logBackgrounds = {
-    // geomType: {
-    //   complete: true || false,
-    //   imgSrc: finalImgSrc
-    // }
-  };
-
-// FUNCTION EXPRESSIONS
-
-  var projectArray = unprojCoordArr => {
-    return unprojCoordArr.map(d => (Array.isArray(d[0])) ? projectArray(d) : projection(d));
-  }
-
+  // FUNCTION EXPRESSIONS
   var cityState = d => {
     let region = d.state || d.province;
     return d.city + ", " + region;
-  }
-
-  var getBottomPad = () => {
-    return window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24 ? 18 : 24;
   }
 
 //// READY MAP
@@ -153,7 +109,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     .style("fill", "none")
     .classed("point-all opacity75 bg-lighten25 no-zoom absolute top left",true)
     .on("dblclick", () => {
-      d3.event.stopPropagation();  // don't also play/pause/etc if other active svg click event listeners; useless because reaches here AFTER togglePause()
+      // d3.event.stopPropagation();  // intended to prevent play/pause/etc if other active svg click event listeners; useless because reaches here AFTER togglePause(); also interferes with collapsing modal on dblclick
       resetZoom();
     })
 
@@ -188,20 +144,18 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     zoomLevels = [1,24],
     zoomScales = d3.scalePow().exponent(3)
       .domain(zoomLevels)
-      // .range(scaleExtent) // set elsewhere
       .clamp(true);
 
-  d3.select("button#zoomIn")
+  d3.select("button#zoom-in")
     .on('click', zoomClick)
-    .on('mouseenter', highlightBtn)  // triggering mouseover style changes programmatically remedies bug of #zoomIn's hover state being triggered concurrent to #zoomOut's
+    .on('mouseenter', highlightBtn)  // triggering mouseover style changes programmatically remedies bug of #zoom-in's hover state being triggered concurrent to #zoom-out's
     .on('mouseleave', removeHighlight);
-  d3.select("button#zoomOut")
+  d3.select("button#zoom-out")
     .on('click', zoomClick)
     .on('mouseenter', highlightBtn)
     .on('mouseleave', removeHighlight)
 
   var zoom = d3.zoom()
-    // .scaleExtent(scaleExtent) // set elsewhere
     .on("zoom", zoomed)
     .filter(() => {
       // dbl-clicking on background does not trigger zoom (but rather resets it)
@@ -289,8 +243,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 // MORE DATA, CATEGORY ASSIGNMENT, ETC
 
-  let readyAndWaiting = {}; // IMPORTANT! will be populated with filtered enrich features and accessed as associated trigger pts encountered en route
-
   let geomAssoc = {
     "pt": {
       encounterCol: "A",
@@ -316,7 +268,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       get logCanvas() { return d3.select("#encounters-C").select("canvas#lines") },
       get set() { return encounteredLines; }
     }
-  }
+  },
+     geomGrpIds = ["#encounters-A","#encounters-B","#encounters-C"];
 
   let contentAssoc = {
     "modal-about": {
@@ -334,20 +287,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       left: "right"
     }
   }
-
-  let encounteredPts = new Set(),
-    encounteredLines = new Set(),
-    encounteredPolys = new Set(),
-    uniqueEncounters = new Set(),
-       allEncounters = {
-         "A": [],
-         "B": [],
-         "C": []
-       };
-
-  let logGroups = new Set(),
-       tagTypes = new Set(),
-      symbolSet = new Set();
 
   let enrichCats = {  // enrichData categories/logTypes
     "ECOREGION": {
@@ -537,12 +476,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 // CUSTOM DISPATCH BEHAVIOR
 
-  let dispatch = d3.dispatch("zoomclick","depart","encounter","arrive","reverse","unencounter","reverseArrived")
-    // .on("zoomclick", flagZoomStray)
+  let dispatch = d3.dispatch("depart","encounter","arrive","reverse","unencounter","reverseArrived")
     .on("depart.train", departed)
     .on("encounter.trigger", encountered)
     .on("arrive.train", arrived)
-    .on("reverse.train", reversed)
+    .on("reverse.train", () => departed(true))  // reverseFlag = true;
     .on("unencounter.trigger", unencountered)
     .on("reverseArrived.train", reverseArrived)
 
@@ -576,10 +514,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // SET BOUNDING BOX
   admin0.then(data => {
     data0 = getMesh(data,"countries");
-    resetTransformAdjustments()
-    resetZoom();
-    enableZoomBtns();
-    svg.call(zoom);
+    bounds0 = {
+      get bounds() { return path.bounds(data0); },
+      get domEdge() {
+        if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
+        return this._domEdge;
+      }
+    }
+    resetZoom(true)  // state0 == true;
+    restoreState0(true)  // init == true;
   }, onError)
 
   // DRAW VECTOR BASE
@@ -602,16 +545,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("class", "base basemap baselayers")
     var adminBase = baselayers.append("g")
       .attr("id", "admin-base")
-      .style("opacity", 1)
     var hydroBase = baselayers.append("g")
       .attr("id", "hydro-base")
-      .style("opacity", 1)
     var urbanBase = baselayers.append("g")
       .attr("id", "urban-base")
-      .style("opacity", 1)
     var railBase = baselayers.append("g")
       .attr("id", "rail-base")
-      .style("opacity", 1)
 
     // FILLED MESH
     adminBase.append("path")
@@ -619,7 +558,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("d", path(continentMesh))
       .style("stroke","#004c4c")
       .style("stroke-width",0.2)
-      .style("opacity",1)
       .style("stroke-opacity",0.8)
       .style("fill","dimgray")
 
@@ -630,6 +568,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .style("opacity",0.4)
       .style("stroke","darkcyan")
       .style("stroke-width",0.05)
+      .property("orig-opacity",0.4)
 
     hydroBase.append("path")
       .attr("id", "lake-mesh2")
@@ -638,16 +577,16 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .style("opacity",0.12)
       .style("stroke","black")
       .style("stroke-width",0.1)
+      .property("orig-opacity",0.12)
 
     urbanBase.append("path")
       .attr("id", "urban-mesh")
       .attr("d", path(urbanMesh))
       .attr("stroke","silver")
       .attr("fill","gainsboro")
-      // .attr("fill", chroma("#44443e").luminance(0.2))
-      // .attr("stroke", chroma("#44443e").luminance(0.1))
       .style("stroke-width",0.05)
       .style("opacity",0.6) // 0.8
+      .property("orig-opacity",0.6)
 
     // STROKED MESH
     adminBase.append("path")
@@ -676,6 +615,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         .style("stroke", riverBlue)
         .style("opacity", 0.8)
         .style("stroke-width", d => d.properties.strokeweig * 0.6)
+        .property("orig-opacity", 0.8)
 
     railBase.append("g")
       .attr("id", "railways")
@@ -686,7 +626,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         .attr("stroke-width", d => { return (8/(d.properties.scalerank * 10)) })
         .attr("stroke","lightslategray")
         .style("fill", "none")
-        .style("opacity",1)
 
     // POINT FEATURES
     urbanBase.selectAll("circle")
@@ -780,7 +719,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             resolve();
             d3.select(this)
               .classed("none",true)
-              .style("opacity",1)
+              .style("opacity", 1)
             if (childId) d3.select(this).select(`#${childId}`).classed("none",true)
           })
       })
@@ -880,17 +819,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             })
             .on("end",function() {
               d3.select(this).transition().delay(300).duration(500) // .delay(750).duration(750)
-                .style("opacity",0)
+                .style("opacity", 0)
                 .on("start", () => {
                   d3.select("#play-pause-btn").transition().duration(300) // .duration(750)
-                    .style("opacity",1)  // in case previously hidden
+                    .style("opacity", 1)  // in case previously hidden
                 })
                 .on("end", function() {
                   resolve();
                   d3.select(this)
-                    .classed("none",true)
-                    .style("transform",null)
-                    .style("opacity",1)
+                    .classed("none", true)
+                    .style("transform", null)
+                    .style("opacity", 1)
                   if (childId) d3.select(this).select(`#${childId}`).classed("none",true)
                 })
             })
@@ -904,10 +843,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
 //// ON INITIAL LOAD
-
-  function initPrompt() {
-    d3.select("#modal").classed("none",false)  // show prompt
-  }
 
   function populateOptions(allOptions) {
 
@@ -964,8 +899,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // STORE IN state0; make sure event listeners & data included
     state0.opt0 = d3.select("#getOption0").node().innerHTML;
     state0.opt1 = d3.select("#getOption1").node().innerHTML;
-
-    initPrompt();
 
     function onBlur() {
 
@@ -1060,20 +993,29 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     if (index1 >= 0) opt1 = capitalize(fixable[index1].name) + " " + (fixable[index1].addition || "Amtrak Station");
 
     let from = d3.json(`https://free.rome2rio.com/api/1.4/json/Autocomplete?key=&query=${opt0}`).then(extractCrux,onError),
-          to = d3.json(`https://free.rome2rio.com/api/1.4/json/Autocomplete?key=&query=${opt1}`).then(extractCrux,onError);
+          to = d3.json(`https://free.rome2rio.com/api/1.4/json/Autocomplete?key=&query=${opt1}`).then(extractCrux,onError),
+     routeId,
+     storedFlag;
 
-    let selection = Promise.all([from,to]).then(queryAPI,onError);
+    let selection = Promise.all([from,to]).then(([from,to]) => {
+      routeId = getRouteId(from,to);
+      if (routeHx[routeId]) storedFlag = true;
+      return storedFlag ? "stored" : queryAPI(from,to);
+    },onError);
 
-    selection.then(data => {
-      if (data == null) {  // if no rail-only routes found, reprompt user;
-        d3.select("#submit-btn-load").classed("none",true);
-        d3.select("#submit-btn-txt").classed("none",false);
-        initPrompt()
+    selection.then(results => {
+      if (results == null) {  // if no rail-only routes found, reprompt user;
+        toggleModal("get-options","open")
       } else {  // otherwise, proceed with drawing/zooming to chosen route
         toggleLoading();
-        let processed = processReceived(data);
-        Promise.all([processed]).then(function(data) {
-          if (!experience.initiated) initExp(data[0]);
+        let processed = storedFlag ? Promise.resolve(routeHx[routeId]) : processReceived(results);
+        processed.then(function(routeData) {
+          // store as current
+          currentRoute = routeData;
+          // bind all trigger points to the DOM for en route intersection;
+          bindQuadtreeData(currentRoute.quadtree,true) // triggerPtFlag === true
+          // initiate experience
+          initExp(storedFlag);
         }, onError);
       }
     }, onError);
@@ -1081,8 +1023,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     function extractCrux(results) {
       let topMatch = results.places[0];
       return topMatch ? {
-        name: `${topMatch.shortName}`,
-        coords: `${topMatch.lat},${topMatch.lng}`
+        shortName: topMatch.shortName,
+        lat: topMatch.lat,
+        lng: topMatch.lng
       } : null;
     }
 
@@ -1106,7 +1049,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           d3.select(this).classed("none", true)
         })
 
-    d3.select("#map-init-load").attr("opacity",0).classed("none", false)
+    d3.select("#map-init-load")
+      .attr("opacity",0)
+      .classed("none", false)
       .transition().duration(300)
         .attr("opacity", 1)
 
@@ -1114,20 +1059,18 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 //// API / DATA-PROCESSING RELATED
 
-  function queryAPI([opt0,opt1]) {
+  function queryAPI(opt0,opt1) {
 
     // save and parse user input
-    var posA = opt0 ? replaceCommas(opt0.coords) : null,
-        posB = opt1 ? replaceCommas(opt1.coords) : null,
-       nameA = opt0 ? replaceCommas(opt0.name) : null,
-       nameB = opt1 ? replaceCommas(opt1.name) : null;
+    var posA = opt0 ? `${opt0.lat}%2C${opt0.lng}` : null,
+        posB = opt1 ? `${opt1.lat}%2C${opt1.lng}` : null,
+       nameA = opt0 ? replaceCommas(opt0.shortName) : null,
+       nameB = opt1 ? replaceCommas(opt1.shortName) : null;
 
     // define Rome2Rio API query string
     let apiCall = `https://free.rome2rio.com/api/1.4/json/Search?key=V8yzAiCK&oPos=${posA}&dPos=${posB}&oName=${nameA}&dName=${nameB}&oKind=station&dKind=station&noAir&noAirLeg&noBus&noFerry&noCar&noBikeshare&noRideshare&noTowncar&noMinorStart&noMinorEnd&noPrice`
 
-    let received = d3.json(apiCall).then(validate,onError);
-
-    return received;
+    return d3.json(apiCall).then(validate,onError);
 
   }
 
@@ -1174,96 +1117,80 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       let route = raw.routes[0],
        mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat()),
-        inMiles = kmToMi(route.distance);
+        inMiles = Math.round(kmToMi(route.distance)),
+      inMinutes = Math.round(route.totalTransitDuration); // not including transfers
 
       let thisRoute = {
+        id: getRouteId(raw.places[0],raw.places[1]),
         from: raw.places[0],
         to: raw.places[1],
-        totalDistance: inMiles,
-        totalTime: route.totalTransitDuration, // not including transfers
-        lineString: mergedGJ,
+        totalMiles: inMiles,
+        totalTime: inMinutes,
+        minPerMile: inMinutes / inMiles,
         segments: route.segments.map(storeSegmentDetails),
-        allStops: raw.places,
         get relStops() {
-
-          let stopSet = new Set();
-
-          let toFromStns = this.allStops.filter(d => d.shortName.startsWith(this.from.shortName) && d.kind === "station" || d.shortName.startsWith(this.to.shortName) && d.kind === "station");
-
-          if (toFromStns.length < 2) {
-
-            let missing = [];
-
-            if (!toFromStns.some(d => d.shortName.startsWith(this.from.shortName))) missing.push(this.from)
-
-            if (!toFromStns.some(d => d.shortName.startsWith(this.to.shortName))) missing.push(this.to)
-
-            missing.forEach(d => toFromStns.push(d));
-
-          }
-
-          toFromStns.forEach(d => d.toFrom = d.shortName.startsWith(this.to.shortName) ? "to" : "from")
-
-          let oTos = toFromStns.filter(d => d.toFrom === "to"),
-            oFroms = toFromStns.filter(d => d.toFrom === "from"),
-               tos = (oTos.length > 1) ? oTos.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oTos,
-             froms = (oFroms.length > 1) ? oFroms.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oFroms;
-
-          // avoid overfiltering
-          if (tos.length < 1) tos = oTos;
-          if (froms.length < 1) froms = oFroms;
-
-          toFromStns = tos.concat(froms);
-
-          toFromStns.forEach(d => {
-            d.flagged = true;
-            stopSet.add(d);
-          })
-
-          this.segments.forEach(d => {
-            stopSet.add(d.departing);
-            stopSet.add(d.arriving);
-          });
-
-          return [...stopSet];
-
+          if (!this._relStops) this._relStops = getRelStops(this,raw.places);
+          return this._relStops;
         },
-        arcPts: projectArray(truncateCoords(getSteps(arcSteps))),
-        geoMM: getSteps(Math.round(inMiles))
+        geoMM: getSteps(mergedGJ,inMiles),
+        views: {
+          data1: mergedGJ
+        }
       }
 
-      // store unprojected milemarkers as globally accessible coord array
-      geoMM = thisRoute.geoMM;
-
-      // easily access to/from coords
-      thisRoute.to.coords = getCoords()
-      thisRoute.from.coords = getCoords()
-
-      function getSteps(steps = 500) {  // controlled simplification of route; returns one coord for every (inMiles/steps) miles
-        let chunkLength = Math.max(1,Math.round(inMiles/steps)),  // must be at least 1 to avoid errors (happens when getting arcPts on very short routes) but Math.ceil too frequently results in double-length milemarker segments
-          lineChunks = turf.lineChunk(mergedGJ,chunkLength,miles).features,
-          firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
-          lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
-          lastCoord = lastChunk[lastChunk.length-1];
-        return firstCoords.concat([lastCoord]);
-      }
-
-      // likely will not need all this information
       function storeSegmentDetails(segment) {
         return {
             agency: (segment.agencies) ? raw.agencies[segment.agencies[0].agency] : null,
           lineName: (segment.agencies) ? segment.agencies[0].lineNames[0] : null,
-        lineString: polyline.toGeoJSON(segment.path),
-          distance: kmToMi(segment.distance),
-             stops: segment.stops,
          departing: raw.places[segment.depPlace],
           arriving: raw.places[segment.arrPlace]
         }
       }
 
-      function getCoords() {
-        this.coords = [this.lng,this.lat]
-        return this.coords
+      function getRelStops(routeObj,allStops) {
+
+        // COMBAK ensure routeObj actually updated from within here
+        let stopSet = new Set();
+
+        let toFromStns = allStops.filter(d => d.shortName.startsWith(routeObj.from.shortName) && d.kind === "station" || d.shortName.startsWith(routeObj.to.shortName) && d.kind === "station");
+
+        if (toFromStns.length < 2) {
+
+          let missing = [];
+
+          if (!toFromStns.some(d => d.shortName.startsWith(routeObj.from.shortName))) missing.push(routeObj.from)
+
+          if (!toFromStns.some(d => d.shortName.startsWith(routeObj.to.shortName))) missing.push(routeObj.to)
+
+          missing.forEach(d => toFromStns.push(d));
+
+        }
+
+        toFromStns.forEach(d => d.toFrom = d.shortName.startsWith(routeObj.to.shortName) ? "to" : "from")
+
+        let oTos = toFromStns.filter(d => d.toFrom === "to"),
+          oFroms = toFromStns.filter(d => d.toFrom === "from"),
+             tos = (oTos.length > 1) ? oTos.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oTos,
+           froms = (oFroms.length > 1) ? oFroms.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oFroms;
+
+        // avoid overfiltering
+        if (tos.length < 1) tos = oTos;
+        if (froms.length < 1) froms = oFroms;
+
+        toFromStns = tos.concat(froms);
+
+        toFromStns.forEach(d => {
+          d.flagged = true;
+          stopSet.add(d);
+        })
+
+        routeObj.segments.forEach(d => {
+          stopSet.add(d.departing);
+          stopSet.add(d.arriving);
+        });
+
+        return [...stopSet];
+
       }
 
       return thisRoute;
@@ -1276,69 +1203,57 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       let headlightDegrees = 1.5; // was 0.5; play around with approximate conversion of degrees -> pixels given path? (some combo of path.measure() and projection.invert()?)
 
       // keep radius consistent with filtered pool of enrichData
-      chosen.bufferedRoute = turf.buffer(chosen.lineString, headlightDegrees, {units: "degrees", steps: 12});
+      let bufferedRoute = turf.buffer(chosen.views.data1, headlightDegrees, {units: "degrees", steps: 12});
 
       let possFeatures = Promise.all([quadtreeReps,admin0]).then(getIntersected,onError);
 
-      // bind all trigger points to the DOM for en route intersection
-      Promise.all([possFeatures,triggerPts]).then(([idList,pts]) => {
+      // store routeQuadtree plus all relevant pts, lines, and polys in chosen (currentRoute) object
+      let enriched = Promise.all([possFeatures,triggerPts]).then(([idList,pts]) => {
 
         const onList = d => {
           return idList.has(d.properties.id)
         }
 
         const withinBuffer = d => {
-          return turf.booleanPointInPolygon(d,chosen.bufferedRoute);
+          return turf.booleanPointInPolygon(d,bufferedRoute);
         }
 
         let quadData = topojson.feature(pts, pts.objects.triggerPts).features.filter(onList).filter(withinBuffer)
 
         let options = {
-          bounding: chosen.bufferedRoute
+          bounding: bufferedRoute
         }
 
-        routeQuadtree = makeQuadtree(quadData,options)
+        chosen.quadtree = makeQuadtree(quadData,options)
 
-        // non-optional quadtree binding
-        bindQuadtreeData(routeQuadtree,true) // triggerPtFlag === true
+        return Promise.all([enrichPts,enrichLines,enrichPolys]).then(data => {
+          chosen.readyAndWaiting = {};
+          data.forEach(geomGrp => {
+            let key = Object.keys(geomGrp.objects)[0];
+            let filtered = topojson.feature(geomGrp,geomGrp.objects[key]).features.filter(onList);
+            filtered.forEach(datum => chosen.readyAndWaiting[datum.properties.id] = datum);
+          })
+          return chosen;
+        });
 
       },onError)
 
-      return chosen;
+      return enriched;
 
       function getIntersected([quadReps,quadBounds]) {
 
         // FIRST make a quadtree of all representative enrich data pts draped over North America
 
         let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features,
-        // .filter(d => d.geometry),
               dataExtent = getMesh(quadBounds,"countries")
 
         if (!quadtree0) quadtree0 = makeQuadtree(quadtreeData,{bounding:dataExtent})
 
-        let searchExtent = padExtent(path.bounds(chosen.bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad
+        let searchExtent = padExtent(path.bounds(bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad
 
         let filteredEnrich = searchQuadtree(quadtree0, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1])
 
-        let possibleFeatures = new Set(filteredEnrich.map(d => d.properties.id));
-
-        enrichPts.then(pts => {
-          topojson.feature(pts, pts.objects.enrichPts).features.filter(d => { return possibleFeatures.has(d.properties.id) }).forEach(pt => {
-            readyAndWaiting[pt.properties.id] = pt;
-          })
-        })
-        enrichLines.then(lines => {
-          topojson.feature(lines, lines.objects.enrichLines).features.filter(d => { return possibleFeatures.has(d.properties.id) }).forEach(line => {
-            readyAndWaiting[line.properties.id] = line;
-          })
-        })
-        enrichPolys.then(polys => {
-          topojson.feature(polys, polys.objects.enrichPolys).features.filter(d => { return possibleFeatures.has(d.properties.id) }).forEach(poly => {
-            readyAndWaiting[poly.properties.id] = poly;
-          })
-        })
-
-        return possibleFeatures;
+        return new Set(filteredEnrich.map(d => d.properties.id));  // possibleFeatures
 
       }
 
@@ -1346,20 +1261,22 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
+  function getRouteId(from,to) {
+    return from.shortName.slice(0,3).toLowerCase() + to.shortName.slice(0,3).toLowerCase() + `${from.lng}`.slice(0,5).replace('.','') + `${from.lat}`.slice(0,4).replace('.','') + `${to.lng}`.slice(0,5).replace('.','') + `${to.lat}`.slice(0,4).replace('.','')
+  }
+
 //// INITIATE EXPERIENCE
 
-  function initExp(receivedData) {
+  function initExp(storedFlag = false) {
 
     experience.initiated = true;
 
-    data1 = receivedData.lineString;
+    prepareEnvironment().then(() => { // proceed
 
-    Promise.resolve(prepareEnvironment(receivedData)).then(() => { // proceed
-
-      routeBoundsIdentity = () => {
+      currentRoute.views.routeBoundsIdentity = storedFlag ? currentRoute.views.routeBoundsIdentity : () => {
 
         // bottomPad0 == scale accommodation; bottomPad == actual shift
-        let bounds1 = path.bounds(data1),
+        let bounds1 = path.bounds(currentRoute.views.data1),
           bottomPad = getBottomPad(),
          dashHeight = d3.select("#dash").node().clientHeight,
          bottomPad0 = height < dashHeight * 2 ? bottomPad : dashHeight;  // map height must be at least twice that of dash to impact scale calculations
@@ -1377,13 +1294,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       }
 
       // control timing with transition start/end events
-      svg.transition().duration(zoomDuration) // .ease(zoomEase)
-        .call(zoom.transform, routeBoundsIdentity)
+      svg.transition().duration(zoomDuration)
+        .call(zoom.transform, currentRoute.views.routeBoundsIdentity)
         .on("start", () => {
-          // flagZoomStray();
           currentBounds = {
-            // get bounds() { return path.bounds(data1); },
-            bounds: path.bounds(data1),
+            get bounds() { return path.bounds(currentRoute.views.data1); },
             get domEdge() {
               if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
               return this._domEdge;
@@ -1392,33 +1307,31 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           transitionIn()
         })
         .on("end", () => {
-          // pause to prepareUser, then initiate animation (incl zoom to firstFrame)
-          prepareUser();
+          // pause (prepare user?), then zoom to firstFrame
+          // prepareUser();
           d3.timeout(() => {
-            onYourMarks(receivedData,routeBoundsIdentity);
+            onYourMarks(storedFlag);
           }, tPause);
         })
 
     })
 
-    function prepareEnvironment(received) {
+    function prepareEnvironment() {
 
-      let task1 = setupDash(received),
+      let task1 = setupDash(),
           task2 = setupEnrichLayers(),
-          task3 = drawRoute(received);
+          task3 = drawRoute();
 
-      Promise.all([task1,task2,task3]).then(() => {
-        return true;
-      })
+      return Promise.all([task1,task2,task3]);
 
-      function setupDash(received) {
+      function setupDash() {
 
         // // store state0
         // state0.dash = d3.select("#dash").node().innerHTML;
 
         // ROUTE SUMMARY
         // agency names & lines
-        let agencies = [...new Set(received.segments.map(d => {
+        let agencies = [...new Set(currentRoute.segments.map(d => {
           if (d.lineName && d.agency.name) {
             let lineName = exRedundant(d.lineName,d.agency.name);
             let fullText = (lineName) ? `'s ${lineName} Line` : '';
@@ -1442,12 +1355,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         // origin & destination
         d3.select("#from").append("span")
-          .classed("flex-child",true)
-          .text(received.from.shortName)
+          .classed("flex-child one-life",true)
+          .text(currentRoute.from.shortName)
         d3.select("#to").insert("span")
-          .classed("flex-child",true)
-          .text(received.to.shortName)
+          .classed("flex-child one-life",true)
+          .text(currentRoute.to.shortName)
         d3.select("#via").insert("div")
+          .classed("one-life",true)
           .html(agencyHtml)
           .attr("strokeStyle","dimgray")
 
@@ -1457,11 +1371,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         initClock()
         initCompass()
 
-        // NARRATION
-        // remove placeholder text from #encounters and change header text (for now)
-        d3.selectAll(".placeholder").remove()
-        d3.select("#narration-header").select("h5")
-          .text("Currently passing:")
+        d3.select("#dash").selectAll(".toggle-none").classed("none",false)
+
+        if (experience.i < 1) dashInit0();
 
         return true;
 
@@ -1471,63 +1383,39 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
 
         function initElevation() {
-
-          d3.select("#elevation").select("div").classed("none",false)
-
-          getElevation([received.from.lng,received.from.lat]).then(elevation => {
-
-            d3.select("#elevation-val").text(elevation)
-
-            d3.select("#asl-abbr")
-              .on("mouseover", function() {
-                d3.select(this).append("div")
-                  .attr("class","tooltip px6 pt6 pb3 bg-darken75 color-lighten75 z5 point-none")
-                  .style("left", (d3.event.clientX + 6) + "px")
-                  .style("top", (d3.event.layerY + 36) + "px")
-                  .style("fill", "dimgray")
-                  .style("stroke", "whitesmoke")
-                  .style("opacity", 1)
-                  .text("above sea level") // abbr default too delayed
-              })
-              .on("mouseout", function() {
-                d3.select(this).selectAll(".tooltip").remove();
-              })
-
-          });
-
+          getElevation([currentRoute.from.lng,currentRoute.from.lat]).then(elevation => d3.select("#elevation-val").text(elevation));
         }
 
         function initOdometer() {
-
-          d3.select("#odometer").select("div").classed("none",false)
-
-          totalMiles = Math.round(received.totalDistance);
-
-          d3.select("#total-miles").append("text")
-            .text(`${totalMiles} miles`)
-
+          d3.select("#total-miles").text(`${currentRoute.totalMiles} miles`)
         }
 
         function initClock() {
-
-          d3.select("#clock").select("div").classed("none",false)
-
-          totalTime = Math.round(received.totalTime);  // in minutes
-         minPerMile = totalTime / totalMiles;
-
-          d3.select("#total-time").append("text")
-            .text(`${totalTime} minutes`)
-
+          d3.select("#total-time").text(`${currentRoute.totalTime} minutes`)
         }
 
         function initCompass() {
-
-          d3.select("#compass").select("div").classed("none",false)
-
           let azimuth0 = getAzimuth(0);
-
           d3.select("#compass-val").text(azimuth0)
           d3.select("#current-quadrant").text(getQuadrant(azimuth0))
+        }
+
+        function dashInit0() {
+          // no need to do these things twice if user has setup dash before
+
+          d3.select("#asl-abbr")
+            .on("mouseover", function() {
+              d3.select(this).append("div")
+                .attr("class","tooltip px6 pt6 pb3 bg-darken75 color-lighten75 z5 point-none")
+                .style("left", (d3.event.clientX + 6) + "px")
+                .style("top", (d3.event.layerY + 36) + "px")
+                .style("fill", "dimgray")
+                .style("stroke", "whitesmoke")
+                .text("above sea level") // abbr default too delayed
+            })
+            .on("mouseout", function() {
+              d3.select(this).selectAll(".tooltip").remove();
+            })
 
         }
 
@@ -1536,7 +1424,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       function setupEnrichLayers() {
 
         // enrich content groups
-        const enrichLayer = g.append("g").attr("id","enrich-layer");
+        const enrichLayer = g.append("g")
+          .attr("id","enrich-layer")
+          .classed("one-life",true)
 
         enrichLayer.append("g").attr("id","enrich-polygons")
         enrichLayer.append("g").attr("id","enrich-lines")
@@ -1546,16 +1436,18 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       }
 
-      function drawRoute(received) {
+      function drawRoute() {
 
         var journey = g.append("g")
           .attr("id", "journey")
+          .classed("one-life",true)
         var route = journey.append("g")
           .attr("id", "route")
         var train = journey.append("g")
           .attr("id", "train")
 
-        let arcPts = getSimpRoute(turf.lineString(received.arcPts),0.1).geometry.coordinates;
+        let arcPts = getSimpRoute(turf.lineString(projectArray(truncateCoords(getSteps(currentRoute.views.data1,currentRoute.totalMiles,arcSteps)))),0.1).geometry.coordinates;
+        // getSimpRoute(turf.lineString(currentRoute.arcPts),0.1).geometry.coordinates;
 
         // LINE/ROUTE
 
@@ -1589,7 +1481,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         // separately add relevant station points (those with stops) using R2R return data
         route.append("g").attr("id", "station-stops")
           .selectAll("use")
-          .data(received.relStops.sort((a,b) => {
+          .data(currentRoute.relStops.sort((a,b) => {
             // in case stop/start station overlaps with another, stop/start comes later to ensure drawn on top
             return a.flagged || !b.flagged ? 1 : -1;
           }))
@@ -1686,22 +1578,23 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-  function onYourMarks(routeObj,routeBoundsIdentity) {  // initAnimation
+  function onYourMarks(storedFlag) {
 
     // get zoomFollow object including simplified zoomArc (if applicable) and first/last zoom frames
-    let zoomFollow = getZoomFollow(routeObj);
+    currentRoute.zoomFollow = storedFlag ? currentRoute.zoomFollow : getZoomFollow();
 
     // need to remain accessible for animate():
-    tFull = tpm * zoomFollow.fullDist;
+    tFull = tpm * currentRoute.totalMiles;
     trainPt = g.select("#train-point");
     headlights = g.select("#headlights");
     fullPath = g.select("#full-route");
 
-    if (zoomFollow.arc.length) {
+    if (currentRoute.zoomFollow.arc.length) {
       // bind zoomArc to DOM for tracking only (not visible)
       zoomArc = g.append("path")
         .attr("id", "zoom-arc")
-        .datum(projectArray(zoomFollow.arc))
+        .classed("one-life",true)
+        .datum(projectArray(currentRoute.zoomFollow.arc))
         .attr("d", line)
         .style("fill","none")
         .style("stroke","none")
@@ -1712,14 +1605,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     }
 
     // FIRST/LAST IDENTITY CALCULATIONS //
-
-    //COMBAK ADJUST SCALE PAD IF TALL ROUTE/WIDE SCREEN
-      // // if fitting taller route into taller screen, no need for scalePad (bottomPad > 24 will take care of this)
-      // let scalePad = (bottomPad0 > 24 && bounds1[1][0] - bounds1[0][0] < bounds1[1][1] - bounds1[0][1]) ? 0 : 0.1,
-      //     options0 = { scalePad: scalePad, padBottom: bottomPad0 },
-
-    // recalculated for first/last identities
-    firstLastOptions = {
+    if (!firstLastOptions) firstLastOptions = {
       get padBottom() {
         let dashHeight = d3.select("#dash").node().clientHeight;
         return (height < dashHeight * 2) ? getBottomPad() : dashHeight;  // map height must be at least twice that of dash to impact scale calculations
@@ -1727,23 +1613,30 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       get scale() {
         let options0 = { scalePad: 0.5, padBottom: this.padBottom };
         // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
-        let k2 = getTransform(path.bounds(data2),options0).k,
-            k3 = getTransform(path.bounds(data3),options0).k,
+        let k2 = getTransform(path.bounds(currentRoute.views.data2),options0).k,
+            k3 = getTransform(path.bounds(currentRoute.views.data3),options0).k,
           avgK = (k2 + k3)/2;
         return Math.ceil(Math.min(maxInitZoom,avgK));
       }
     }
 
-    if (zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
+    //COMBAK FIRSTLASTOPTIONS? ADJUST SCALE PAD IF TALL ROUTE/WIDE SCREEN
+      // // if fitting taller route into taller screen, no need for scalePad (bottomPad > 24 will take care of this)
+      // let scalePad = (bottomPad0 > 24 && bounds1[1][0] - bounds1[0][0] < bounds1[1][1] - bounds1[0][1]) ? 0 : 0.1,
+      //     options0 = { scalePad: scalePad, padBottom: bottomPad0 },
+
+    if (currentRoute.zoomFollow.necessary) {  // calculate transforms and timing from firstFrame to lastFrame (at initial zoomFollow scale)
 
       // let options1 = { padBottom: bottomPad }, // default scalePad
-      //           k2 = getTransform(path.bounds(data2),options1).k,
-      //           k3 = getTransform(path.bounds(data3),options1).k,
+      //           k2 = getTransform(path.bounds(currentRoute.views.data2),options1).k,
+      //           k3 = getTransform(path.bounds(currentRoute.views.data3),options1).k,
       //         avgK = (k2 + k3)/2;
 
       // assuming same scalePad, same bottomPad, same k2/k3/avgK
       // zoomAlongOptions less responsive/recalculating than firstLast for performance reasons
       // zoomAlongOptions = firstLastOptions;
+
+      // reset each time
       zoomAlongOptions = {
         get padBottom() {
           if (!this._padBottom) this.setPadBottom();
@@ -1767,40 +1660,38 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
       }
 
+      // COMBAK recalc if already calculated?
       let p0 = zoomArc.node().getPointAtLength(0),
           p1 = zoomArc.node().getPointAtLength(zoomLength);
 
       // then calc final first/last frames at constant scale with center centered! (note diff fn call)
-      firstIdentity = () => getIdentity(getCenterTransform([p0.x,p0.y],firstLastOptions))
+      currentRoute.views.firstIdentity = storedFlag ? currentRoute.views.firstIdentity : () => getIdentity(getCenterTransform([p0.x,p0.y],firstLastOptions))
 
-      lastIdentity = () => getIdentity(getCenterTransform([p1.x,p1.y],firstLastOptions))
+      currentRoute.views.lastIdentity = storedFlag ? currentRoute.views.lastIdentity : () => getIdentity(getCenterTransform([p1.x,p1.y],firstLastOptions))
 
-      tPad = zoomFollow.tpsm * zoomFollow.focus;  // use tpsm to delay zoomFollow until train hits mm <zoomFollow.focus>; tps(implified)m because focusPt is calculated from simplified route
+      tPad = currentRoute.zoomFollow.tpsm * currentRoute.zoomFollow.focus;  // use tpsm to delay zoomFollow until train hits <zoomFollow.focus>; tps(implified)m because focusPt is calculated from simplified route
 
     } else {
       // even if zoomFollow unnecessary, adjust bottomPad to accommodate dash
-      sharedIdentity = () => getIdentity(getTransform(path.bounds(data1),firstLastOptions));
-      firstIdentity = sharedIdentity;
-      lastIdentity = sharedIdentity;
+      sharedIdentity = () => getIdentity(getTransform(path.bounds(currentRoute.views.data1),firstLastOptions));
+      currentRoute.views.firstIdentity = storedFlag ? currentRoute.views.firstIdentity : sharedIdentity;
+      currentRoute.views.lastIdentity = storedFlag ? currentRoute.views.lastIdentity : sharedIdentity;
     }
 
     getSet(); // initiate movement!
 
-    function getZoomFollow(routeObj) {
+    function getZoomFollow() {
 
       let zoomFollow = {
         necessary: true, // default
-        // focus: Math.max(viewFocusInt, Math.floor(routeObj.totalDistance / 12)),
         focus: viewFocusInt,
         get limit() { return this.focus * 2 },
         arc: [],
         firstThree: [],
         lastThree: [],
-        fullFull: routeObj.lineString,
-        fullSimp: getSimpRoute(routeObj.lineString),
-        fullDist: routeObj.totalDistance,
+        fullSimp: getSimpRoute(currentRoute.views.data1),
         get simpDist() { return Math.round(turf.length(this.fullSimp, miles)) },
-        get tpsm() /* t per simplified mile */ { return tpm * Math.round(this.fullDist) / this.simpDist }
+        get tpsm() /* t per simplified mile */ { return tpm * Math.round(currentRoute.totalMiles) / this.simpDist }
       }
 
       if (zoomFollow.simpDist > zoomFollow.limit) {
@@ -1818,15 +1709,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         zoomFollow.firstThree[1] = zoomFollow.arc[0],
          zoomFollow.lastThree[1] = zoomFollow.arc[zoomFollow.arc.length-1];
 
-        data2 = turf.lineString(zoomFollow.firstThree);
-        data3 = turf.lineString(zoomFollow.lastThree);
+        currentRoute.views.data2 = turf.lineString(zoomFollow.firstThree);
+        currentRoute.views.data3 = turf.lineString(zoomFollow.lastThree);
 
       } else {
 
         // short route, first/last frames identical; no zoomAlong necessary
         zoomFollow.necessary = false;
-        data2 = data1;
-        data3 = data1;
+        currentRoute.views.data2 = currentRoute.views.data1;
+        currentRoute.views.data3 = currentRoute.views.data1;
 
       }
 
@@ -1853,32 +1744,28 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let t = !again ? zoomDuration : zoomDuration/4;
 
-    svg.transition().duration(t) // .ease(zoomEase)
-      .call(zoom.transform, firstIdentity)
+    svg.transition().duration(t)
+      .call(zoom.transform, currentRoute.views.firstIdentity)
       .on("start", () => {
-        // flagZoomStray()
-        // reset panned flags
+        // reset panned flags (if panned on pause or reverse?)
         resetTransformAdjustments();
         // store currentBounds
         currentBounds = {
-          // get bounds() { return path.bounds(data2); },
-          bounds: path.bounds(data2),
+          get bounds() { return path.bounds(currentRoute.views.data2); },
           get domEdge() {
             if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
             return this._domEdge;
           }
         }
         // dim background layers
-        if (reversing.i < 1) dimBackground(t/2)
+        if (experience.reversing.i < 1) dimBackground(t/2)
         // expand dash automatically
         expand("dash")
         // prepare global values for animation coordination
         preanimate()
         // momentarily disable all zooming and panning
-        if (!again) {  // if again, we're already there
-          svg.on(".zoom",null)
-          disableZoomBtns();
-        }
+        svg.on(".zoom",null)
+        disableZoomBtns()
       })
       .on("end", () => {
         // reveal train
@@ -1907,7 +1794,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                   .style("opacity",0)
                   .classed("hide-visually none",false)
                   .transition().duration(750)
-                    .style("opacity",1)
+                    .style("opacity", 1)
                     .on("start",() => {
                       d3.select("#center-controls").select("#play-lrg")
                         .classed("none",false)
@@ -1915,7 +1802,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                         .style("opacity",0)
                         .classed("none",false)
                         .transition().duration(750)
-                          .style("opacity",1)
+                          .style("opacity", 1)
                     })
               }
 
@@ -1928,20 +1815,18 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     function dimBackground(t) {
 
-      let dimMore = [d3.select("#continent-mesh"),d3.select("#railways").selectAll("path"),/*d3.select("#railway-ties").selectAll("path"),*/d3.select("#rivers").selectAll("path"),d3.select("#lake-mesh"),d3.select("#lake-mesh2"),d3.select("#urban-mesh"),d3.select("#country-mesh")],
-          dimLess = [d3.select("#state-mesh")];
-
       let dimGroup = dimMore.map(d => {
         return {
-          selection: d,
+          selection: Array.isArray(d) ? d3.select(d[0]).selectAll(d[1]) : d3.select(d),
           dimFactor: relativeDim
         }
       }).concat(dimLess.map(d => {
         return {
-          selection: d,
+          selection: Array.isArray(d) ? d3.select(d[0]).selectAll(d[1]) : d3.select(d),
           dimFactor: relativeDim * 4
         };
       }));
+
 
       dimGroup.forEach(group => {
 
@@ -1959,17 +1844,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function go() {
-    // kick off glboal timer (within depart())
-    dispatch.call("depart") // , this);
+    // kick off global timer
+    dispatch.call("depart")
   }
 
   function animate(elapsed) {
 
-    if (reversing.flag) {
+    if (experience.reversing.flag) {
       // timer countDOWN
-      elapsed = reversing.t - elapsed;
+      elapsed = experience.reversing.t - elapsed;
       // zoomFollow if necessary
-      if (zoomArc && elapsed <= reversing.t - reversing.tPad && elapsed >= reversing.tPad) zoomAlong(elapsed,reversing.t,reversing.tPad);
+      if (zoomArc && elapsed <= experience.reversing.t - experience.reversing.tPad && elapsed >= experience.reversing.tPad) zoomAlong(elapsed,experience.reversing.t,experience.reversing.tPad);
     } else {  // not reversing
       // zoomFollow if necessary
       if (zoomArc && elapsed >= tPad && elapsed <= tFull-tPad) zoomAlong(elapsed);
@@ -1982,7 +1867,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     trackerUpdate(getMM(elapsed))
 
     // watch for animation end
-    if (!reversing.flag && elapsed > tFull) {
+    if (!experience.reversing.flag && elapsed > tFull) {
       dispatch.call("arrive");
     } else if /* reversing && */ (elapsed < 0) {
       dispatch.call("reverseArrived");
@@ -2011,7 +1896,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // calculate new centerAdjust if new or in-progress pan event; otherwise, use most recently calculated centerAdjust value
       if (transformAdjustments.panned.updateFlag) {
 
-        if (experience.animating && !experience.paused) pauseTimer();
+        pauseTimer();
 
         // reset
         transformAdjustments.panned.updateFlag = false;
@@ -2038,10 +1923,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       if (transformAdjustments.zoomed.respectFlag) {
         // user zoomed during active animation
         transformAdjustments.zoomed.respectFlag = false;
-        zoomAlongOptions.scale = currentScale // transformAdjustments.zoomed.scale;
+        zoomAlongOptions.scale = currentScale;
       } else {
         // user zoomed on pause: clamp within limits if necessary
-        let minScale = routeBoundsIdentity().k,
+        let minScale = currentRoute.views.routeBoundsIdentity().k,
         appliedScale = currentScale < minScale ?
             minScale
           : currentScale >= maxFollowZoom ?
@@ -2050,7 +1935,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         zoomAlongOptions.scale = appliedScale;
       }
     }
-    // IF USER ZOOMS DURING ANIMATION (RESPECTED) THEN PAUSES AND ZOOMS MORE, ZOOM EFFECTIVELY RESET WITHIN BOUNDS (A GOOD THING)
 
     // calculate translate necessary to center data within extent
     return getCenterTransform([p.x,p.y],zoomAlongOptions);
@@ -2070,7 +1954,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("#submit-btn-load").classed("none",false);
     onSubmit(this.form.getOption0.value,this.form.getOption1.value);
   })
-  d3.select("#select-new").on("click", () => selectNew())
+  d3.select("#select-new").on("click", () => pauseTimer().then(selectNew))
   d3.select("#info-btn").on("click", () => toggleModal("modal-about"))
   d3.select("#dash-expand-btn").on("click", () =>  expand("dash"))
   d3.select("#dash-collapse-btn").on("click", () =>  collapse('dash','down'))
@@ -2106,15 +1990,41 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     }
   })
 
-// // LOAD EVENTS
-//   d3.select(window).on("load", initPrompt)
-
 // RESIZE EVENTS
   d3.select(window).on("resize.map", adjustSize)
 
 // FORMS & FIELDS
-  d3.select("#get-options").on("focus", function (e) { e.target.style.background = "palegoldenrod" })
-                                .on("blur", function (e) { e.target.style.background = "#fafafa" })
+  d3.select("#get-options").on("focus", e => e.target.style.background = "palegoldenrod")
+                           .on("blur", e => e.target.style.background = "#fafafa")
+
+// LISTENER FUNCTIONS
+
+  function awaitSpaceBar(e) {
+    if (e.isComposing || e.keyCode !== 32) return;
+    // else, set & unset additional listener
+    e.preventDefault();  // spacebar shouldn't trigger any other recently pressed buttons, etc
+    window.onkeyup = function(e) {
+      if (e.isComposing || e.keyCode !== 32) return;
+      // else
+      togglePause()
+      window.onkeyup = null;
+    }
+  }
+
+  function pauseOnSingleClick() {
+    // FILTER DBLCLICKS
+    if (clickedOnce) {
+      clickedOnce = false;
+      clearTimeout(dblclickFilter)
+      return;  // user is dblclicking; ignore this event (dblclick event listeners proceed)
+    } else {   // clicking for the first time in recent history
+      dblclickFilter = setTimeout(function() {
+        clickedOnce = false;
+        togglePause();  // if no more clicks follow, proceed with single click listeners
+      }, 150);
+      clickedOnce = true;
+    }
+  }
 
 //////////////////////////
 ///// MORE FUNCTIONS /////
@@ -2124,7 +2034,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function adjustSize() {
 
-    // if (experience.animating && !experience.paused) pauseTimer();
+    // pauseTimer();
 
     // get updated dimensions and currentTransform (before updates)
     let updated = calcSize();
@@ -2144,13 +2054,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // constrain zoom behavior
     // zoom.translateExtent(extent0)
-
-    // NOT WORTH STATE TRACKING:
-    // if (!transformAdjustments.zoomed.strayedFlag) {  // if still at zoom0, simply resetZoom (which also triggers updateScaleExtent)
-    //
-    //   resetZoom(true)  // adjustingFlag = true;
-    //
-    // } else {  // else, calc and apply transform }
 
     let currentTransform = d3.zoomTransform(svg.node()),
            currentCenter = getCenterFromTransform(currentTransform, {width: oWidth, height: oHeight }),
@@ -2283,6 +2186,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     return (width >= 1200) ? "right" : "down";
   }
 
+  function getBottomPad() {
+    return window.innerWidth < 1200 && d3.select("#aside").node().clientHeight > 24 ? 18 : 24;
+  }
+
 //// GEOJSON + TOPOJSON HELPERS
 
   function getMesh(tj,key,meshFx) {
@@ -2347,7 +2254,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     return merged;
   }
 
-//// TURF/GEO ON-THE-FLY
+//// TURF-LIKE/GEO ON-THE-FLY
 
   function getRotate(p0,p1) {  // returns rounded value in degrees of bearing between two projected pts
 
@@ -2394,8 +2301,27 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     return simplified;
   }
 
+  function getSteps(gj,distance,steps = distance) {  // controlled simplification of route; returns one coord for every (distance/steps) miles
+    let chunkLength = Math.max(1,Math.round(distance/steps)),  // must be at least 1 to avoid errors (happens when getting arcPts on very short routes) but Math.ceil too frequently results in double-length milemarker segments
+      lineChunks = turf.lineChunk(gj,chunkLength,miles).features,
+      firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
+      lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
+      lastCoord = lastChunk[lastChunk.length-1];
+    return firstCoords.concat([lastCoord]);
+  }
+
+  function projectArray(unprojCoordArr) {
+    return unprojCoordArr.map(d => (Array.isArray(d[0])) ? projectArray(d) : projection(d));
+  }
+
   function truncateCoords(coords,precision = 5) {
     return coords.map(d => turf.truncate(turf.point(d),{precision:precision,mutate:true}).geometry.coordinates);
+  }
+
+  function combineBounds(bounds1,bounds2) {
+    let b0 = [Math.min(bounds1[0][0],bounds2[0][0]),Math.min(bounds1[0][1],bounds2[0][1])],
+        b1 = [Math.max(bounds1[1][0],bounds2[1][0]),Math.max(bounds1[1][1],bounds2[1][1])]
+    return [b0,b1];
   }
 
 //// ZOOM BEHAVIOR
@@ -2412,29 +2338,23 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     g.attr("transform", "translate(" + tx + "," + ty + ") scale(" + tk + ")");
 
-    g.style("stroke-width", 1 / (tk * tk) + "px");
+    g.style("stroke-width", 1 / (tk * tk * tk) + "px");
 
     // projection.clipExtent(extent0)
 
-    if (d3.event.sourceEvent) {
+    if (d3.event.sourceEvent && experience.initiated && d3.event.sourceEvent.type === "mousemove") {
 
-      // if (!["resize","click"].includes(d3.event.sourceEvent.type)) flagZoomStray();
-
-      if (experience.initiated && d3.event.sourceEvent.type === "mousemove") {
-
-        if (experience.manuallyPaused) {
-          // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame) before resuming animation // COMBAK add additional flag re: scale?
-          transitionResume = true;
-        } else if (experience.animating) {
-          // if user pans after animation has started, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
-          // if (!experience.paused) pauseTimer();
-          transformAdjustments.panned.flag = true;
-          transformAdjustments.panned.updateFlag = true;
-          transformAdjustments.panned.transform = transform;
-          // resumeTimer();
-        } // else { /* panning after arrival */ }
-
-      }
+      if (experience.manuallyPaused) {
+        // if user pans while animation was manually paused, flag to svg.transition().call(d3.zoomTransform, nextZoomFrame) before resuming animation
+        transitionResume = true;
+      } else if (experience.animating) {
+        // if user pans after animation has started, respect as readjustment of zoomAlong view (since d3.event.sourceEvent specified for wheel and mouse events only, and since wheel.zoom disabled while !experience.paused, user must be panning).
+        // if (!experience.paused) pauseTimer();
+        transformAdjustments.panned.flag = true;
+        transformAdjustments.panned.updateFlag = true;
+        transformAdjustments.panned.transform = transform;
+        // resumeTimer();
+      } // else { /* panning after arrival */ }
 
     }
 
@@ -2442,19 +2362,43 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function zoomClick() {
 
-    // if (experience.animating && !experience.paused) pauseTimer();
+    // pauseTimer();
+
+    // COMBAK implement in new commit
+    // zoomInFactor = 2,
+    // zoomOutFactor = 0.5
+    // can get ride of zoomScales
+    //
+    // let currentScale = d3.zoomTransform(svg.node()).k,
+    //      targetScale = this.id === "zoom-in" ? currentScale * zoomInFactor : currentScale * zoomOutFactor;
+    //
+    // // if scale already clamped at min/max, offer visual feedback (little shake) that zoom limit reached
+    // if (targetScale === currentScale) {
+    //   d3.select(this).classed("animation-shake",true)
+    //   d3.timeout(() => {
+    //     d3.select(this).classed("animation-shake",false);
+    //   }, 400);
+    // } else {  // otherwise, store/apply new scale values
+    //   if (experience.animating && !experience.manuallyPaused) {
+    //     // flag for purposes of continuity within zoomAlongTransform and other on-the-fly transform calculations
+    //     transformAdjustments.zoomed.respectFlag = true;
+    //     this.id === "zoom-in" ? svg.call(zoom.scaleBy, zoomInFactor) : svg.call(zoom.scaleBy, zoomOutFactor)
+    //   } else {
+    //     this.id === "zoom-in" ?
+    //       svg.transition().duration(500)
+    //          .call(zoom.scaleBy, zoomInFactor)
+    //     : svg.transition().duration(500)
+    //          .call(zoom.scaleBy, zoomOutFactor)
+    //   }
+    // }
 
     // this.parentNode holds current zoom scale (actual scale, NOT level)
-    // let oScale = +d3.select(this.parentNode).attr("value"),
     let currentTransform = d3.zoomTransform(svg.node()),
                   oScale = currentTransform.k,
                   oLevel = +zoomScales.invert(oScale),
-               direction = (this.id === "zoomIn") ? 1 : -1,
+               direction = (this.id === "zoom-in") ? 1 : -1,
                 newLevel = oLevel + zoomStep * direction,
                 newScale = +zoomScales(newLevel).toFixed(2);
-
-    // console.log("level change: " + oLevel + " -> " + newLevel)
-    // console.log("scale change: " + oScale + " -> " + newScale)
 
     // if scale already clamped at min/max, offer visual feedback (little shake) that zoom limit reached
     if (oScale === newScale) {
@@ -2477,11 +2421,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         svg.call(zoom.transform, zoomIdentity)
         // flag for purposes of continuity within zoomAlongTransform and other on-the-fly transform calculations
         transformAdjustments.zoomed.respectFlag = true;
-        // transformAdjustments.zoomed.scale = newScale; // unnecessary?
       } else {
         svg.transition().duration(500)
            .call(zoom.transform, zoomIdentity)
-        // dispatch.call("zoomclick")  // transitioning into zoom doesn't pass sourceEvents, so zoomclick not otherwise caught during event processing within zoomed fn
       }
 
     }
@@ -2491,17 +2433,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function enableZoomBtns() {
-    d3.select("button#zoomIn")
+    d3.select("button#zoom-in")
       .property("disabled",false)
-    d3.select("button#zoomOut")
+    d3.select("button#zoom-out")
       .property("disabled",false)
   }
 
   function disableZoomBtns() {
     // when zoom 100% disabled, zoomBtns also disabled
-    d3.select("button#zoomIn")
+    d3.select("button#zoom-in")
       .property("disabled",true)
-    d3.select("button#zoomOut")
+    d3.select("button#zoom-out")
       .property("disabled",true)
   }
 
@@ -2574,45 +2516,34 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-  function resetZoom(adjustingFlag = false) {
+  async function resetZoom(state0 = false) {
 
-    if (d3.active(this)) console.log(d3.active(this))
-    // if (active) active.classed("active", false);
-    // active = d3.select(null);
-
-    if (experience.initiated && (!experience.animating || experience.manuallyPaused)) {
-      // animation initiated, but paused or not yet begun
-      transitionResume = true;
-    } else if (experience.animating && !experience.manuallyPaused) {
-      pauseTimer()
-      transformAdjustments.zoomed.respectFlag = true;
-      // transformAdjustments.zoomed.scale = newScale; // unnecessary?
-    }
-
-    // transformAdjustments.zoomed.strayedFlag = false;
-
-    currentBounds = {
-      get bounds() { return path.bounds(data0); },
-      get domEdge() {
-        if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
-        return this._domEdge;
+    if (!state0) {
+      if (experience.initiated && (!experience.animating || experience.manuallyPaused)) {
+        // animation initiated, but paused or not yet begun
+        transitionResume = true;
+      } else if (experience.animating && !experience.manuallyPaused) {
+        pauseTimer()
+        transformAdjustments.zoomed.respectFlag = true;
       }
     }
+
+    currentBounds = bounds0;
 
     let zoom0 = getIdentity(getTransform(currentBounds.bounds,{ padBottom: getBottomPad() }));
 
     updateScaleExtent(zoom0.k)
 
-    if (adjustingFlag) {
-      svg.call(zoom.transform,zoom0)
-      if (experience.paused && !experience.manuallyPaused) resumeTimer();
-    } else {
-      svg.transition().duration(750) // .ease(zoomEase)
+    let promise = new Promise((resolve, reject) => {
+      svg.transition().duration(750)
          .call(zoom.transform, zoom0)
          .on("end", () => {
-           if (experience.paused && !experience.manuallyPaused) resumeTimer();
+           if (!state0 && experience.paused && !experience.manuallyPaused) resumeTimer();
+           resolve()
          })
-    }
+    })
+
+    return await promise; // for any waiting callers
 
   }
 
@@ -2621,10 +2552,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     zoomScales.range(scaleExtent)
     zoom.scaleExtent(scaleExtent)
   }
-
-  // function flagZoomStray() {
-  //   transformAdjustments.zoomed.strayedFlag = true;
-  // }
 
   function nozoom() {
     d3.event.preventDefault();
@@ -2694,7 +2621,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // data should all be points, whether representative of larger polygons/lines or otherwise
 
     let quadtreeData = g.append("g")
-      .classed("quadtree-data", true)
+      .attr("id", "quadtree-data")
+      .classed("one-life", true)
 
     quadtreeData.selectAll(".quad-datum")
       .data(quadtree.data())
@@ -2736,11 +2664,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             // quadtree.removeAll(toRemove)
 
             // for flagged, en route trigger-pts only
-            if ((g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).node()) && (g.selectAll(".quadtree-data").select(`.quad-datum.${d.properties.id}`).classed("trigger-pt"))) {
+            if ((g.select("#quadtree-data").select(`.quad-datum.${d.properties.id}`).node()) && (g.select("#quadtree-data").select(`.quad-datum.${d.properties.id}`).classed("trigger-pt"))) {
 
-              if (reversing.flag && uniqueEncounters.has(d.properties.id)) {
+              if (experience.reversing.flag && uniqueEncounters.has(d.properties.id)) {
                 dispatch.call("unencounter", d)
-              } else if (!reversing.flag && !uniqueEncounters.has(d.properties.id)) {
+              } else if (!experience.reversing.flag && !uniqueEncounters.has(d.properties.id)) {
                 uniqueEncounters.add(d.properties.id)
                 dispatch.call("encounter", d)
               }
@@ -2773,7 +2701,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     fullLength = fullPath.node().getTotalLength();
 
-    pt0 = fullPath.node().getPointAtLength(0);
+    zoomAlongState.pt0 = fullPath.node().getPointAtLength(0);
 
     eased = (t, t1 = tFull) => trainEase(t/t1);
     routeDashInterpolator = d3.interpolateString("0," + fullLength, fullLength + "," + fullLength);
@@ -2786,15 +2714,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // calculate initial search extent for quadtree
     let sectorExtent = [[-arcWidth/2,-arcHeight],[arcWidth/2,0]],
-    translatedExtent = translateExtent(sectorExtent,pt0.x,pt0.y);
+    translatedExtent = translateExtent(sectorExtent,zoomAlongState.pt0.x,zoomAlongState.pt0.y);
 
     // searchExtent is sector (headlight) extent translatedThenRotated
-    searchExtent = rotateExtent(translatedExtent,rotate0,[pt0.x,pt0.y]);
+    let searchExtent = rotateExtent(translatedExtent,rotate0,[zoomAlongState.pt0.x,zoomAlongState.pt0.y]);
 
     // save newly determined values as previous values
-    prevTranslate = [pt0.x,pt0.y];
-       prevExtent = searchExtent;
-       prevRotate = rotate0;
+    zoomAlongState.prevTranslate = [zoomAlongState.pt0.x,zoomAlongState.pt0.y];
+       zoomAlongState.prevExtent = searchExtent;
+       zoomAlongState.prevRotate = rotate0;
 
   }
 
@@ -2807,7 +2735,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       currentTranslate = [trainTransform.x, trainTransform.y],
          currentRotate = trainTransform.r;
 
-    if (reversing.flag && t !== reversing.t) {  // keep train/headlights rotated toward destination when reversing in progress
+    if (experience.reversing.flag && t !== experience.reversing.t) {  // keep train/headlights rotated toward destination when reversing in progress
       currentRotate = (currentRotate < 180) ? currentRotate + 180 : currentRotate - 180;
     }
 
@@ -2820,25 +2748,25 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     headlights.attr("transform",transformString);
 
     // traversed path illuminated with color as train progresses
-    fullPath.style("opacity",1)
+    fullPath.style("opacity", 1)
     fullPath.style("stroke-dasharray",routeDashInterpolator(eased(t)))
 
     // get adjusted quadtreeRep searchExtent on each trainMove
-    let dx = currentTranslate[0] - prevTranslate[0],
-        dy = currentTranslate[1] - prevTranslate[1];
+    let dx = currentTranslate[0] - zoomAlongState.prevTranslate[0],
+        dy = currentTranslate[1] - zoomAlongState.prevTranslate[1];
 
-    let translatedExtent = translateExtent(prevExtent,dx,dy),
-             rotateDelta = currentRotate - prevRotate;
+    let translatedExtent = translateExtent(zoomAlongState.prevExtent,dx,dy),
+             rotateDelta = currentRotate - zoomAlongState.prevRotate;
 
-    searchExtent = rotateExtent(translatedExtent,rotateDelta,currentTranslate)
+    let searchExtent = rotateExtent(translatedExtent,rotateDelta,currentTranslate)
 
     // save newly determined values as previous values
-    prevTranslate = currentTranslate;
-       prevExtent = searchExtent;
-       prevRotate = currentRotate;
+    zoomAlongState.prevTranslate = currentTranslate;
+       zoomAlongState.prevExtent = searchExtent;
+       zoomAlongState.prevRotate = currentRotate;
 
     // initiate quadtree search
-    searchQuadtree(routeQuadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1]);
+    searchQuadtree(currentRoute.quadtree, searchExtent[0][0], searchExtent[0][1], searchExtent[1][0], searchExtent[1][1]);
 
   }
 
@@ -2848,45 +2776,59 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let pt1 = fullPath.node().getPointAtLength(l1)
 
-    let rotate = (pt0.x !== pt1.x) ? getRotate(pt0,pt1) : prevRotate; // || rotate0?
+    let rotate = (zoomAlongState.pt0.x !== pt1.x) ? getRotate(zoomAlongState.pt0,pt1) : zoomAlongState.prevRotate; // || rotate0?
 
     // shift pt values pt0 >> pt1
-    pt0 = pt1;
+    zoomAlongState.pt0 = pt1;
 
     return { x: pt1.x, y: pt1.y, r: rotate }; // NOTE R, NOT K
 
   }
 
-  function departed() {
+  function departed(reverseFlag = false) {
 
-    // track state
+    // regardless
     experience.animating = true;
-
-    // show play-pause btn & activate listeners
-    d3.select("#play-pause-btn")
-      .property("disabled", false)
-      .on("click.pause", manualPause)
-      .on("click.play", null)
+    d3.selectAll(".encounter").classed("pointer",false)
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none",true)
-    d3.select("#play-pause-icon")
-      .select("#pause-icon").classed("none",false)
 
-    window.onkeydown = awaitSpaceBar;
-    svg.on("click", () => {
-      // FILTER DBLCLICKS
-      if (clickedOnce) {
-        clickedOnce = false;
-        clearTimeout(dblclickFilter)
-        return;  // user is dblclicking; ignore this event (dblclick event listeners proceed)
-      } else {   // clicking for the first time in recent history
-        dblclickFilter = setTimeout(function() {
-          clickedOnce = false;
-          togglePause();  // if no more clicks follow, proceed with single click listeners
-        }, 150);
-        clickedOnce = true;
+    if (reverseFlag) {
+
+      // track state
+      experience.reversing.flag = true;
+      experience.reversing.t = Math.ceil(tFull / reverseCut);
+      experience.reversing.tPad = zoomArc ? tPad / reverseCut : null;
+
+      for (var geomType in geomAssoc) {
+        geomAssoc[geomType].reverseT = Math.floor(experience.reversing.t /  geomAssoc[geomType].set.size);
       }
-    });
+
+      // show reversing icon
+      d3.select("#play-pause-btn")
+        .property("disabled",true)
+        .on("click.play",null)
+        .on("click.pause",null)
+        .on("click.replay",null)
+      d3.select("#play-pause-icon")
+        .select("#reversing-icon").classed("none",false)
+
+    } else {
+
+      // show pause btn
+      d3.select("#play-pause-btn")
+        .property("disabled", false)
+        .on("click.pause", manualPause)
+        .on("click.play", null)
+        .on("click.replay", null)
+      d3.select("#play-pause-icon")
+        .select("#pause-icon").classed("none",false)
+
+    }
+
+    // activate listeners
+    window.onkeydown = awaitSpaceBar;
+    svg.on("click", pauseOnSingleClick)
 
     // reset zoom & zoomClick to reenable manual panning and button zooming before again disabling all free wheel-/mouse-related zooming
     svg.call(zoom)
@@ -2895,19 +2837,19 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
        .on("scroll.zoom",null)
 
     // confirm this where we at, just in case user panned away before initiating animation (sneaky! zoom disabled by this point; resetting and panning not)
-    if (JSON.stringify(d3.zoomTransform(svg.node())) !== JSON.stringify(firstIdentity())) {  // conditional assumes order of k, x, and y is same for both
-      console.log("not equal")
-      svg.transition().duration(500) // .ease(zoomEase)
-        .call(zoom.transform,firstIdentity)
+    let targetIdentity = reverseFlag ? currentRoute.views.lastIdentity : currentRoute.views.firstIdentity;
+    if (JSON.stringify(d3.zoomTransform(svg.node())) !== JSON.stringify(targetIdentity())) {  // conditional assumes order of k, x, and y is same for both
+      svg.transition().duration(750)
+        .call(zoom.transform,targetIdentity)
         .on("end", proceed)
     } else {
       proceed()
     }
 
     function proceed() {
-      // start global timers
-      timer = d3.timer(animate);
-      console.log("train departing @ " + Math.floor(d3.now()))
+      // start global timer
+      timer = d3.timer(animate,300);
+      if (!reverseFlag) console.log("train departing @ " + Math.floor(d3.now()))
     }
 
   }
@@ -2916,23 +2858,20 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // stop animation
     timer.stop()
-    timer = null;
 
     svg.on("click", null)
     window.onkeydown = null;
 
     // reset several state variables
-    resetExperienceState(true); // initException == true
+    resetExperienceState(true,true); // initException == true, counterException == true
     resetTransformAdjustments();
 
     // inform d3 zoom behavior of final transform value (transition in case user adjusted zoom en route)
-    svg.transition().duration(zoomDuration) // .ease(zoomEase)
-      .call(zoom.transform, lastIdentity)
+    svg.transition().duration(zoomDuration)
+      .call(zoom.transform, currentRoute.views.lastIdentity)
       .on("start", () => {
-        // flagZoomStray()
         currentBounds = {
-          // get bounds() { return path.bounds(data3); },
-          bounds: path.bounds(data3),
+          get bounds() { return path.bounds(currentRoute.views.data3); },
           get domEdge() {
             if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
             return this._domEdge;
@@ -2947,6 +2886,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       })
 
     // avoid slight tracker disconnects at end
+    let geoMM = currentRoute.geoMM; // shorthand
     let finalCoords = geoMM[geoMM.length - 1];
     getElevation(finalCoords).then(elevation => {
       d3.select("#elevation-val").text(elevation)
@@ -2955,8 +2895,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     d3.select("#compass-val").text(finalAzimuth)
     d3.select("#current-quadrant").text(getQuadrant(finalAzimuth))
     // miles and clock too
-    d3.select("#odometer-val").text(totalMiles)
-    d3.select("#clock-val").text(totalTime)
+    d3.select("#odometer-val").text(currentRoute.totalMiles)
+    d3.select("#clock-val").text(currentRoute.totalTime)
 
     // update play-pause btn and listeners
     d3.select("#play-pause-btn")
@@ -2976,9 +2916,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function reverseArrived() {
 
     // stop animation
-    reverseTimer.stop();
-    reversing.flag = false;
-    reverseTimer = null;
+    timer.stop();
+    experience.reversing.i++;
+
+    resetExperienceState(true,true); // initException == true, counterException == true
 
     // avoid slight tracker disconnects at end
     d3.select("#odometer-val").text("0")
@@ -2998,58 +2939,22 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // pause, then automatically restart animation from beginning
     d3.timeout(() => {
       getSet(true)  // again = true; ensure quadtree encounters only triggering reveal, not re-adding to dom
-    });
+    }, 300);
 
   }
 
   function replayAnimation() {
-    // update play-pause icon
-    d3.select("#play-pause-btn")
-      .on("click.play",null)
-      .on("click.pause",null)
-      .on("click.replay",null)
-      .property("disabled",true)
-    d3.select("#play-pause-icon")
-      .selectAll(".icon-opt").classed("none",true)
-    d3.select("#play-pause-icon")
-      .select("#reversing-icon").classed("none",false)
-    // confirm at final identity
-    svg.transition().duration(750) // .ease(zoomEase)
-      .call(zoom.transform, lastIdentity) // may already be here
-      .on("start", () => {
-        // disable all free zooming/panning
-        svg.on(".zoom",null)
-        // when zoom 100% disabled, zoomBtns also disabled
-        disableZoomBtns()
-        // prereverse() to adjust select values stored during preanimate();
-        eased = (t, t1 = reversing.t) => trainEase(t/t1);
-        prevExtent = [[prevExtent[0][0]-2.5,prevExtent[0][1]-2.5],[prevExtent[1][0]+2.5,prevExtent[1][1]+2.5]];
-      })
-      .on("end",() => {
-        dispatch.call("reverse")
-      })
-  }
-
-  function reversed() {
-
-    // track state
-    reversing.flag = true;
-    reversing.i++;
-    reversing.t = Math.ceil(tFull / reverseCut);
-    reversing.tPad = zoomArc ? tPad / reverseCut : null;
-
-    for (var geomType in geomAssoc) {
-      geomAssoc[geomType].reverseT = Math.floor(reversing.t /  geomAssoc[geomType].set.size);
-    }
-
-    // start global timers
-    let delay = 0,
-         time = d3.now();
-
-    reverseTimer = d3.timer(animate, delay, time);
-
-    // quadtree with trigger appropriate 'unreveal' action via dispatch to unencountered() while reversing.flag
-
+    // reset panned flags (if panned on pause or reverse?)
+    resetTransformAdjustments();
+    // momentarily disable all zooming and panning
+    svg.on(".zoom",null)
+    disableZoomBtns()
+    // prereverse() to adjust select values stored during preanimate();
+    eased = (t, t1 = experience.reversing.t) => trainEase(t/t1);
+    // pad reverse searchExtent (but not too much) to ensure everything erased
+    zoomAlongState.prevExtent = [[zoomAlongState.prevExtent[0][0]-2.5,zoomAlongState.prevExtent[0][1]-2.5],[zoomAlongState.prevExtent[1][0]+2.5,zoomAlongState.prevExtent[1][1]+2.5]];
+    // finally
+    dispatch.call("reverse")
   }
 
 //// TRANSITIONS AND TWEENS
@@ -3148,15 +3053,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function encountered() {
 
     let id = this.properties.id,
-        gj = readyAndWaiting[id], // get associated feature
+        gj = currentRoute.readyAndWaiting[id], // get associated feature
       baseT;
 
-    if (!gj) console.log(this) // COMBAK: ?: py508, py12, py51, py315
+    if (!gj) return;
 
     // get and save logGroup/category and protected area tags
     let geomType = id.slice(0,2),
-        logGroup = getGroup(gj),
-          subTag = getTag(gj,logGroup);
+        logGroup = gj.properties.logGroup || getGroup(gj),
+          subTag = gj.properties.subTag || getTag(gj,logGroup);
 
     gj.properties.logGroup = logGroup,
       gj.properties.subTag = subTag;
@@ -3280,7 +3185,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         gjA.properties = {...gj.properties}
         gjB.properties = {...gj.properties,...{oid: origId, id: origId + "-2"}}
 
-        if (gjA.geometry.coordinates.length) revealLine(gjA,baseT)
+        if (gjA.geometry.coordinates.length) revealLine(gjA,baseT,"paired-flag")
         if (gjB.geometry.coordinates.length) revealLine(gjB,baseT)
 
       }
@@ -3601,7 +3506,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-  function revealLine(gj,baseT) {
+  function revealLine(gj,baseT,pairedFlag = '') {
 
     let t = Math.max(minT,baseT * tpm),
       props = gj.properties,
@@ -3618,7 +3523,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                     .datum(gj)
                     .attr("d", path)
                     .attr("id", d => d.properties.id)
-                    .attr("class", d => `enrich-line ${d.properties.logGroup.divId}`)
+                    .attr("class", d => `enrich-line ${d.properties.logGroup.divId} ${pairedFlag}`)
                     .property("name", formatName)
                     .property("category", d => d.properties.CATEGORY)
                     .property("level", d => d.properties.LEVEL)
@@ -3663,7 +3568,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     }
 
-    if (!gj.properties.id.includes("-")) output(newLine)  // don't output partial geometries
+    if (!gj.properties.id.includes("-")) output(newLine,pairedFlag)  // don't output partial geometries
 
   }
 
@@ -3761,7 +3666,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
          geomType = featureId.slice(0,2),
          duration = geomAssoc[geomType].reverseT,
               col = geomAssoc[geomType].encounterCol,
-               gj = readyAndWaiting[featureId];
+               gj = currentRoute.readyAndWaiting[featureId];
+
+    if (!gj) return;
 
     uniqueEncounters.delete(featureId);
     geomAssoc[geomType].set.delete(gj);
@@ -3845,22 +3752,23 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 //// OUTPUT AND ALERT incl DASHBOARD
 
-  function output(encountered) {
+  function output(encountered,pairedFlag = '') {
 
     if (encountered.property("name")) {
 
       // get encountered group A, B, or C
-      let col = geomAssoc[encountered.property("id").slice(0,2)].encounterCol;
+      let geomType = encountered.property("id").slice(0,2),
+               col = geomAssoc[geomType].encounterCol;
 
       allEncounters[col].unshift(encountered) // array of selections
 
       // "currently passing" div
-      updateOutput(allEncounters[col].slice(),col)
+      updateOutput(allEncounters[col].slice(),col,geomType,pairedFlag)
 
       // legend-log groups
       log(encountered)
 
-      function updateOutput(encounters,col) { // allEncounters) {
+      function updateOutput(encounters,col,geomType,pairedFlag) { // allEncounters) {
         // https://observablehq.com/@d3/selection-join
 
         const t = d3.transition().duration(750)
@@ -3870,28 +3778,34 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .data(encounters, d => d.property("id"))
           .join(
             enter => enter.append("div")
-              .classed("flex-child encounter color-black txt-compact mx3 my3 px6 py6", true)
+              .classed(`flex-child encounter ${geomType}-encounter one-life color-black txt-compact mx3 my3 px6 py6 ${pairedFlag}`, true)
               .html(getHtml)
               .property("assocId", d => d.attr("id"))
-              .style("opacity", 1)
               .on("mouseover", highlightAssoc)
               .on("mouseout", unhighlight)
               .on("click", function() {  // if animation paused or ended, zoom to feature
 
                 if (experience.animating && !experience.manuallyPaused) return;
 
-                let featureId = d3.select(this).property("assocId"),
+                let selection = d3.select(this),
+                    featureId = selection.property("assocId"),
                       feature = g.select("#enrich-layer").select(`#${featureId}`),
                            gj = feature.datum(),
                   featureBounds;
 
-                if (gj.geometry.type === "Point") {
+                if (selection.classed("pt-encounter")) {
+                // if (gj.geometry.type === "Point") {
                   // getCenterTransform requires predetermined zoom level... lacking this, pad projected point with radius pixels and zoom to bounds
                   let pt0 = projection(gj.geometry.coordinates), // often feature.attr("cx/cy"), but not always
                    radius = +feature.attr("r") * 5;
                   featureBounds = [[pt0[0]-radius,pt0[1]-radius],[pt0[0]+radius,pt0[1]+radius]];
                 } else {
-                  featureBounds = path.bounds(feature.datum());
+                  featureBounds = path.bounds(gj);
+                  if (selection.classed("paired-flag")) {
+                    // INCLUDE PAIR IF IT EXISTS
+                    let feature2 = g.select("#enrich-layer").select(`#${featureId}-2`);
+                    if (feature2.node()) featureBounds = combineBounds(featureBounds,path.bounds(feature2.datum()))  // approaching this otherwise results in +/- Infinity bounds for watersheds
+                  }
                 }
 
                 // dash will necessarily be open since user just clicked on it
@@ -3903,7 +3817,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                 // flag to transitionResume
                 transitionResume = true; //separate scale and translate?
 
-                svg.transition().duration(zoomDuration/2) // .ease(zoomEase)
+                svg.transition().duration(zoomDuration/2)
                   .call(zoom.transform,zoomIdentity)
 
               }),
@@ -3969,7 +3883,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             .order()
             .join(
               enter => enter.append("div")
-                .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm ${itemClass} relative`,true)
+                .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm ${itemClass} relative one-life`,true)
                 .html(getLogHtml(group,symbolId,isParent,padLeft))
                 .property("groupId",group.divId)
                 .property("symbolId",symbolId)
@@ -4143,10 +4057,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function trackerUpdate(i) {
 
-    let coordsNow = geoMM[i], // || geoMM[i-1] || geoMM[i-2],
+    let coordsNow = currentRoute.geoMM[i],
             miles = i + 1,
              // pace = getPace();
-             time = Math.round(miles * minPerMile);
+             time = Math.round(miles * currentRoute.minPerMile);
 
     if (coordsNow) {  // avoids error at end
 
@@ -4166,10 +4080,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function getMM(t) {
-    // if tpm variable, current mm is would be pace calculation - previous total (already elapsed, cannot undo)
-    let atPace = Math.floor(t/tpm);
-    mm = (accumReset) ? atPace - accumReset : atPace;
-    return mm;
+    // // if tpm variable, current mm is would be pace calculation minus previous total (already elapsed, cannot undo)
+    // let atPace = Math.floor(t/tpm);
+    // mm = accumReset ? atPace - accumReset : atPace;
+    // return mm;
+    return Math.floor(t/tpm); // store if going for adjustTPM()?
   }
 
   // function adjustTPM() {
@@ -4199,8 +4114,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function getAzimuth(i) {  // returns rounded value in degrees of azimuth bearing between two unprojected pts
 
-    let prevPt = geoMM[i-1] || geoMM[i],
-        nextPt = geoMM[i+1] || geoMM[i];
+    let prevPt = currentRoute.geoMM[i-1] || currentRoute.geoMM[i],
+        nextPt = currentRoute.geoMM[i+1] || currentRoute.geoMM[i];
 
     return Math.round(turf.bearingToAzimuth(turf.bearing(prevPt,nextPt)));
 
@@ -4232,11 +4147,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // if window too short to reasonably fit more content, expand modal instead
     if (window.innerHeight < 500 && elementStr === "about") {
-
-      // if (elementStr === "about") {
       toggleModal("modal-about")
-      // }
-
     } else {
 
       d3.select(`#${elementStr}`).classed(`disappear-${contentAssoc.opposites[direction]}`, false)
@@ -4326,9 +4237,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-  function toggleModal(subContent) {
+  function toggleModal(subContent,force) {
 
-    if (d3.select(`#modal`).classed("none")) {
+    if (force === "open" || (force !== "closed" && d3.select(`#modal`).classed("none"))) {
       if (subContent) {
         d3.select(`#${subContent}`).classed("none", false);
         if (subContent === "modal-about") {
@@ -4336,20 +4247,24 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           isTogglable(subContent,true) // only info btn toggles modal open and closed
         } else {  // subContent === "getOptions"
           d3.select("#select-new").property("disabled", true); // disable select-new btn while getOptions form is open
+          d3.select("#submit-btn-load").classed("none",true);
+          d3.select("#submit-btn-txt").classed("none",false);
         }
       }
       d3.select("#veil").classed("none", false);
       d3.select("#modal").classed("none", false);
-    } else {  // modal currently open
+    } else {  // modal currently open || force === "closed"
       // if toggling closed with close button (!subContent) or re-clicking subContent button recently used to open modal
       if (!subContent || (subContent && isTogglable(subContent))) {
-        // basic close
+        // basic close; reset various
         d3.select("#modal").classed("none", true);
         d3.select("#veil").classed("none", true);
-        d3.select("#get-options").classed("none", true)
-        d3.select("#modal-about").classed("none", true)
+        d3.select("#get-options").classed("none", true);
+        d3.select("#submit-btn-load").classed("none",true);
+        d3.select("#submit-btn-txt").classed("none",false);
+        d3.select("#modal-about").classed("none", true);
         d3.select("#select-new").property("disabled", false);
-        if (subContent) isTogglable(subContent,false)
+        if (subContent) { isTogglable(subContent,false) }
       } else {  // subContent && (!isTogglable(subContent))
         // user wants to switch modal subContent with modal open
         if (d3.select(`#${subContent}`).classed("none")) {
@@ -4373,6 +4288,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
       }
     }
+
   }
 
   function isTogglable(content,set) {
@@ -4405,41 +4321,49 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     }
   }
 
-  function awaitSpaceBar(e) {
-    if (e.isComposing || e.keyCode !== 32) return;
-    // else, set & unset additional listener
-    e.preventDefault();  // spacebar shouldn't trigger any other recently pressed buttons, etc
-    window.onkeyup = function(e) {
-      if (e.isComposing || e.keyCode !== 32) return;
-      // else
-      togglePause()
-      window.onkeyup = null;
+  function manualPause() {
+
+    pauseTimer();
+    experience.manuallyPaused = true;
+
+    // regardless of direction
+    d3.selectAll(".encounter").classed("pointer", true)
+    d3.select("#play-pause-icon")
+      .selectAll(".icon-opt").classed("none", true)
+
+    if (experience.reversing.flag) {
+      d3.select("#play-pause-btn")
+        .property("disabled", false)
+        .on("click.play", null)
+        .on("click.pause", null)
+        .on("click.replay", manualResume)
+      d3.select("#play-pause-icon")
+        .select("#replay-icon").classed("none", false)
+    } else {
+      // toggle play/pause buttons
+      d3.select("#play-pause-btn")
+        .on("click.play", manualResume)
+        .on("click.pause", null)
+        .on("click.replay", null)
+      d3.select("#play-pause-icon")
+        .select("#play-icon").classed("none", false)
     }
+
+    // allow free zooming while paused
+    svg.call(zoom)
+
   }
 
   function pauseTimer() {
-    // track state
-    experience.paused = true;
-    experience.pausedAt = d3.now() - timer._time;
-    // stop timer (after pausedAt stored)
-    if (timer) timer.stop();
-    if (reverseTimer) reverseTimer.stop()
-  }
-
-  function manualPause() {
-    experience.manuallyPaused = true;
-    pauseTimer();
-    // toggle play/pause
-    d3.select("#play-pause-btn")
-      .on("click.play",manualResume)
-      .on("click.pause",null)
-    d3.select("#play-pause-icon")
-      .selectAll(".icon-opt").classed("none",true)
-    d3.select("#play-pause-icon")
-      .select("#play-icon").classed("none",false)
-    d3.selectAll(".encounter").classed("pointer",true)
-    // allow free zooming while paused
-    svg.call(zoom)
+    // if not yet animating (no timers to pause) or already paused (re-setting pausedAt value before expliciting resuming will cause jumps)
+    if (experience.animating && !experience.pausedAt) {
+      // update experience state
+      experience.paused = true;
+      experience.pausedAt = d3.now() - timer._time;
+      // stop timer (after pausedAt stored)
+      timer.stop();
+    }
+    return Promise.resolve();
   }
 
   function manualResume() {
@@ -4456,12 +4380,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // reset
       transitionResume = false;
 
-      let t1 = (reversing.flag) ? reversing.t : tFull,
-          tP = (reversing.flag) ? reversing.tPad : tPad;
+      let t1 = (experience.reversing.flag) ? experience.reversing.t : tFull,
+          tP = (experience.reversing.flag) ? experience.reversing.tPad : tPad;
 
       let transform = getZoomAlongTransform(experience.pausedAt,t1,tP)
 
-      svg.transition().duration(750) // .ease(zoomEase)
+      svg.transition().duration(750)
         .call(zoom.transform, getIdentity(transform))
         .on("start", resetTransformAdjustments)
         .on("end",continueResume)
@@ -4474,134 +4398,141 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       resumeTimer();
 
-      // toggle pause-play
-      d3.select("#play-pause-btn")
-        .on("click.pause", manualPause)
-        .on("click.play", null)
+      // regardless of direction
+      d3.selectAll(".encounter").classed("pointer", false)
       d3.select("#play-pause-icon")
         .selectAll(".icon-opt").classed("none",true)
-      d3.select("#play-pause-icon")
-        .select("#pause-icon").classed("none",false)
+
+      if (experience.reversing.flag) {
+        d3.select("#play-pause-btn")
+          .on("click.play", null)
+          .on("click.pause", null)
+          .on("click.replay", null)
+          .property("disabled", true)
+        d3.select("#play-pause-icon")
+          .select("#reversing-icon").classed("none",false)
+      } else {
+        // toggle pause-play
+        d3.select("#play-pause-btn")
+          .on("click.pause", manualPause)
+          .on("click.play", null)
+          .on("click.replay", null)
+        d3.select("#play-pause-icon")
+          .select("#pause-icon").classed("none",false)
+      }
 
     }
 
   }
 
   function resumeTimer(delay = 0) {
-    // determine time since storing of pausedAt
-    let time = d3.now() - experience.pausedAt;
-    // restart timer @ stored time
-    if (timer) timer.restart(animate,delay,time);
-    else if (reverseTimer) reverseTimer.restart(animate,delay,time);
-    // track state
+    // copy pausedAt value
+    let pausedAt = experience.pausedAt;
+    // reset pause state
+    experience.pausedAt = null;
     experience.paused = false;
     experience.manuallyPaused = false;
-    experience.pausedAt = null;
+    // restart timer @ time passed since storing of pausedAt
+    timer.restart(animate,delay,d3.now() - pausedAt);
   }
 
   function selectNew() {
 
-    // if mid-animation, pause and confirm user intent
-    if (experience.animating && !experience.paused) pauseTimer();
-
-    let confirmed = experience.initiated ? confirm('Do you wish to select a new route?') : true;
-    if (!confirmed) {
-      if (experience.paused && !experience.manuallyPaused) resumeTimer();
-      return;
-    } else {
-      resetConfirmed(); // RESET ALL to stored state0
+    if (!experience.initiated) {
+      resetZoom().then(() => {
+        toggleModal('get-options')
+      })
+    } else {  // experience.initiated
+      if (confirm('Do you wish to select a new route?')) {
+        resetZoom(true).then(resetConfirmed);  // state0 == true;
+      } else {
+        if (experience.paused && !experience.manuallyPaused) resumeTimer();
+      }
     }
-
-    // if select new confirmed, continue to show form with options
-    d3.select("#submit-btn-txt").classed("none",false);
-    d3.select("#submit-btn-load").classed("none",true);
-
-    // open selection form
-    toggleModal('get-options')
 
     function resetConfirmed() {
 
-      // COMBAK TODO:
-        // restore orig opacity levels of dimmed base?
-        // work below into cohensive reset method attached to currentState obj
+      routeHx[currentRoute.id] = currentRoute  // jsonCopy(currentRoute)
 
-      // reset listeners..?
-      svg.on("click", null)
-      window.onkeydown = null;
+      collapse("dash", "down")
+      restoreState0()
 
-      if (experience.animating) manualPause(); // CANCEL?
+      console.log(routeHx)
 
-      zoomArc = null;
-      resetExperienceState();
-      // togglesOff = { info: false, select: false }
-      logBackgrounds = {};
-      transitionResume = false;
-      reversing = { flag: false, stop: false, i: 0, t: null, tPad: null }
-      readyAndWaiting = {};
-
-      encounteredPts = new Set(),
-      encounteredLines = new Set(),
-      encounteredPolys = new Set(),
-      uniqueEncounters = new Set(),
-         allEncounters = {
-           "A": [],
-           "B": [],
-           "C": []
-         };
-
-      logGroups = new Set(),
-       tagTypes = new Set(),
-      symbolSet = new Set();
-
-      // add fade transitions to content removal
-      d3.select("#journey").remove()
-      g.select("#enrich-layer").remove();
-      d3.select(".quadtree-data").remove()
-      d3.select("#zoom-arc").remove()
-
-      if (routeQuadtree) routeQuadtree.removeAll(routeQuadtree.data())
-
-      // resetDash
-      let encounterGrps = ["#encounters-A", "#encounters-B", "#encounters-C"];
-      encounterGrps.forEach(selector => {
-        d3.select(selector)
-          .style("background-image", null)
-          .selectAll('.encounter').remove()
-      })
-      d3.select("#legend-log-content").selectAll(".legend-log-item").remove()
-      d3.select("#from-to").select("#from").selectAll("span").remove()
-      d3.select("#from-to").select("#to").selectAll("span").remove()
-      d3.select("#from-to").select("#via").selectAll("div").remove()
-      d3.select("#from-to").select("#totals").selectAll("span").remove()
-      d3.select("#elevation").select("div").classed("none",true)
-      d3.select("#odometer").select("div").classed("none",true)
-      d3.select("#compass").select("div").classed("none",true)
-      d3.select("#clock").select("div").classed("none",true)
-      d3.select("#elevation-val").text("0")
-      d3.select("#odometer-val").text("0")
-      d3.select("#compass-val").text("0")
-      d3.select("#clock-val").text("0")
-      d3.select("#current-quadrant").text("N")
-      d3.select("#total-miles").selectAll("text").remove()
-      d3.select("#total-time").selectAll("text").remove()
-
+      // in case user didn't make it past awaitUserInput screen:
       d3.select("#center-controls-parent").classed("mb36",false)
-      d3.select("#lrg-controls-text")
+      d3.select("#lrg-control-text")
         .classed("hide-visually none",true)
         .style("transform",null)
       d3.select("#center-controls")
         .classed("none",true)
         .style("transform",null)
 
-      // flag all to remove as one-life ?
-
-      resetZoom();
-      collapse("dash", "down")
-
-      // d3.select("#dash").html(state0.dash)
       d3.select("#getOption0").html(state0.opt0)
       d3.select("#getOption1").html(state0.opt1)
 
+      // open selection form
+      toggleModal("get-options","open")
+
+    }
+
+  }
+
+  function restoreState0(init = false) {
+
+    // reset state
+    resetExperienceState();  // also nulls timer
+    resetTransformAdjustments();
+    togglesOff = { info: false, select: false };
+    currentRoute = { views: {} };
+    zoomAlongState = { /* prevTranslate, prevRotate, prevExtent, pt0 */ };
+
+    // reset stored content
+    logBackgrounds = {
+      // geomType: {
+      //   complete: true || false,
+      //   imgSrc: finalImgSrc
+      // }
+    };
+
+    logGroups = new Set();
+     tagTypes = new Set();
+    symbolSet = new Set();
+
+    encounteredPts = new Set();
+    encounteredLines = new Set();
+    encounteredPolys = new Set();
+    uniqueEncounters = new Set();
+    allEncounters = { "A": [], "B": [], "C": [] };
+
+    // reset zoom abilities (more below if init; will have already resetZoom() before calling)
+    svg.call(zoom);
+
+    if (init) {
+      enableZoomBtns();
+      toggleModal("get-options","open")
+    } else {
+      // reset event listeners
+      svg.on("click", null)
+      window.onkeydown = null;
+      // reset view
+      undimBackground()
+      geomGrpIds.forEach(selector => d3.select(selector).style("background-image", null))
+      d3.selectAll(".toggle-none").classed("none",true)
+      d3.selectAll(".reset-0").text("0")
+      d3.select("#current-quadrant").text("N")
+      d3.selectAll('.one-life').remove();
+      // reset additional state & stored content
+      transitionResume = false;
+    }
+
+    function undimBackground(t = 400) {
+      let dimGroup = dimMore.concat(dimLess);
+      dimGroup.forEach(d => {
+        let selection = Array.isArray(d) ? d3.select(d[0]).selectAll(d[1]) : d3.select(d);
+        selection.transition().duration(t)
+          .style("opacity", selection.property("orig-opacity") || 1)
+      })
     }
 
   }
@@ -4984,67 +4915,77 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // select & highlight corresponding enrich elements on map
     let selection = d3.select(this),
-      selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
+         selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
 
-    let associated = g.select("#enrich-layer").selectAll(`${selector}`);
+    let associated = [g.select("#enrich-layer").selectAll(`${selector}`)];
 
-    associated // .transition()
-      .style("stroke", function(d) {
-        return d.geometry.type === "Point" ?
-          chroma(d3.select(this).style("stroke")).darken().hex() // (2)
-        : chroma(d3.select(this).style("stroke")).brighten().hex();
-      })
-      .style("stroke-width", function(d) {
-        let currentWidth = d3.select(this).style("stroke-width");
-        return ["LineString","MultiLineString"].includes(d.geometry.type) ? currentWidth * 1.2 : currentWidth;
-      })
-      .style("stroke-opacity",1)
-      .style("opacity", function() {
-        return d3.select(this).property("hover-opacity") || 0.9
-      })
-      .raise();
+    if (selection.classed("paired-flag")) { // must be .encounter
+      let associated2 = g.select("#enrich-layer").select(`${selector}-2`);
+      if (associated2.node()) associated.push(associated2);
+    }
+
+    associated.forEach(selection => {
+      selection   // .transition()
+        .style("stroke", function(d) {
+          return d.geometry.type === "Point" ?
+            chroma(d3.select(this).style("stroke")).darken().hex() // (2)
+          : chroma(d3.select(this).style("stroke")).brighten().hex();
+        })
+        .style("stroke-width", function(d) {
+          let currentWidth = d3.select(this).style("stroke-width");
+          return ["LineString","MultiLineString"].includes(d.geometry.type) ? currentWidth * 1.2 : currentWidth;
+        })
+        .style("stroke-opacity",1)
+        .style("opacity", function() {
+          return d3.select(this).property("hover-opacity") || 0.9
+        })
+        .raise();
+    })
 
     // highlight text node container
-    let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
-
     if (selection.classed("encounter")) {
 
-      d3.select(hoverNode.firstChild).classed("opacity75",true)
+      d3.select(this.firstChild).classed("opacity75",true)
 
-      let fillVal = g.select("#enrich-layer").select(`${selector}`).style("fill");
+      let fillVal = associated[0].style("fill");
 
       if (fillVal.startsWith("url")) {  // textured; use existing pattern src (for html, not svg)
 
-        let divId = associated.property("log-group").divId,
-         geomType = associated.attr("id").slice(0,2),
-          pattern = patterns[associated.attr("patternKey")],
+        let divId = associated[0].property("log-group").divId,
+         geomType = associated[0].attr("id").slice(0,2),
+          pattern = patterns[associated[0].attr("patternKey")],
            imgSrc = (geomType === "pt" && symInvert.includes(divId)) ? pattern.invertedSrc : pattern.src;
 
-        d3.select(hoverNode).style("background-image", `url(${imgSrc})`) // avoids [object Object]
+        selection.style("background-image", `url(${imgSrc})`) // avoids [object Object]
 
       } else if (fillVal === "none") {  // lines
 
-        if (associated.property("sub-tag")) { // watersheds
-          let patternKey = associated.property("category").toLowerCase() + "-" + associated.property("sub-tag").divId + "-" + selector.slice(1,3);
+        if (associated[0].property("sub-tag")) { // watersheds
 
-          d3.select(hoverNode).style("background-image", `url(${patterns[patternKey].src})`)
+          let patternKey = associated[0].property("category").toLowerCase() + "-" + associated[0].property("sub-tag").divId + "-" + selector.slice(1,3);
+
+          selection.style("background-image", `url(${patterns[patternKey].src})`)
 
         } else {  // rivers
 
-          d3.select(hoverNode).style("background-color",g.select("#enrich-layer").select(`${selector}`).style("stroke"));
+          selection.style("background-color",associated[0].style("stroke"));
 
         }
 
       } else {
 
-        d3.select(hoverNode).style("background-color",fillVal)
+        selection.style("background-color",fillVal)
 
       }
 
     } else {
 
+      let hoverNode = this;
+
       if (selection.classed("legend-log-child-item")) {
         d3.event.stopPropagation();  // cancel bubbling
+      } else if (selection.classed("legend-log-item")) {
+        hoverNode = selection.select("details").select("summary").node();
       }
 
       d3.select(hoverNode).classed("bg-darken25",true)
@@ -5059,31 +5000,37 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let selection = d3.select(this),
       selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
 
-    g.select("#enrich-layer").selectAll(`${selector}`) // .transition()
-      .style("stroke", function() {
-        return d3.select(this).property("orig-stroke") || "whitesmoke";
-      })
-      .style("stroke-width", function() {
-        return d3.select(this).property("orig-stroke-width") || 0;
-      })
-      .style("stroke-opacity", function() {
-        return d3.select(this).property("orig-stroke-opacity") || 0
-      })
-      .style("opacity", function() {
-        return d3.select(this).property("orig-opacity") || 1;
-      })
+    let associated = [g.select("#enrich-layer").selectAll(`${selector}`)];
+
+    if (selection.classed("paired-flag")) { // must be .encounter
+      let associated2 = g.select("#enrich-layer").select(`${selector}-2`);
+      if (associated2.node()) associated.push(associated2);
+    }
+
+    associated.forEach(selection => {
+      selection   // .transition()
+        .style("stroke", function() {
+          return d3.select(this).property("orig-stroke") || "whitesmoke";
+        })
+        .style("stroke-width", function() {
+          return d3.select(this).property("orig-stroke-width") || 0;
+        })
+        .style("stroke-opacity", function() {
+          return d3.select(this).property("orig-stroke-opacity") || 0
+        })
+        .style("opacity", function() {
+          return d3.select(this).property("orig-opacity") || 1;
+        })
+    });
 
     // unhighlight text node container
-    let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
-
     if (selection.classed("encounter")) {
-
       // clear to original background & opacity
-      d3.select(hoverNode).style("background-color","rgba(0, 0, 0, 0)")
-      d3.select(hoverNode).style("background-image","none")
-      d3.select(hoverNode.firstChild).classed("opacity75",false)
-
+      selection.style("background-color","rgba(0, 0, 0, 0)")
+      selection.style("background-image","none")
+      d3.select(this.firstChild).classed("opacity75",false)
     } else {
+      let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
       d3.select(hoverNode).classed("bg-darken25",false)
     }
 
@@ -5115,15 +5062,20 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function resetTransformAdjustments() {
     transformAdjustments = {
       panned: { flag: false, updateFlag: false, transform: null, centerAdjust: null },
-      zoomed: { respectFlag: false /* , strayedFlag: false, scale: null */ }
+      zoomed: { respectFlag: false }
     }
   }
 
-  function resetExperienceState(initException = false) {
-    experience = { initiated: initException, animating: false, paused: false, manuallyPaused: false, pausedAt: null }
+  function resetExperienceState(initException = false, counterException = false) {
+    timer = null;
+    experience = { initiated: initException, animating: false, paused: false, manuallyPaused: false, pausedAt: null, reversing: { flag: false, i: counterException ? experience.reversing.i : 0, t: null, tPad: null } }
   }
 
   // PARSE, CONVERT, ASSOCIATE
+
+  function jsonCopy(src) {
+    return JSON.parse(JSON.stringify(src));
+  }
 
   function getSubstr(string,i0 = 4) { // defaults for use in converting from textures.js url(); assume format "url(#12345)"
     let i1 = string.length - 1;
@@ -5143,8 +5095,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   }
 
   function replaceCommas(string) {
-    let commaFree = string.replace(/\s*,\s*|\s+,/g, '%2C');
-    return commaFree;
+    return string.replace(/\s*,\s*|\s+,/g, '%2C');
   }
 
   function kmToMi(km) {
@@ -5157,8 +5108,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       "I": 1,
       "II": 2,
       "III": 3,
-      "IV": 4,
-      "V": 5
+      "IV": 4
     };
     return unromanized[romanNum];
   }
@@ -5307,7 +5257,32 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 /////// NO FOR REAL, THIS WHERE I'M AT ///////
 
+// havedone:
+  // resolve bug interfering with click off modal (trying to stop event propagation in resetZoom)
+  // resolve bug throwing loop if user tried to select new route during reverseAnimation
+  // store currentRoute -> routeHx upon selectNew
+  // call upon (session-limited) routeHx if possible before querying R2R and processing all new data
+  // flag all to remove as one-life
+  // refactor resetConfirmed() and add restoreState0()
+  // improve pause/resume timing, esp when pause triggered by selectnew or similar
+  // ensure all of split watersheds highlighted and including in zoomToBounds calculation (created combinedBounds fn)
+  // rid of excess segment / stored details
+  // make reverse animation fully pausable
+  // integrate depart and reverseDepart (previously reversed()) functions
+  // rid of need for separate reverseTImer and associated checks
+
 // todo:
+  // d3 scale for pt sizing
+  // clicking on map zooms to feature?
+  // clicking on legend log zooms to feature group
+  // too small zoom to feature bounds: N Santium River, S Santium River
+  // mouseover encounter highlights:
+      // pts: darken stroke more
+      // lines: good!
+      // polys:
+        // for textured, no need to change stroke at all from primaryHex
+        // for rest, ok? less bright?
+        // make stroke smaller as bounds get smaller
   // center control buttons get animation-fade-in-out class ?
   // nouns/states better as fn expressions? e.g isToggleable
   // PRIORITY:
@@ -5355,3 +5330,19 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // zooming/panning during active animation will be respected (incl resetZoom)
   // zooming while animation paused will be reset to minimum zoom of routeBoundsIdentity.k, and maximum zoomAlongTransform.k
   // panning while animation paused will be reset to center train
+  // if user zooms during animation (respected) then pauses and zooms more, zoom effectively reset within bounds (a good thing)
+  // data0-3 all unprojected: init bounds (ie continent), full route, first route frame, last route frame
+  // when reversing, quadtree with trigger appropriate 'unreveal' action via dispatch to unencountered()
+
+// COMBAK:
+// function featureClicked(node) {
+//   console.log(d3.mouse(svg.node()))
+//   function clicked([x, y]) {
+//     d3.event.stopPropagation();
+//     svg.transition().duration(750).call(
+//       zoom.transform,
+//       d3.zoomIdentity.translate(width / 2, height / 2).scale(40).translate(-x, -y),
+//       d3.mouse(svg.node())
+//     );
+//   }
+// }
