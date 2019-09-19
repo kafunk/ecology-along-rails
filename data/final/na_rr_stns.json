@@ -260,7 +260,6 @@
 {"type":"Point","coordinates":[49866,67432],"properties":{"id":"296","lon":-106.74337016,"city":"Saskatoon","province":"SK","country":"CAN","lat":52.108766783,"state":null}},
 {"type":"Point","coordinates":[40799,23235],"properties":{"id":"297","lon":-114.60522088,"city":"Needles","province":null,"country":"USA","lat":34.839771027,"state":"CA"}},
 {"type":"Point","coordinates":[85015,28230],"properties":{"id":"299","lon":-76.267685804,"city":"Chesapeake City","province":null,"country":"USA","lat":36.791635211,"state":"VA"}},
-{"type":"Point","coordinates":[75683,53125],"properties":{"id":"302","lon":-84.359293974,"city":"Sault Ste Marie","province":"ON","country":"CAN","lat":46.518784696,"state":null}},
 {"type":"Point","coordinates":[54406,64406],"properties":{"id":"308","lon":-102.8072623,"city":"Melville","province":"SK","country":"CAN","lat":50.926662906,"state":null}},
 {"type":"Point","coordinates":[32131,72464],"properties":{"id":"312","lon":-122.121,"city":"Aleza Lake","province":"BC","country":"CAN","lat":54.075,"state":null}},
 {"type":"Point","coordinates":[97310,57219],"properties":{"id":"314","lon":-65.6074,"city":"Caplan","province":"QC","country":"CAN","lat":48.1185,"state":null}},

@@ -48,3 +48,4 @@ deleted stations:
 {"type":"Point","coordinates":[95916,74335],"properties":{"id":"246","lon":-66.815671692,"city":"Schefferville","province":"QC","country":"CAN","lat":54.806066533,"state":null}},
 {"type":"Point","coordinates":[81492,46042],"properties":{"id":"322","lon":-79.3219,"city":"Oriole","province":"ON","country":"CAN","lat":43.751,"state":null}},
 {"type":"Point","coordinates":[96536,62569],"properties":{"id":"248","lon":-66.278419313,"city":"Sept-Îles","province":"QC","country":"CAN","lat":50.208690755,"state":null}},
+{"type":"Point","coordinates":[75683,53125],"properties":{"id":"302","lon":-84.359293974,"city":"Sault Ste Marie","province":"ON","country":"CAN","lat":46.518784696,"state":null}}
