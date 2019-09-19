@@ -65,6 +65,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
     maxInitZoom = 56,
     maxFollowZoom = 64, // limit active zoomAlongTransform scale
+    maxFeatureZoom = 600,
     zoomDuration = tPause,  // zoom to frame transition duration
     trainEase = d3.easeSinInOut,
     relativeDim = 0.4,  // dimBackground level; lower values => greater dim
@@ -72,10 +73,16 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     pyIgnore = ["grassland","lakes"],
     ptIgnore = ["pa-grp1","pa-grp2","pa-grp3"],
     symInvert = ["volcanoes","inv-roadless","other-np-geo"],  // logGroups.divIds; specific to converting styles -> legend-log swatches and narrative output backgrounds
-    dimMore = ["#continent-mesh",["#railways","path"],["#rivers","path"],"#lake-mesh","#lake-mesh2","#country-mesh","#urban-mesh"],
+    dimMore = ["#continent-mesh",["#railways","path"],["#rivers","path"],"#lake-mesh","#lake-mesh2","#country-mesh","#urban-mesh",["#cities","circle"]],
     dimLess = ["#state-mesh"],
     zoomInFactor = 1.25,
-    zoomOutFactor = 0.75;
+    zoomOutFactor = 0.75,
+    radiusScale = d3.scaleSqrt()
+                    .domain([7000000,100000000])
+                    .range([0.08,0.2]),
+    levelScale = d3.scaleSqrt()
+                    .domain([1,4])
+                    .range([0.075,0.025]);
 
   // FUNCTION EXPRESSIONS
   var cityState = d => {
@@ -176,7 +183,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       darkGold = '#785d2b',
      goldGreen = '#b5be6a',
     groupGreen = '#8bc188',
-     groupBlue = '#09a094';
+     groupBlue = '#09a094',
+     greenGrey = '#6f794c';
 
   let colorAssignments = {
     watersheds: {
@@ -320,10 +328,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "inv-roadless",
       fullTxt: "Inventoried Roadless Areas",
       textureType: "paths",
-      // textureProps: {d: "nylon", background: yellowGold, thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
-      // ptTextureProps: {d: "nylon", thicker: 72, lighter: 48, stroke: yellowGold},
-      textureProps: {d: "nylon", stroke: yellowGold, thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
-      ptTextureProps: {d: "nylon", thicker: 72, lighter: 48, background: yellowGold},
+      textureProps: {d: "nylon", stroke: greenGrey, thicker: 48, lighter: 36, shapeRendering: "crispEdges"},
+      ptTextureProps: {d: "nylon", thicker: 72, lighter: 48, background: greenGrey},
       htmlAdjust: { thicker: 0.8, heavier: 14 }
       // no keywords; DESCRIPTION (?) === "Inventoried Roadless Area"
     },
@@ -338,8 +344,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "volcanoes",
       fullTxt: "Volcanoes",
       textureType: "paths",
-      // textureProps: {d: "caps", thicker: 48, lighter: 24, background: darkRed, shapeRendering: "crispEdges"},
-      // ptTextureProps: {d: "caps", thicker: 108, lighter: 48, stroke: darkRed, shapeRendering: "crispEdges"},
       textureProps: {d: "caps", thicker: 48, lighter: 24, stroke: darkRed, shapeRendering: "crispEdges"},
       ptTextureProps: {d: "caps", thicker: 108, lighter: 48, background: darkRed, shapeRendering: "crispEdges"},
       htmlAdjust: { thicker: 1, heavier: 8 }
@@ -349,8 +353,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       divId: "other-np-geo",
       fullTxt: "Other Non-protected Geothermal Areas",
       textureType: "lines",
-      // textureProps: {thicker: 60, lighter: 12, background: "greenyellow", orientation: "6/8"},
-      // ptTextureProps: {thicker: 108, lighter: 60, stroke: "greenyellow", orientation: "6/8"},
       textureProps: {thicker: 60, lighter: 12, stroke: "greenyellow", orientation: "6/8"},
       ptTextureProps: {thicker: 108, lighter: 60, background: "greenyellow", orientation: "6/8"},
       htmlAdjust: { thicker: 2, heavier: 6 }
@@ -542,10 +544,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .attr("id", "admin-base")
     var hydroBase = baselayers.append("g")
       .attr("id", "hydro-base")
-    var urbanBase = baselayers.append("g")
-      .attr("id", "urban-base")
-    var railBase = baselayers.append("g")
-      .attr("id", "rail-base")
+    var urbanRailBase = baselayers.append("g")
+      .attr("id", "urban-rail-base")
 
     // FILLED MESH
     adminBase.append("path")
@@ -574,14 +574,16 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       .style("stroke-width",0.1)
       .property("orig-opacity",0.12)
 
-    urbanBase.append("path")
+    urbanRailBase.append("path")
       .attr("id", "urban-mesh")
       .attr("d", path(urbanMesh))
       .attr("stroke","silver")
       .attr("fill","gainsboro")
-      .style("stroke-width",0.05)
-      .style("opacity",0.6) // 0.8
-      .property("orig-opacity",0.6)
+      .style("stroke-width",0.025)
+      .style("opacity",0.4) // 0.8
+      .style("stroke-opacity",1)
+      .property("orig-opacity",0.4)
+      .property("orig-stroke-opacity",1)
 
     // STROKED MESH
     adminBase.append("path")
@@ -612,7 +614,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         .style("stroke-width", d => d.properties.strokeweig * 0.6)
         .property("orig-opacity", 0.8)
 
-    railBase.append("g")
+    urbanRailBase.append("g")
       .attr("id", "railways")
       .selectAll("path")
       .data(sourceData.railways.gj.features)
@@ -623,21 +625,24 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         .style("fill", "none")
 
     // POINT FEATURES
-    urbanBase.selectAll("circle")
+    urbanRailBase.append("g")
+      .attr("id","cities")
+      .selectAll("circle")
       .data(sourceData.places.gj.features)
       .enter().append("circle")
-        .attr("r", d => d.properties.scalerank * 0.01)
+        .attr("r", d => Math.max(0.05,0.25 / (d.properties.scalerank + 1)))
         .attr("cx", d => { return projection(d.geometry.coordinates)[0]; })
         .attr("cy", d => { return projection(d.geometry.coordinates)[1]; })
         .property("name", d => { return cityState(d.properties); })
         .property("orig-stroke-opacity",0.8)
+        .property("orig-stroke","mediumseagreen")
         .style("fill", "yellowgreen")
         .style("stroke", "mediumseagreen")
-        // .style("stroke-width", d => d.properties.scalerank * 0.01)
+        // .style("stroke-width", d => 1 / d.properties.scalerank * 0.01)
         .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
-    let stations = railBase.append("g")
+    let stations = urbanRailBase.append("g")
       .attr("id", "rail-stations")
       .selectAll("use")
       .data(sourceData.stations.gj.features)
@@ -654,7 +659,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         .style("stroke","indianred")
         .style("stroke-width","1px")
         .property("orig-opacity",0.8)
+        .property("orig-stroke","indianred")
         .property("orig-stroke-opacity",0.6)
+        .property("orig-stroke-width","1px")
         .on("mouseenter", onMouseenter)
         .on("mouseout", onMouseout)
 
@@ -1501,8 +1508,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             .style("stroke", d => !d.flagged ? "dimgray" : "black")
             .style("stroke-width","0.3px") // 0.4
             .property("name", d => d.shortName)
+            .property("orig-stroke", d => !d.flagged ? "dimgray" : "black")
             .property("orig-opacity", d => d.flagged ? 1 : 0.6)  // specified for mouseenter -> mouseout reset
             .property("orig-stroke-opacity",0.6)
+            .property("orig-stroke-width","0.3px")
             .on("mouseenter", onMouseenter)
             .on("mouseout", onMouseout)
 
@@ -1610,12 +1619,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         return (height < dashHeight * 2) ? getBottomPad() : dashHeight;  // map height must be at least twice that of dash to impact scale calculations
       },
       get scale() {
-        // // IF FITTING TALL ROUTE INTO WIDE SCREEN, ADJUST SCALEPAD
-        // let bounds2 = path.bounds(currentRoute.views.data2),
-        //     bounds3 = path.bounds(currentRoute.views.data3);
-        //    scalePad = this.padBottom > 24 && (longerEdge(bounds2) === "height" || longerEdge(bounds3) === "height") ? 0.6 : 0.5,
-        //    options0 = { scalePad: scalePad, padBottom: this.padBottom };
-        // console.log(scalePad)
         let options0 = { scalePad: 0.5, padBottom: this.padBottom };
         // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
         let k2 = getTransform(path.bounds(currentRoute.views.data2),options0).k,
@@ -1827,15 +1830,21 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         };
       }));
 
-
       dimGroup.forEach(group => {
 
         // access currentOpacity or default fallback
-        let currentOpacity = group.selection.style("opacity") || group.selection.attr("globalAlpha") || 1;
+        let currentOpacity = group.selection.style("opacity") || group.selection.attr("globalAlpha") || 1,
+             targetOpacity = currentOpacity * group.dimFactor;
+
+        if (group.selection.on("mouseenter")) {  // cities only
+          group.selection
+            .property("orig-orig-opacity",group.selection.property("orig-opacity") || 1)
+            .property("orig-opacity",targetOpacity)
+        }
 
         // update current opacity according to passed dimFactor
         group.selection.transition().duration(t)
-          .style("opacity", currentOpacity * group.dimFactor)
+          .style("opacity", targetOpacity)
 
       })
 
@@ -2182,6 +2191,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     return (bounds[1][1] - bounds[0][1] > bounds[1][0] - bounds[0][0]) ? "height" : "width"
   }
 
+  function boundsHeight(bounds) {
+    bounds = standardizeBounds(bounds);
+    return bounds[1][1]-bounds[0][1];
+  }
+
   function collapseDirection(width = window.innerWidth) {
     return (width >= 1200) ? "right" : "down";
   }
@@ -2318,10 +2332,17 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     return coords.map(d => turf.truncate(turf.point(d),{precision:precision,mutate:true}).geometry.coordinates);
   }
 
-  function combineBounds(bounds1,bounds2) {
-    let b0 = [Math.min(bounds1[0][0],bounds2[0][0]),Math.min(bounds1[0][1],bounds2[0][1])],
-        b1 = [Math.max(bounds1[1][0],bounds2[1][0]),Math.max(bounds1[1][1],bounds2[1][1])]
-    return [b0,b1];
+  function combineBounds(boundsArray) {
+    let bounds0 = boundsArray.shift();
+    let b00 = bounds0[0][0], b01 = bounds0[0][1],
+        b10 = bounds0[1][0], b11 = bounds0[1][1];
+    boundsArray.forEach(bounds => {  // iterate through remaining
+      b00 = Math.min(b00,bounds[0][0])
+      b01 = Math.min(b01,bounds[0][1])
+      b10 = Math.max(b10,bounds[1][0])
+      b11 = Math.max(b11,bounds[1][1])
+    });
+    return [[b00,b01],[b10,b11]];
   }
 
 //// ZOOM BEHAVIOR
@@ -2745,7 +2766,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     // regardless
     experience.animating = true;
-    d3.selectAll(".encounter").classed("pointer",false)
+    d3.selectAll(".toggle-pointer").classed("pointer",false)
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none",true)
 
@@ -2838,7 +2859,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         // re-allow free zooming
         svg.call(zoom)
         // invite user to click on outputted feature names to zoom to bounds
-        d3.selectAll(".encounter").classed("pointer",true)
+        d3.selectAll(".toggle-pointer").classed("pointer",true)
       })
 
     // avoid slight tracker disconnects at end
@@ -3142,7 +3163,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         gjB.properties = {...gj.properties,...{oid: origId, id: origId + "-2"}}
 
         if (gjA.geometry.coordinates.length) revealLine(gjA,baseT,"paired-flag")
-        if (gjB.geometry.coordinates.length) revealLine(gjB,baseT)
+        if (gjB.geometry.coordinates.length) revealLine(gjB,baseT,"paired-flag second-half")
 
       }
 
@@ -3378,7 +3399,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     encounteredPts.add(gj)
     let sortedPts = [...encounteredPts].sort((a,b) => {
-      return b.properties.orig_area - a.properties.orig_area;
+      return !a.properties.orig_area ? 1 : !b.properties.orig_area ? -1 : b.properties.orig_area - a.properties.orig_area;
     })
 
     let ptOpacity = 0.8,
@@ -3410,22 +3431,23 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .call(async enter => {
             let fill = await getFill(enter.datum());
             if (fill.key) { // typeof fill === "Object"
-              let stroke = chroma(patterns[fill.key].primaryHex).brighten().hex();
+              // let stroke = chroma(patterns[fill.key].primaryHex).brighten().hex();
+              let stroke = chroma(patterns[fill.key].primaryHex).desaturate().darken().hex();
               enter.attr("patternKey",fill.key)
               enter.classed("patterned",true)
               enter.style("fill", patterns[fill.key].url)
                    .style("stroke", stroke)
                    .property("orig-stroke", stroke)
-            } else {
+            } /* else {
               console.log(enter.datum().properties.logGroup.divId)
               let stroke = chroma(fill).brighten().hex();
               enter.style("fill", fill)
                    .style("stroke", stroke)
                    .property("orig-stroke", stroke)
-            }
+            } */
             if (enter.property("sub-tag")) enter.classed(enter.property("sub-tag").divId,true);
             enter.transition().duration(t)
-              .attr("r", d => Math.max(d.properties.orig_area * 0.00000001 || 0.1)) // size of circle is a factor of planar (why did i do it this way?) area of polygon the circle is representing, or 0.1 minimum
+              .attr("r", d => d.properties.orig_area ? radiusScale(d.properties.orig_area) : 0.075) // size of circle is a factor of original area of polygon the circle is representing, or 0.075 minimum
               .style("opacity", 1)  // COMBAK: aim for initial glow effect
               .style("stroke-opacity", 1)
               .on("start", output(enter))
@@ -3467,9 +3489,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let t = Math.max(minT,baseT * tpm),
       props = gj.properties,
       lineOpacity = 0.8,
-      strokeColor = props.CATEGORY.startsWith("River") ? riverBlue
-                    // : (props.CATEGORY.startsWith("Lake")) ? lakeBlue
-                    : colorAssignments.watersheds[props.OCEAN_ID].base,
+      strokeColor = props.CATEGORY.startsWith("River") ? riverBlue : colorAssignments.watersheds[props.OCEAN_ID].base,
       strokeWidth = getStrokeWidth(gj);
 
     encounteredLines.add(gj)
@@ -3584,7 +3604,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
                    .property("orig-stroke", stroke)
             } else {
               // let stroke = chroma(colorAssignments.ecoregions[enter.datum().properties.ECOZONE].base).brighten();
-              let stroke = colorAssignments.ecoregions[enter.datum().properties.ECOZONE].base;
+              // let stroke = colorAssignments.ecoregions[enter.datum().properties.ECOZONE].base;
+              let stroke = fill;
               enter.style("fill", fill)
                    .style("stroke", stroke)
                    .property("orig-stroke", stroke)
@@ -3738,45 +3759,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               .html(getHtml)
               .property("assocId", d => d.attr("id"))
               .on("mouseover", highlightAssoc)
-              .on("mouseout", unhighlight)
-              .on("click", function() {  // if animation paused or ended, zoom to feature
-
-                if (experience.animating && !experience.manuallyPaused) return;
-
-                let selection = d3.select(this),
-                    featureId = selection.property("assocId"),
-                      feature = g.select("#enrich-layer").select(`#${featureId}`),
-                           gj = feature.datum(),
-                  featureBounds;
-
-                if (selection.classed("pt-encounter")) {
-                // if (gj.geometry.type === "Point") {
-                  // getCenterTransform requires predetermined zoom level... lacking this, pad projected point with radius pixels and zoom to bounds
-                  let pt0 = projection(gj.geometry.coordinates), // often feature.attr("cx/cy"), but not always
-                   radius = +feature.attr("r") * 5;
-                  featureBounds = [[pt0[0]-radius,pt0[1]-radius],[pt0[0]+radius,pt0[1]+radius]];
-                } else {
-                  featureBounds = path.bounds(gj);
-                  if (selection.classed("paired-flag")) {
-                    // INCLUDE PAIR IF IT EXISTS
-                    let feature2 = g.select("#enrich-layer").select(`#${featureId}-2`);
-                    if (feature2.node()) featureBounds = combineBounds(featureBounds,path.bounds(feature2.datum()))  // approaching this otherwise results in +/- Infinity bounds for watersheds
-                  }
-                }
-
-                // dash will necessarily be open since user just clicked on it
-                let bottomPad = d3.select("#dash").node().clientHeight,
-                      options = { scalePad: 0.1, padBottom: bottomPad };
-
-                let zoomIdentity = getIdentity(getTransform(featureBounds,options));
-
-                // flag to transitionResume
-                transitionResume = true; //separate scale and translate?
-
-                svg.transition().duration(zoomDuration/2)
-                  .call(zoom.transform,zoomIdentity)
-
-              }),
+              .on("mouseout", unhighlightAssoc)
+              .on("click", zoomToFeature),
             update => update,
             exit => exit
               .call(exit => exit.transition(t)
@@ -3839,13 +3823,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             .order()
             .join(
               enter => enter.append("div")
-                .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm ${itemClass} relative one-life`,true)
+                .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm toggle-pointer ${itemClass} relative one-life`,true)
                 .html(getLogHtml(group,symbolId,isParent,padLeft))
                 .property("groupId",group.divId)
                 .property("symbolId",symbolId)
                 .style("opacity", 0)  // initially
                 .on("mouseover", highlightAssoc)
-                .on("mouseout", unhighlight)
+                .on("mouseout", unhighlightAssoc)
+                .on("click", zoomToFeature)
                 .call(enter => enter.transition().duration(300)
                   .style("opacity", 1)
                 )
@@ -3865,6 +3850,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             let parentSym = d3.select(`#${parentDivId}`).select("summary").select(".log-symbol");
             parentSym.classed("pointer",true)
             parentSym.on("click",function() {
+              d3.event.stopPropagation();
               // children toggled automatically by details element; this function attending to visual of triangle marker only
               let target = d3.select(this);
               target.classed("open") ?
@@ -3928,7 +3914,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
             let html,
               innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol align-center pt3 pt0-mm"></span>
-              <label class="flex-child flex-child--grow align-center log-name px3">${group.fullTxt}</label>
+              <label class="flex-child flex-child--grow align-center log-name toggle-pointer px3">${group.fullTxt}</label>
               <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
 
             if (isParent) {
@@ -4272,7 +4258,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       showLrgControls("pause-lrg")
       manualPause();
     } else if (experience.animating) {
-      d3.selectAll(".encounter").classed("pointer",false)
+      d3.selectAll(".toggle-pointer").classed("pointer",false)
       // manual resume control feedback
       showLrgControls("play-lrg").then(manualResume)
     }
@@ -4284,7 +4270,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     experience.manuallyPaused = true;
 
     // regardless of direction
-    d3.selectAll(".encounter").classed("pointer", true)
+    d3.selectAll(".toggle-pointer").classed("pointer",true)
     d3.select("#play-pause-icon")
       .selectAll(".icon-opt").classed("none", true)
 
@@ -4356,7 +4342,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       resumeTimer();
 
       // regardless of direction
-      d3.selectAll(".encounter").classed("pointer", false)
+      d3.selectAll(".toggle-pointer").classed("pointer",false)
       d3.select("#play-pause-icon")
         .selectAll(".icon-opt").classed("none",true)
 
@@ -4491,6 +4477,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       let dimGroup = dimMore.concat(dimLess);
       dimGroup.forEach(d => {
         let selection = Array.isArray(d) ? d3.select(d[0]).selectAll(d[1]) : d3.select(d);
+
+        if (selection.on("mouseenter")) {  // cities
+          selection.property("orig-opacity",selection.property("orig-orig-opacity"))
+        }
+
         selection.transition().duration(t)
           .style("opacity", selection.property("orig-opacity") || 1)
       })
@@ -4702,9 +4693,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     if (d.properties.STROKEWIDTH) {
       return d.properties.STROKEWIDTH * 0.25 + "px";
     } else if (d.properties.LEVEL) {
-      return +(0.2 - 0.04 * unromanize(d.properties.LEVEL)).toFixed(4) + "px";
+      return levelScale(unromanize(d.properties.LEVEL)).toFixed(2) + "px"
     } else {
-      return 0.04 + "px";
+      return 0.025 + "px";
     }
   }
 
@@ -4765,21 +4756,31 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-//// TOOLTIPS & MOUSEOVER
+//// TOOLTIPS & FEATURE CLICK/MOUSEOVER
 
   function onMouseenter(d) {
 
-    // visual affordance for element itself
-    d3.select(this) // .classed("hover", true) //.raise();
-      .transition().duration(100)
-        .style("stroke-opacity",0.9)
-        .style("opacity", d3.select(this).property("hover-opacity") || 0.9)
+    let mouseTarget = d3.select(this),
+         selections = [mouseTarget],
+          partnerId = mouseTarget.classed("paired-flag") ?
+                        mouseTarget.classed("second-half") ?
+                          mouseTarget.attr("id").replace("-2","")
+                        : mouseTarget.attr("id") + "-2"
+                      : null;
 
-    if (d3.select(this).property("name")) {
+    if (partnerId) {
+      mouseTarget.property("partner-id",partnerId)  // COMBAK could work this in earlier!
+      selections.push(d3.select(`#${partnerId}`))
+    }  // split watersheds!
+
+    // visual affordance for element itself
+    selections.forEach(selection => highlight(selection))
+
+    if (mouseTarget.property("name")) {
       // make/bind/style tooltip, positioned relative to location of mouse event (offset 10,-30)
       let tooltip = d3.select("#map").append("div")
         .attr("class","tooltip point-none shadow-darken50")
-        .html(getInnerHtml(d3.select(this)))
+        .html(getInnerHtml(mouseTarget))
         .style("left", (d3.event.layerX + 10) + "px")
         .style("top", (d3.event.layerY - 30) + "px")
         .attr("fill", "honeydew")
@@ -4851,14 +4852,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function onMouseout(d) {
 
-    // reset visual affordances; note opposite defaults
-    let resetStrokeOpacity = d3.select(this).property("orig-stroke-opacity") || 0,
-      resetOpacity = d3.select(this).property("orig-opacity") || 1;
+    let mouseTarget = d3.select(this),
+         selections = [mouseTarget],
+          partnerId = mouseTarget.classed("paired-flag") ? mouseTarget.property("partner-id") : null;
 
-    d3.select(this)  // .classed("hover", false) // .lower();
-      .transition().duration(750)
-        .style("stroke-opacity", resetStrokeOpacity)
-        .style("opacity", resetOpacity)
+    if (partnerId) selections.push(d3.select(`#${partnerId}`));  // split watersheds!
+
+    // reset visual affordances; note opposite defaults
+    selections.forEach(selection => unhighlight(selection))
 
     // access existing
     let tooltip = d3.select("#map").selectAll(".tooltip") // don't bother matching by id; should only ever be one tooltip open at a time
@@ -4875,36 +4876,24 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   function highlightAssoc() {
 
     // select & highlight corresponding enrich elements on map
-    let selection = d3.select(this),
-         selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
+    let mouseTarget = d3.select(this);
 
-    let associated = [g.select("#enrich-layer").selectAll(`${selector}`)];
+    if (mouseTarget.classed("legend-log-child-item")) d3.event.stopPropagation();
 
-    if (selection.classed("paired-flag")) { // must be .encounter
+    let selector = getSelector(mouseTarget),
+      associated = [g.select("#enrich-layer").selectAll(`${selector}`)];
+
+    if (mouseTarget.classed("paired-flag")) { // must be .encounter
       let associated2 = g.select("#enrich-layer").select(`${selector}-2`);
       if (associated2.node()) associated.push(associated2);
     }
 
     associated.forEach(selection => {
-      selection   // .transition()
-        .style("stroke", function(d) {
-          return d.geometry.type === "Point" ?
-            chroma(d3.select(this).style("stroke")).darken().hex() // (2)
-          : chroma(d3.select(this).style("stroke")).brighten().hex();
-        })
-        .style("stroke-width", function(d) {
-          let currentWidth = d3.select(this).style("stroke-width");
-          return ["LineString","MultiLineString"].includes(d.geometry.type) ? currentWidth * 1.2 : currentWidth;
-        })
-        .style("stroke-opacity",1)
-        .style("opacity", function() {
-          return d3.select(this).property("hover-opacity") || 0.9
-        })
-        .raise();
-    })
+      selection.nodes().forEach(node => highlight(d3.select(node)))
+    });
 
     // highlight text node container
-    if (selection.classed("encounter")) {
+    if (mouseTarget.classed("encounter")) {
 
       d3.select(this.firstChild).classed("opacity75",true)
 
@@ -4917,7 +4906,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           pattern = patterns[associated[0].attr("patternKey")],
            imgSrc = (geomType === "pt" && symInvert.includes(divId)) ? pattern.invertedSrc : pattern.src;
 
-        selection.style("background-image", `url(${imgSrc})`) // avoids [object Object]
+        mouseTarget.style("background-image", `url(${imgSrc})`) // avoids [object Object]
 
       } else if (fillVal === "none") {  // lines
 
@@ -4925,29 +4914,23 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
           let patternKey = associated[0].property("category").toLowerCase() + "-" + associated[0].property("sub-tag").divId + "-" + selector.slice(1,3);
 
-          selection.style("background-image", `url(${patterns[patternKey].src})`)
+          mouseTarget.style("background-image", `url(${patterns[patternKey].src})`)
 
         } else {  // rivers
 
-          selection.style("background-color",associated[0].style("stroke"));
+          mouseTarget.style("background-color",associated[0].style("stroke"));
 
         }
 
       } else {
 
-        selection.style("background-color",fillVal)
+        mouseTarget.style("background-color",fillVal)
 
       }
 
     } else {
 
-      let hoverNode = this;
-
-      if (selection.classed("legend-log-child-item")) {
-        d3.event.stopPropagation();  // cancel bubbling
-      } else if (selection.classed("legend-log-item")) {
-        hoverNode = selection.select("details").select("summary").node();
-      }
+      let hoverNode = mouseTarget.classed("legend-log-item") ? mouseTarget.select("details").select("summary").node() : this;
 
       d3.select(hoverNode).classed("bg-darken25",true)
 
@@ -4955,46 +4938,134 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-  function unhighlight() {
+  function unhighlightAssoc() {
 
     // select & unhighlight corresponding enrich elements on map
-    let selection = d3.select(this),
-      selector = (selection.classed("encounter")) ? `#${selection.property("assocId")}` : (selection.classed("legend-log-child-item")) ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
+    let mouseTarget = d3.select(this);
 
-    let associated = [g.select("#enrich-layer").selectAll(`${selector}`)];
+    if (mouseTarget.classed("legend-log-child-item")) d3.event.stopPropagation();
 
-    if (selection.classed("paired-flag")) { // must be .encounter
+    let selector = getSelector(mouseTarget),
+     associated = [g.select("#enrich-layer").selectAll(`${selector}`)];
+
+    if (mouseTarget.classed("paired-flag")) {  // must be .encounter
       let associated2 = g.select("#enrich-layer").select(`${selector}-2`);
       if (associated2.node()) associated.push(associated2);
     }
 
     associated.forEach(selection => {
-      selection   // .transition()
-        .style("stroke", function() {
-          return d3.select(this).property("orig-stroke") || "whitesmoke";
-        })
-        .style("stroke-width", function() {
-          return d3.select(this).property("orig-stroke-width") || 0;
-        })
-        .style("stroke-opacity", function() {
-          return d3.select(this).property("orig-stroke-opacity") || 0
-        })
-        .style("opacity", function() {
-          return d3.select(this).property("orig-opacity") || 1;
-        })
+      selection.nodes().forEach(node => unhighlight(d3.select(node)))
     });
 
     // unhighlight text node container
-    if (selection.classed("encounter")) {
+    if (mouseTarget.classed("encounter")) {
       // clear to original background & opacity
-      selection.style("background-color","rgba(0, 0, 0, 0)")
-      selection.style("background-image","none")
+      mouseTarget.style("background-color","rgba(0, 0, 0, 0)")
+      mouseTarget.style("background-image","none")
       d3.select(this.firstChild).classed("opacity75",false)
     } else {
-      let hoverNode = (selection.classed("legend-log-item")) ? selection.select("details").select("summary").node() : this;
+      let hoverNode = (mouseTarget.classed("legend-log-item")) ? mouseTarget.select("details").select("summary").node() : this;
       d3.select(hoverNode).classed("bg-darken25",false)
     }
 
+  }
+
+  function highlight(selection) {
+    selection  // .classed("hover", false)
+      .style("stroke", function(d) {
+        let currentStroke = d3.select(this).style("stroke");
+        if (!d.geometry) return currentStroke;
+        // else
+        return d.geometry.type === "Point" ?
+          chroma(d3.select(this).style("stroke")).brighten(2).hex()
+        : ["Polygon","MultiPolygon"].includes(d.geometry.type) ?
+          d3.select(this).classed("patterned") ?
+            d3.select(this).style("stroke")
+          : chroma(d3.select(this).style("stroke")).desaturate().brighten().hex()
+        : chroma(d3.select(this).style("stroke")).brighten().hex();
+      })
+      .style("stroke-width", function(d) {
+        let currentWidth = d3.select(this).style("stroke-width");
+        return !d.geometry || ["Polygon","MultiPolygon","Point"].includes(d.geometry.type) ? currentWidth : currentWidth * 1.2
+      })
+      .style("stroke-opacity",1)  // COULD MESS AROUND HERE TOO; was 0.9
+      .style("opacity", function() {
+        return d3.select(this).property("hover-opacity") || 0.9
+      })
+  }
+
+  function unhighlight(selection) {
+    selection  // .classed("hover", false)
+      .style("stroke", function() {
+        return d3.select(this).property("orig-stroke") || "whitesmoke";
+      })
+      .style("stroke-width", function() {
+        return d3.select(this).property("orig-stroke-width") || 0;
+      })
+      .style("stroke-opacity", function() {
+        return d3.select(this).property("orig-stroke-opacity") || 0
+      })
+      .style("opacity", function() {
+        return d3.select(this).property("orig-opacity") || 1;
+      })
+  }
+
+  function zoomToFeature() {  // if animation paused or ended, zoom to feature(s)
+
+    if (experience.animating && !experience.manuallyPaused) return;  // should not be clickable
+
+    let selection = d3.select(this);
+
+    if (selection.classed("legend-log-child-item")) d3.event.stopPropagation();
+
+    let selector = getSelector(selection),
+      associated = g.select("#enrich-layer").selectAll(`${selector}`),
+     boundsGroup = [];
+
+    associated.nodes().forEach(node => {
+      let featureBounds,
+        feature = d3.select(node),
+             gj = feature.datum();
+      if (gj.geometry.type === "Point") {
+        // getCenterTransform requires predetermined zoom level... lacking this, pad projected point with radius pixels and zoom to bounds
+        let pt0 = projection(gj.geometry.coordinates), // often feature.attr("cx/cy"), but not always
+         radius = +feature.attr("r") + +feature.style("stroke-width").replace("px","");
+        featureBounds = [[pt0[0]-radius,pt0[1]-radius],[pt0[0]+radius,pt0[1]+radius]];
+      } else {
+        featureBounds = path.bounds(gj);
+        if (feature.classed("paired-flag")) {
+          // INCLUDE PAIR IF IT EXISTS
+          let feature2 = g.select("#enrich-layer").select(`#${feature.attr("id")}-2`);
+          if (feature2.node()) boundsGroup.push(path.bounds(feature2.datum()))  // approaching this otherwise results in +/- Infinity bounds for watersheds
+        }
+      }
+      boundsGroup.push(featureBounds);
+    });
+
+    // 0.5 = padValue
+    let groupBounds = combineBounds(boundsGroup);
+    groupBounds = padExtent(groupBounds,0.5) // alt to scalePad
+
+    // dash will necessarily be open since user just clicked on it
+    let options = { padBottom: d3.select("#dash").node().clientHeight };
+
+    let zoomIdentity = getIdentity(getTransform(groupBounds,options));
+
+    if (zoomIdentity.k > maxFeatureZoom) { // RARE
+      options.scale = maxFeatureZoom
+      zoomIdentity = getIdentity(getTransform(groupBounds,options));
+    }
+
+    // flag to transitionResume
+    transitionResume = true;
+
+    svg.transition().duration(zoomDuration/2)
+      .call(zoom.transform,zoomIdentity)
+
+  }
+
+  function getSelector(selection) {
+    return selection.classed("encounter") ? `#${selection.property("assocId")}` : selection.classed("legend-log-child-item") ? `.${selection.property("symbolId").match(/.*(?=-)/)[0]}` : `.${selection.property("groupId")}`;
   }
 
 //// OTHER HELPER FUNCTIONS
@@ -5222,44 +5293,46 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   // readd flex-child--no-shrink to all encounters
   // add pointer class to parent legend-log symbols
   // simplify zoomclick
-  // FIXED: random station leftovers intruding related to persistent, ill-placed mouseover while processing
+  // fixed: random station leftovers intruding related to persistent, ill-placed mouseover while processing
+  // combine urbanBase and railbase for greater control over ordering
+  // adjust sizing of city pts and add to dimGroup
+  // adjust sizing of enrich pts
+  // clicking on legend log zooms to feature group (plus effective toggle-pointer class)
+  // max zoom on feature bounds plus improved bounds padding
+  // fix opacity mouseover reset on cities following dim/undim background
+  // fidget with / improve highlightAssoc styling
+  // copy highlightAssoc styling to onMouseenter & unhighlight to onMouseout
+  // fixed: mouseover doesn't recognize all watersheds
+  // sort of fixed?: level I && II ecoregion stroke too wide
+  // reduce starting stroke-width on ["Polygon","MultiPolygon"].includes(d.geometry.type) && d3.select(this).classed("patterned")
+  // fix/split: middle fork inventoried roadless area
+  // delete sault ste marie
+  // more of smallest polygons -> pts
+  // update enrich pts / pys / searchReps / triggerPts accordingly
+  // reduce redundancy between highlightAssoc and mouseover
+  // change inventoried roadless color to differtence from wildlands
 
 // todo:
-  // d3 scale for pt sizing
+  // stop propagation of hover events where possible
+  // stroke with pa-grp1 patterned polys now too dark..
+  // states and cities for non-MEX-CAN-USA?
   // clicking on map zooms to feature?
-  // clicking on legend log zooms to feature group
-  // too small zoom to feature bounds: N Santium River, S Santium River
-  // mouseover encounter highlights:
-      // pts: darken stroke more
-      // lines: good!
-      // polys:
-        // for textured, no need to change stroke at all from primaryHex
-        // for rest, ok? less bright?
-        // make stroke smaller as bounds get smaller
   // center control buttons get animation-fade-in-out class ?
   // nouns/states better as fn expressions? e.g isToggleable
-  // PRIORITY:
-    // keep highlightassoc consistent with mouseover
-    // symbol styling+:
-      // thicken nylon pt stroke
-      // change stroke of volcanoes
-      // reduce circle log symbol size
-      // py stroke too wide
-    // set max zoom on zoom to feature
+  // symbol styling+:
+    // thicken nylon pt stroke
+    // change stroke of volcanoes
+    // reduce circle log symbol size
+    // py stroke too wide
   // rid of failure/feelings language
   // form smoothness
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
-  // TODO remove more of smallest polygons? ( eg eagle inventored roadless -> pt )
-  // PROBLEM CITIES REMAINING:
-    // seem ok now? port kent, alliance (but maybe remove anyway)
-    // sault ste marie, UNFIXABLE
-  // WATERSHEDS AND RIVERS ON HOVER: thicken
   // svg drop shadow on pts?
   // integrate #attribution and any other bottom-aligned overlay buttons with attuneMapBottomDashTop();
   // hover over legend-log categories offers insight into categorziation process
 
 // maybe? (having trouble finding examples of this now):
-  // sometimes padbottom too much for NS firstlastidentities; adjust scalepad up / fix firstlast overzoom
+  // sometimes padbottom too much for NS firstlastidentities; adjust scalepad up / fix firstlast overzoom (eg Amqui south)
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
@@ -5297,4 +5370,15 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 //       d3.mouse(svg.node())
 //     );
 //   }
+// }
+// firstDirection = northSouth(currentRoute.views.data2),
+//  lastDirection = northSouth(currentRoute.views.data3)
+//
+// function northSouth(lineString) {
+//   return getQuadrant(turf.bearingToAzimuth(turf.bearing(turf.point(lineString.geometry.coordinates[0]),turf.point(lineString.geometry.coordinates[lineString.geometry.coordinates.length-1])))).slice(0,1);
+// }
+// if (bottomPad > 24 && ((firstDirection == "S" && longerEdge(this.bounds2) === "height" && boundsHeight(this.bounds2) > 4) || (lastDirection == "N" && longerEdge(this.bounds3) === "height" && boundsHeight(this.bounds3) > 4))) {
+//   bottomPad *= 0.5;
+// } else if (bottomPad > 24 && ((firstDirection == "N" && longerEdge(this.bounds2) === "height" && boundsHeight(this.bounds2) > 4) || (lastDirection == "S" && longerEdge(this.bounds3) === "height" && boundsHeight(this.bounds3) > 4))) {
+//   bottomPad *= 1.25;
 // }
