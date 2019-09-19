@@ -63,7 +63,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     minT = tpm * 10,
     tPause = 2400,  // standard delay time for certain transitions
     viewFocusInt = 100,  // miles in/out to initially focus view, start/stop zoomFollow
-    maxInitZoom = 56,
+    maxInitZoom = 48,
     maxFollowZoom = 64, // limit active zoomAlongTransform scale
     maxFeatureZoom = 600,
     zoomDuration = tPause,  // zoom to frame transition duration
@@ -346,7 +346,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       textureType: "paths",
       textureProps: {d: "caps", thicker: 48, lighter: 24, stroke: darkRed, shapeRendering: "crispEdges"},
       ptTextureProps: {d: "caps", thicker: 108, lighter: 48, background: darkRed, shapeRendering: "crispEdges"},
-      htmlAdjust: { thicker: 1, heavier: 8 }
+      htmlAdjust: { thicker: 1.2, heavier: 12 }
       // no keywords; CATEGORY.startsWith("Volcano")
     },
     "GEOTHERMAL": {
@@ -389,7 +389,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       textureType: "circles",
       textureProps: { complement: true, thicker: 54, lighter: 24 },
       ptTextureProps: { complement: true, thicker: 72, lighter: 36 },
-      htmlAdjust: { thinner: 18, lighter: 0, radius: 2 , size: 8 }
+      htmlAdjust: { thinner: 18, lighter: 0, radius: 1.8 , size: 8 }
       // no keywords; CATEGORY === "Protected Area" && DESCRIPTION !== "Inventoried Roadless Area"
     }
   },
@@ -1623,8 +1623,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         // first iteration used to get scale @ each identity (k averaged and used to confirm not overzooming)
         let k2 = getTransform(path.bounds(currentRoute.views.data2),options0).k,
             k3 = getTransform(path.bounds(currentRoute.views.data3),options0).k,
-          avgK = (k2 + k3)/2;
-        return Math.ceil(Math.min(maxInitZoom,avgK));
+          avgK = (k2 + k3)/2,
+             k = Math.ceil(Math.min(maxInitZoom,avgK));
+        return k < currentRoute.views.routeBoundsIdentity().k ? currentRoute.views.routeBoundsIdentity().k : k;
       }
     }
 
@@ -3916,6 +3917,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
               innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol align-center pt3 pt0-mm"></span>
               <label class="flex-child flex-child--grow align-center log-name toggle-pointer px3">${group.fullTxt}</label>
               <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
+              //  h${s} w${s-6} align-r
 
             if (isParent) {
               html = `<details id="${group.divId}" class="flex-parent flex-parent--column">
@@ -5290,40 +5292,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 /////// NO FOR REAL, THIS WHERE I'M AT ///////
 
 // done:
-  // readd flex-child--no-shrink to all encounters
-  // add pointer class to parent legend-log symbols
-  // simplify zoomclick
-  // fixed: random station leftovers intruding related to persistent, ill-placed mouseover while processing
-  // combine urbanBase and railbase for greater control over ordering
-  // adjust sizing of city pts and add to dimGroup
-  // adjust sizing of enrich pts
-  // clicking on legend log zooms to feature group (plus effective toggle-pointer class)
-  // max zoom on feature bounds plus improved bounds padding
-  // fix opacity mouseover reset on cities following dim/undim background
-  // fidget with / improve highlightAssoc styling
-  // copy highlightAssoc styling to onMouseenter & unhighlight to onMouseout
-  // fixed: mouseover doesn't recognize all watersheds
-  // sort of fixed?: level I && II ecoregion stroke too wide
-  // reduce starting stroke-width on ["Polygon","MultiPolygon"].includes(d.geometry.type) && d3.select(this).classed("patterned")
-  // fix/split: middle fork inventoried roadless area
-  // delete sault ste marie
-  // more of smallest polygons -> pts
-  // update enrich pts / pys / searchReps / triggerPts accordingly
-  // reduce redundancy between highlightAssoc and mouseover
-  // change inventoried roadless color to differtence from wildlands
+  // symbol styling adjustments to circles and caps
+  // improve legend-log-name alignment regardless of number count
 
 // todo:
-  // stop propagation of hover events where possible
-  // stroke with pa-grp1 patterned polys now too dark..
   // states and cities for non-MEX-CAN-USA?
-  // clicking on map zooms to feature?
-  // center control buttons get animation-fade-in-out class ?
-  // nouns/states better as fn expressions? e.g isToggleable
-  // symbol styling+:
-    // thicken nylon pt stroke
-    // change stroke of volcanoes
-    // reduce circle log symbol size
-    // py stroke too wide
   // rid of failure/feelings language
   // form smoothness
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
@@ -5333,6 +5306,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
 // maybe? (having trouble finding examples of this now):
   // sometimes padbottom too much for NS firstlastidentities; adjust scalepad up / fix firstlast overzoom (eg Amqui south)
+  // clicking on map zooms to feature?
+  // center control buttons get animation-fade-in-out class ?
+  // nouns/states better as fn expressions? e.g isToggleable
+  // fix: stroke with pa-grp1 patterned polys now too dark..
+  // stop propagation of hover events where possible
 
 // SAFARI FIXES (ENSURE CURRENT, NOT DEV)
   // lines appear on left when opening details elements / data sources (then disappear again on scroll -- no record)
