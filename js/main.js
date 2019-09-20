@@ -3916,8 +3916,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             let html,
               innerHtml = `<span id="${fillId}" class="flex-child flex-child--no-shrink h${s} w${s} log-symbol align-center pt3 pt0-mm"></span>
               <label class="flex-child flex-child--grow align-center log-name toggle-pointer px3">${group.fullTxt}</label>
-              <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count">${initCount}</span>`
-              //  h${s} w${s-6} align-r
+              <span id="${group.divId}-count" class="flex-child flex-child--no-shrink log-count wmin12 align-r">${initCount}</span>`
 
             if (isParent) {
               html = `<details id="${group.divId}" class="flex-parent flex-parent--column">
