@@ -3756,7 +3756,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
           .data(encounters, d => d.property("id"))
           .join(
             enter => enter.append("div")
-              .classed(`flex-child flex-child--no-shrink encounter ${geomType}-encounter one-life color-black txt-compact mx3 my3 px6 py6 ${pairedFlag}`, true)
+              .classed(`flex-child flex-child--no-shrink encounter ${geomType}-encounter toggle-pointer one-life color-black txt-compact mx3 my3 px6 py6 ${pairedFlag}`, true)
               .html(getHtml)
               .property("assocId", d => d.attr("id"))
               .on("mouseover", highlightAssoc)
@@ -3824,7 +3824,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             .order()
             .join(
               enter => enter.append("div")
-                .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm toggle-pointer ${itemClass} relative one-life`,true)
+                .classed(`flex-child flex-child--grow flex-child--no-shrink hmin18 hmin24-mm ${itemClass} relative one-life`,true)
                 .html(getLogHtml(group,symbolId,isParent,padLeft))
                 .property("groupId",group.divId)
                 .property("symbolId",symbolId)
@@ -5292,11 +5292,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 /////// NO FOR REAL, THIS WHERE I'M AT ///////
 
 // done:
-  // symbol styling adjustments to circles and caps
-  // improve legend-log-name alignment regardless of number count
 
 // todo:
-  // states and cities for non-MEX-CAN-USA?
+  // improve legend-log-name alignment regardless of number count?  // states and cities for non-MEX-CAN-USA?
   // rid of failure/feelings language
   // form smoothness
   // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
