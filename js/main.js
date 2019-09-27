@@ -19,10 +19,11 @@
   // merged enrich data
  enrichPolys = d3.json("data/final/enrich_polys.json"),
  enrichLines = d3.json("data/final/enrich_lines.json"),
-   enrichPts = d3.json("data/final/enrich_pts.json"),
+   enrichPts = d3.json("./data/final/enrich_pts.json"),
   // quadtree ready
-quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
-  triggerPts = d3.json("data/final/enrich_trigger_pts.json");
+quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
+  triggerPts = d3.json("./data/final/enrich_trigger_pts.json"),
+  elevations = d3.csv("data/final/pass_rail_elevations.csv");
 
 //// STATE MANAGEMENT & SEMI-GLOBALS
 
@@ -42,6 +43,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   // PERSISTENT ACROSS ROUTES
   var quadtree0;
+  var elevationQuadtree;
   var state0 = {}; // restorable?
   var routeHx = {};
   var patterns = {};
@@ -146,6 +148,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
   var reflectedPath = d3.geoPath()
     .projection(reflectedY)
 
+  var nullPath = d3.geoPath()
+    .projection(d3.geoIdentity())
+
 // PAN/ZOOM BEHAVIOR
 
   d3.select("button#zoom-in")
@@ -239,8 +244,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       center: { }
     },
     quadtree: {
-      projectX: d => projection(d.geometry.coordinates)[0],
-      projectY: d => projection(d.geometry.coordinates)[1]
+      project: true,
+      getX: d => projection(d.geometry.coordinates)[0],
+      getY: d => projection(d.geometry.coordinates)[1]
     }
   }
 
@@ -1118,7 +1124,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       }
 
       let route = raw.routes[0],
-       mergedGJ = turf.lineString(route.segments.map(d=>polyline.toGeoJSON(d.path)).map(d=>d.coordinates).flat()),
+     segmentGJs = route.segments.map(segment => polyline.toGeoJSON(segment.path)),
+       mergedGJ = turf.lineString(segmentGJs.map(d=>d.coordinates).flat()),
         inMiles = Math.round(kmToMi(route.distance)),
       inMinutes = Math.round(route.totalTransitDuration); // not including transfers
 
@@ -1129,7 +1136,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         totalMiles: inMiles,
         totalTime: inMinutes,
         minPerMile: inMinutes / inMiles,
-        segments: route.segments.map(storeSegmentDetails),
+        segments: route.segments.map(storeSegmentDetails).filter(d => d!= null),
         get relStops() {
           if (!this._relStops) this._relStops = getRelStops(this,raw.places);
           return this._relStops;
@@ -1140,7 +1147,22 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
       }
 
+      if (!elevationQuadtree) {
+        elevations.then(elevationData => {
+          elevationData.map(d => d.feet_asl = metersToFeet(d.meters_asl))
+          elevationQuadtree = makeQuadtree(elevationData, {
+            bounding: data0,
+            project: false,
+            getX: d => +d.xcoord,
+            getY: d => +d.ycoord
+          })
+        });
+      }
+
+      return thisRoute;
+
       function storeSegmentDetails(segment) {
+        if (raw.vehicles[segment.vehicle].name === "Walk") return;
         return {
             agency: (segment.agencies) ? raw.agencies[segment.agencies[0].agency] : null,
           lineName: (segment.agencies) ? segment.agencies[0].lineNames[0] : null,
@@ -1149,12 +1171,11 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
       }
 
-      function getRelStops(routeObj,allStops) {
+      function getRelStops(routeObj,placesObj) {  // transfer points between segments
 
-        // COMBAK ensure routeObj actually updated from within here
         let stopSet = new Set();
 
-        let toFromStns = allStops.filter(d => d.shortName.startsWith(routeObj.from.shortName) && d.kind === "station" || d.shortName.startsWith(routeObj.to.shortName) && d.kind === "station");
+        let toFromStns = placesObj.filter(d => d.shortName.startsWith(routeObj.from.shortName) && d.kind === "station" || d.shortName.startsWith(routeObj.to.shortName) && d.kind === "station");
 
         if (toFromStns.length < 2) {
 
@@ -1170,8 +1191,10 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
         toFromStns.forEach(d => d.toFrom = d.shortName.startsWith(routeObj.to.shortName) ? "to" : "from")
 
+        // filter to best option if multiple from/to stations returned
         let oTos = toFromStns.filter(d => d.toFrom === "to"),
           oFroms = toFromStns.filter(d => d.toFrom === "from"),
+             // prefer more explicit station names
              tos = (oTos.length > 1) ? oTos.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oTos,
            froms = (oFroms.length > 1) ? oFroms.filter(d => ["Amtrak","VIA","Station"].some(match,d.shortName)) : oFroms;
 
@@ -1195,8 +1218,6 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       }
 
-      return thisRoute;
-
     }
 
     // Relate route waypts/nodes/links to spatially intersecting (given buffer) data for interesting and illuminating route experience
@@ -1207,7 +1228,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       // keep radius consistent with filtered pool of enrichData
       let bufferedRoute = turf.buffer(chosen.views.data1, headlightDegrees, {units: "degrees", steps: 12});
 
-      let possFeatures = Promise.all([quadtreeReps,admin0]).then(getIntersected,onError);
+      let possFeatures = quadtreeReps.then(getIntersected,onError);
 
       // store routeQuadtree plus all relevant pts, lines, and polys in chosen (currentRoute) object
       let enriched = Promise.all([possFeatures,triggerPts]).then(([idList,pts]) => {
@@ -1242,14 +1263,13 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
       return enriched;
 
-      function getIntersected([quadReps,quadBounds]) {
+      function getIntersected(quadReps) {
 
         // FIRST make a quadtree of all representative enrich data pts draped over North America
 
-        let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features,
-              dataExtent = getMesh(quadBounds,"countries")
+        let quadtreeData = topojson.feature(quadReps,quadReps.objects.searchReps).features;
 
-        if (!quadtree0) quadtree0 = makeQuadtree(quadtreeData,{bounding:dataExtent})
+        if (!quadtree0) quadtree0 = makeQuadtree(quadtreeData, { bounding: data0 })
 
         let searchExtent = padExtent(path.bounds(bufferedRoute))  // add x padding to initial quadtree searchExtent to ensure initial filter sufficiently broad
 
@@ -1389,7 +1409,8 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
         }
 
         function initElevation() {
-          getElevation([currentRoute.from.lng,currentRoute.from.lat]).then(elevation => d3.select("#elevation-val").text(elevation));
+          let initElevation = getElevation([currentRoute.from.lng,currentRoute.from.lat]);
+          d3.select("#elevation-val").text(Math.floor(initElevation))
         }
 
         function initOdometer() {
@@ -2318,7 +2339,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   function getSteps(gj,distance,steps = distance) {  // controlled simplification of route; returns one coord for every (distance/steps) miles
     let chunkLength = Math.max(1,Math.round(distance/steps)),  // must be at least 1 to avoid errors (happens when getting arcPts on very short routes) but Math.ceil too frequently results in double-length milemarker segments
-      lineChunks = turf.lineChunk(gj,chunkLength,miles).features,
+      lineChunks = turf.lineChunk(gj,chunkLength,miles).features.map(feature => {
+        feature.geometry.coordinates = feature.geometry.coordinates.map(coord => {
+          return coord.map(d => Math.floor(d * 10000) / 10000)
+        })
+        return feature;
+      }),
       firstCoords = lineChunks.map(d=>d.geometry.coordinates[0]),
       lastChunk = lineChunks[lineChunks.length-1].geometry.coordinates,
       lastCoord = lastChunk[lastChunk.length-1];
@@ -2344,6 +2370,14 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
       b11 = Math.max(b11,bounds[1][1])
     });
     return [[b00,b01],[b10,b11]];
+  }
+
+  function bufferBox(coords,n = 0.001) {
+    return [coords[0]-n, coords[1]-n, coords[0]+n, coords[1]+n];
+  }
+
+  function metersToFeet(m) {
+    return Math.round(m * 3.281);
   }
 
 //// ZOOM BEHAVIOR
@@ -2580,18 +2614,27 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     let opts = {...defaultOptions.quadtree,...options};
 
-    // get projected bounding box of passed geoJSON
-    let pathBox = path.bounds(opts.bounding),
+    // get bounding box of passed geoJSON
+    let pathBox = opts.project ? path.bounds(opts.bounding) : switchYs(nullPath.bounds(opts.bounding)),
              x0 = pathBox[0][0], // xmin
              y0 = pathBox[0][1], // ymin
              x1 = pathBox[1][0], // xmax
              y1 = pathBox[1][1]; // ymax
 
     // initiate quadtree with specified x and y functions
-    let quadtree = d3.quadtree(data,opts.projectX,opts.projectY)
+    let quadtree = d3.quadtree(data,opts.getX,opts.getY)
       .extent([[x0, y0], [x1, y1]])
 
     return quadtree;
+
+    function switchYs(bounds) {
+      let y0 = bounds[0][1],
+          y1 = bounds[1][1];
+      bounds[0][1] = y1
+      bounds[1][1] = y0
+      return bounds;
+    }
+
   }
 
   function bindQuadtreeData(quadtree,triggerPtFlag = false) {
@@ -2616,7 +2659,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
   }
 
-  function searchQuadtree(quadtree, x0, y0, x3, y3) {
+  function searchQuadtree(quadtree, x0, y0, x3, y3, nnFlag = false) {
 
     let selected = [];
 
@@ -2641,14 +2684,26 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
             // })
             // quadtree.removeAll(toRemove)
 
-            // for flagged, en route trigger-pts only
-            if ((g.select("#quadtree-data").select(`.quad-datum.${d.properties.id}`).node()) && (g.select("#quadtree-data").select(`.quad-datum.${d.properties.id}`).classed("trigger-pt"))) {
+            // if (nnFlag) {  // nnFlag = non-nodeFlag (elevation search)
+            //   // // if (d3.select("#elevation-val").text() !== d.feet_asl) {
+            //   // d3.select("#elevation-val").text(d.feet_asl)
+            //   // // }
+            // } else {
 
-              if (experience.reversing.flag && uniqueEncounters.has(d.properties.id)) {
-                dispatch.call("unencounter", d)
-              } else if (!experience.reversing.flag && !uniqueEncounters.has(d.properties.id)) {
-                uniqueEncounters.add(d.properties.id)
-                dispatch.call("encounter", d)
+            if (!nnFlag) {
+
+              let matched = g.select("#quadtree-data").select(`.quad-datum.${d.properties.id}`);
+
+              // for flagged, en route trigger-pts only
+              if (matched.node() && matched.classed("trigger-pt")) {
+
+                if (experience.reversing.flag && uniqueEncounters.has(d.properties.id)) {
+                  dispatch.call("unencounter", d)
+                } else if (!experience.reversing.flag && !uniqueEncounters.has(d.properties.id)) {
+                  uniqueEncounters.add(d.properties.id)
+                  dispatch.call("encounter", d)
+                }
+
               }
 
             }
@@ -2694,6 +2749,12 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let sectorExtent = [[-arcWidth/2,-arcHeight],[arcWidth/2,0]],
     translatedExtent = translateExtent(sectorExtent,zoomAlongState.pt0.x,zoomAlongState.pt0.y);
 
+// console.log(sectorExtent)
+// 0: -1.1627141237258911
+// 1: -2.623080015182495
+// 0: 1.1627141237258911
+// 1: 0
+
     // searchExtent is sector (headlight) extent translatedThenRotated
     let searchExtent = rotateExtent(translatedExtent,rotate0,[zoomAlongState.pt0.x,zoomAlongState.pt0.y]);
 
@@ -2736,7 +2797,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     let translatedExtent = translateExtent(zoomAlongState.prevExtent,dx,dy),
              rotateDelta = currentRotate - zoomAlongState.prevRotate;
 
-    let searchExtent = rotateExtent(translatedExtent,rotateDelta,currentTranslate)
+    let searchExtent = rotateExtent(translatedExtent,rotateDelta,currentTranslate);
 
     // save newly determined values as previous values
     zoomAlongState.prevTranslate = currentTranslate;
@@ -2866,9 +2927,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // avoid slight tracker disconnects at end
     let geoMM = currentRoute.geoMM; // shorthand
     let finalCoords = geoMM[geoMM.length - 1];
-    getElevation(finalCoords).then(elevation => {
-      d3.select("#elevation-val").text(elevation)
-    });
+    let finalElevation = getElevation(finalCoords);
+    d3.select("#elevation-val").text(Math.floor(finalElevation))
+
     let finalAzimuth = getAzimuth(geoMM.length - 1);
     d3.select("#compass-val").text(finalAzimuth)
     d3.select("#current-quadrant").text(getQuadrant(finalAzimuth))
@@ -2930,7 +2991,7 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     // prereverse() to adjust select values stored during preanimate();
     eased = (t, t1 = experience.reversing.t) => trainEase(t/t1);
     // pad reverse searchExtent (but not too much) to ensure everything erased
-    zoomAlongState.prevExtent = [[zoomAlongState.prevExtent[0][0]-2.5,zoomAlongState.prevExtent[0][1]-2.5],[zoomAlongState.prevExtent[1][0]+2.5,zoomAlongState.prevExtent[1][1]+2.5]];
+    zoomAlongState.prevExtent = [padExtent(zoomAlongState.prevExtent,2.5)];
     // finally
     dispatch.call("reverse")
   }
@@ -4008,9 +4069,9 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
 
     if (coordsNow) {  // avoids error at end
 
-      getElevation(coordsNow).then(elevation => {
-        d3.select("#elevation-val").text(elevation)
-      });
+      // elevation
+      let elevation =  getElevation(coordsNow);
+      d3.select("#elevation-val").text(Math.floor(elevation))
 
       let azimuth = getAzimuth(i);
       d3.select("#compass-val").text(azimuth)
@@ -4040,20 +4101,41 @@ quadtreeReps = d3.json("data/final/quadtree_search_reps.json"),
     return tpm;
   }
 
-  function getElevation([lng,lat]) {
+  // function getElevationAPI([lng,lat]) {
+  //
+  //   let query = `https://elevation-api.io/api/elevation?key=QYpeoaa1-v5DsYaHKdPsI-d2e2UD9l&points=(${lat},${lng})`
+  //
+  //   let elevation = d3.json(query).then(response => {
+  //     return metersToFeet(response.elevations[0].elevation);
+  //   }, onError);
+  //
+  //   return elevation;
+  //
+  //   function metersToFeet(m) {
+  //     return Math.round(m * 3.281);
+  //   }
+  //
+  // }
 
-    let query = `https://elevation-api.io/api/elevation?key=QYpeoaa1-v5DsYaHKdPsI-d2e2UD9l&points=(${lat},${lng})`
+  function getElevation(coords) {
 
-    let elevation = d3.json(query).then(response => {
-      return metersToFeet(response.elevations[0].elevation);
-    }, onError);
+    let bufferVal = 0.001;
+    let miniExtent = bufferBox(coords,bufferVal),
+      elevationGrp = searchQuadtree(elevationQuadtree,miniExtent[0],miniExtent[1],miniExtent[2],miniExtent[3],true); // non-nodFlag == true
 
-    return elevation;
-
-    function metersToFeet(m) {
-      return Math.round(m * 3.281);
+    while (elevationGrp.length === 0) {
+      bufferVal += 0.0005;
+      buffered =  bufferBox(coords,bufferVal);
+      elevationGrp = searchQuadtree(elevationQuadtree,buffered[0],buffered[1],buffered[2],buffered[3],true); // non-nodeFlag == true
     }
 
+    let meanElevation = elevationGrp.map(d => d.feet_asl).reduce((a,b) => a + b) / elevationGrp.length;
+
+    // getElevationAPI([currentRoute.from.lng,currentRoute.from.lat]).then(elevation => {
+    //   console.log(elevation,"VS",meanElevation)
+    // })
+
+    return meanElevation;
   }
 
   function getAzimuth(i) {  // returns rounded value in degrees of azimuth bearing between two unprojected pts
