@@ -2104,7 +2104,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
 
   function calcSize() {
 
-    let calculated = {};
+    let calculated = {
+      height: window.innerHeight - d3.select("#header").node().clientHeight -
+      d3.select("#footer").node().clientHeight,
+      width: window.innerWidth
+    };
 
     // if screen mxl, account for #aside on right vs bottom
     if (window.innerWidth >= 1200) {
@@ -2140,9 +2144,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
 
       }
 
-      calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight;
-
-      calculated.width = window.innerWidth - d3.select("#aside").node().clientWidth;
+      calculated.width -= d3.select("#aside").node().clientWidth;
 
       // update #about-wrapper to align with full map height
       d3.select("#about-wrapper")
@@ -2192,9 +2194,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
       if (window.innerHeight < 500 && !d3.select("#about").classed("disappear-down")) collapse("about","down");
 
       // map height calculation includes #aside
-      calculated.height = window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#aside").node().clientHeight - d3.select("#footer").node().clientHeight;
-
-      calculated.width = window.innerWidth; // d3.select("#about-plus").node().clientWidth;
+      calculated.height -= d3.select("#aside").node().clientHeight;
 
     }
 
@@ -2725,7 +2725,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
   }
 
   function padExtent(extent, padX = headlightRadius/2, padY = padX) {
-    return [[extent[0][0] - padX, extent[0][1] - padY], [extent[1][0] + padX, extent[1][1] + padY]];
+    return[[extent[0][0] - padX, extent[0][1] - padY], [extent[1][0] + padX, extent[1][1] + padY]];
   }
 
 //// ANIMATION
@@ -2748,12 +2748,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     // calculate initial search extent for quadtree
     let sectorExtent = [[-arcWidth/2,-arcHeight],[arcWidth/2,0]],
     translatedExtent = translateExtent(sectorExtent,zoomAlongState.pt0.x,zoomAlongState.pt0.y);
-
-// console.log(sectorExtent)
-// 0: -1.1627141237258911
-// 1: -2.623080015182495
-// 0: 1.1627141237258911
-// 1: 0
 
     // searchExtent is sector (headlight) extent translatedThenRotated
     let searchExtent = rotateExtent(translatedExtent,rotate0,[zoomAlongState.pt0.x,zoomAlongState.pt0.y]);
@@ -2991,7 +2985,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     // prereverse() to adjust select values stored during preanimate();
     eased = (t, t1 = experience.reversing.t) => trainEase(t/t1);
     // pad reverse searchExtent (but not too much) to ensure everything erased
-    zoomAlongState.prevExtent = [padExtent(zoomAlongState.prevExtent,2.5)];
+    zoomAlongState.prevExtent = padExtent(zoomAlongState.prevExtent,2.5);
     // finally
     dispatch.call("reverse")
   }
@@ -3493,20 +3487,13 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
           .call(async enter => {
             let fill = await getFill(enter.datum());
             if (fill.key) { // typeof fill === "Object"
-              // let stroke = chroma(patterns[fill.key].primaryHex).brighten().hex();
               let stroke = chroma(patterns[fill.key].primaryHex).desaturate().darken().hex();
               enter.attr("patternKey",fill.key)
               enter.classed("patterned",true)
               enter.style("fill", patterns[fill.key].url)
                    .style("stroke", stroke)
                    .property("orig-stroke", stroke)
-            } /* else {
-              console.log(enter.datum().properties.logGroup.divId)
-              let stroke = chroma(fill).brighten().hex();
-              enter.style("fill", fill)
-                   .style("stroke", stroke)
-                   .property("orig-stroke", stroke)
-            } */
+            }
             if (enter.property("sub-tag")) enter.classed(enter.property("sub-tag").divId,true);
             enter.transition().duration(t)
               .attr("r", d => d.properties.orig_area ? radiusScale(d.properties.orig_area) : 0.075) // size of circle is a factor of original area of polygon the circle is representing, or 0.075 minimum
@@ -4101,22 +4088,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     return tpm;
   }
 
-  // function getElevationAPI([lng,lat]) {
-  //
-  //   let query = `https://elevation-api.io/api/elevation?key=QYpeoaa1-v5DsYaHKdPsI-d2e2UD9l&points=(${lat},${lng})`
-  //
-  //   let elevation = d3.json(query).then(response => {
-  //     return metersToFeet(response.elevations[0].elevation);
-  //   }, onError);
-  //
-  //   return elevation;
-  //
-  //   function metersToFeet(m) {
-  //     return Math.round(m * 3.281);
-  //   }
-  //
-  // }
-
   function getElevation(coords) {
 
     let bufferVal = 0.001;
@@ -4131,11 +4102,8 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
 
     let meanElevation = elevationGrp.map(d => d.feet_asl).reduce((a,b) => a + b) / elevationGrp.length;
 
-    // getElevationAPI([currentRoute.from.lng,currentRoute.from.lat]).then(elevation => {
-    //   console.log(elevation,"VS",meanElevation)
-    // })
-
     return meanElevation;
+
   }
 
   function getAzimuth(i) {  // returns rounded value in degrees of azimuth bearing between two unprojected pts
@@ -5372,13 +5340,10 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
 
 /////// NO FOR REAL, THIS WHERE I'M AT ///////
 
-// done:
-
 // todo:
   // improve legend-log-name alignment regardless of number count?  // states and cities for non-MEX-CAN-USA?
   // rid of failure/feelings language
   // form smoothness
-  // load elevation data ahead of time to prevent increasing sluggishness  on longer routes
   // svg drop shadow on pts?
   // integrate #attribution and any other bottom-aligned overlay buttons with attuneMapBottomDashTop();
   // hover over legend-log categories offers insight into categorziation process
@@ -5399,13 +5364,8 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
   // everything blurry upon zoom (ie entire animation..)
 
 // performance:
-  // remove elevation query? (see network tab -- slows me down!)
   // enrich data in dynamo DB? --> query?
   // truncate coordinates and other values wherever possible
-  // slim library imports / take only what I need
-    // turf - check
-    // d3 !
-    // chroma ?
   // dynamically simplify map geometries
 
 // GEN NOTES/REMINDERS
@@ -5439,3 +5399,13 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
 // } else if (bottomPad > 24 && ((firstDirection == "N" && longerEdge(this.bounds2) === "height" && boundsHeight(this.bounds2) > 4) || (lastDirection == "S" && longerEdge(this.bounds3) === "height" && boundsHeight(this.bounds3) > 4))) {
 //   bottomPad *= 1.25;
 // }
+
+// UPDATE NOTES: no longer using elevation API
+// add my own elevation data source (USGS dem extract and drape)
+// note coords truncated in getSteps()
+// update text (4300 lines, no regrets)
+
+// DONE
+// fixed reverse bug
+// load elevation data ahead of time to prevent increasing sluggishness  on longer routes (ie remove API elevation query)
+// slim library imports / take only what I need
