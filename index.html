@@ -18,12 +18,12 @@
     <header id="header" class="flex-child flex-child--no-shrink bg-lighten25 shadow-darken25 z5">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--center-cross grid px6 py6 px12-mm px18-ml px24-mxl">
+      <div class="flex-parent flex-parent--center-cross grid px6 py3 py6-mm px12-mm px18-ml px24-mxl">
         <!-- TITLE -->
         <div class="flex-child col col--12">
           <div class="flex-parent flex-parent--column flex-parent--center-main">
-            <h1 id="title" class="flex-child txt-h3 txt-h2-ml txt-nowrap mt3 pt3-ml pt6-mxl ml3 mb-neg12 color-lighten75">Ecology along the rails:</h1> <!-- mt-neg3 -->
-            <h2 id="subtitle" class="flex-child txt-h5 txt-h4-ml ml18 ml24-mm ml30-ml ml36-mxl mt3 mt0-ml mb0-mm pb3-mxl color-darken50">Visualizing the journeys implicit in passenger train travel within North America</h2> <!-- mb-neg3  -->
+            <h1 id="title" class="flex-child txt-h3 txt-h2-ml txt-nowrap pt3-ml pt6-mxl ml3 mt6 color-lighten75">Ecology along the rails:</h1> <!-- mt-neg3 mt3 mb-neg12 -->
+            <h2 id="subtitle" class="flex-child txt-h5 txt-h4-ml ml18 ml24-mm ml30-ml ml36-mxl mb6 mt-neg12 pb3-ml pb6-mxl color-darken50">Visualizing the journeys implicit in passenger train travel within North America</h2> <!-- mb-neg3 mt3 mt0-ml mb0-mm  -->
           </div>
         </div>
       </div>
@@ -34,18 +34,18 @@
     <main id="main" class="flex-child flex-child--grow bg-main">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden"> <!--h-full-->
+      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden h-full"> <!--h-full-->
 
         <!-- map and dash pane -->
         <section id="section" class="flex-child flex-child--grow scroll-hidden bg-section">
 
           <!-- inner map and dash wrapper -->
-          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane--> <!--h-full-->
+          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative h-full"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane--> <!--h-full-->
 
             <!-- map and overlay pane -->
             <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-map">
 
-              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-darken25"> <!--h-full-->
+              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-darken25 h-full"> <!--h-full-->
 
                 <!-- map overlay: buttons, legend, other ui -->
                 <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl point-none"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
@@ -89,7 +89,7 @@
                     </button>
                   </label>
 
-                  <div id="center-controls-parent" class="absolute top left right flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none">
+                  <div id="center-controls-parent" class="absolute top left right flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none z4">
                     <div id="center-controls" class="round point-none shadow-darken50 none">
                       <div id="play-lrg" class="flex-child round opacity100 none">
                         <div class="round bg-lighten50 px60 py60 flex-parent flex-parent--center-cross flex-parent--center-main">
@@ -106,7 +106,7 @@
                     </div>
                   </div>
 
-                  <div id="lrg-control-text" class="absolute top right left flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none mt60 mb-neg120 hide-visually none">
+                  <div id="lrg-control-text" class="absolute top right left flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none mt60 mb-neg120 z4 hide-visually none">
                     <div class="round point-none shadow-darken50">
                       <div class="round bg-darken75 px24 py12 flex-parent flex-parent--center-cross flex-parent--center-main">
                         <span class="flex-child align-center txt-s txt-m-mm txt-l-ml color-accent3 txt-nowrap-ml txt-bold opacity90">click screen or press spacebar to play/pause animation</span>
@@ -117,7 +117,7 @@
                 </div> <!-- end of ui-overlay-group -->
 
                 <!-- map svg/canvas -->
-                <div id="map" class="bg-darken50 mb-neg6"></div> <!-- mb-neg6 again -->
+                <div id="map" class="bg-darken50 h-full mt-neg3 mb-neg3"></div> <!-- mb-neg6 -->
 
               </div>
 
@@ -381,13 +381,13 @@
                 <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative none"> <!-- h-full -->
 
                   <!-- inner modal wrapper -->
-                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round point-all'> <!-- h-full -->
+                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round'> <!-- point-none h-full -->
 
                     <!-- featured content // Modal About -->
                     <div id="modal-about" class='flex-child flex-child--grow shadow-darken75 round px12 mx-auto py12 bg-modal none wmax360 wmax600-mm'> <!-- hmax360 h-full -->
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main'> <!-- h-full -->
+                      <div class='flex-parent flex-parent--column flex-parent--center-main point-all'> <!-- h-full -->
 
                         <!-- About--Header -->
                         <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 pt6 pb3 flex-parent flex-parent--center-cross flex-parent--center-main">
@@ -594,7 +594,7 @@
 
                     <!-- GET START/END FORM -->
                     <form id="get-options" class="flex-child flex-child--grow col col--12 wmax600 shadow-darken75 round px12 py12 mx-auto bg-modal">
-                      <div class="flex-parent flex-parent--center-cross grid bg-lighten50 round">
+                      <div class="flex-parent flex-parent--center-cross grid bg-lighten50 round point-all">
                         <!-- Form Header -->
                         <legend class="flex-child flex-child--grow col col--12 col--6-mm col--5-mxl bg-lighten10 px12 px18-mxl py18 py36-mm w-full align-center color-darken75 round-tl">
                           <h2 class="txt-h3 txt-fancy color-darken75"><span class="txt-nowrap-mxl txt-h3 txt-fancy color-darken50">Select a Route</span> <span class="txt-nowrap-mm txt-h3 txt-fancy color-darken50">to Experience</span></h2>
@@ -655,7 +655,7 @@
 
                     <!-- modal close button -->
                     <label id="modal-close">
-                      <button id="modal-close-btn" class='absolute top right btn color-lighten75 bg-base bg-darken50-on-hover border-t border-r bg-darken75-on-active round-full px3 py3 mt12 mr12 z5'>
+                      <button id="modal-close-btn" class='absolute top right btn color-lighten75 bg-base bg-darken50-on-hover border-t border-r bg-darken75-on-active round-full px3 py3 mt12 mr12 z5 point-all'>
                         <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-close'/></svg>
                       </button>
                     </label>
@@ -677,13 +677,13 @@
           <!-- w-full -->
 
           <!-- inner about/sidebar content wrapper -->
-          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross ">
+          <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross h-full">
 
             <!-- about/sources pane -->
-            <div id="about-plus" class="flex-child bg-lighten75-mxl">
+            <div id="about-plus" class="flex-child bg-lighten75-mxl h-full">
 
               <!-- about toggles and content group -->
-              <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross">
+              <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross h-full">
 
                 <!-- toggles -->
                 <div id="about-toggles" class="flex-child">
@@ -966,7 +966,8 @@
       <!-- inner horizontal wrapper -->
       <div class='flex-parent flex-parent--center-cross flex-parent--space-between-main grid px6 px12-mm my6 px18-ml px24-mxl'>
         <!-- author info -->
-        <div class='flex-child flex-child--no-shrink col col--5 mb-neg3'>
+        <!-- mb-neg3 -->
+        <div class='flex-child flex-child--no-shrink col col--5'>
           <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--row-mm flex-parent--start-main-mm flex-parent--center-cross-mm ml6">
             <span class="flex-child txt-nowrap-sm">Map by <a target='_blank' href='https://www.kafunk.com' class="txt-nowrap">Katrina Funk</a></span>
             <!-- <br class="flex-child none-mm"/> -->
@@ -975,14 +976,14 @@
           </div>
         </div>
         <!-- break/divider icon visible @ mm+ -->
-        <div class="flex-child flex-child--no-shrink col col--2"> <!-- ml-neg1 -->
+        <div class="flex-child flex-child--no-shrink col col--2 mb3"> <!-- ml-neg1 -->
           <div class="flex-parent flex-parent--center-main flex-parent--center-cross mx6">
             <svg class="flex-child flex-child--no-shrink icon h30 w30 color-lighten75 mr-neg1"><use xlink:href="assets/compass-rose.svg#compass-rose"/></svg>
           </div>
         </div>
         <!-- social media -->
         <div class="flex-child flex-child--no-shrink col col--5">
-          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr3 mb-neg6"> <!-- mb-neg6 -->
+          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr3 mb-neg3"> <!-- mb-neg6 -->
             <a target="_blank" href="mailto:kafunk@gmail.com">
               <svg class='flex-child inline-block icon h24 w24 mr6' alt="email"><use xlink:href='#icon-mail'/></svg>
             </a>
@@ -1011,18 +1012,11 @@
   <!-- load Assembly -->
   <script async defer src='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.js'></script>
 
-  <!-- load D3 -->
-  <script src="https://d3js.org/d3.v5.js"></script>
+  <!-- load TopoJSON -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
-  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
-  <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
-  <!-- <script src="https://unpkg.com/d3-simple-slider"></script> -->
 
   <!-- load Chroma.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.2/chroma.min.js"></script>
-
-  <!-- GeoTIFF -->
-  <!-- <script src="https://unpkg.com/geotiff@1.0.0-beta.6/dist/geotiff.bundle.min.js"></script> -->
 
   <!-- from local Vendor folder -->
   <!-- Mapbox Polyline.js -->
@@ -1031,6 +1025,8 @@
   <script src='vendor/mapbox/turf/turf.js'></script>
   <!-- load Textures.js -->
   <script src="vendor/textures/dist/textures.js"></script>
+  <!-- load custom build of D3.js -->
+  <script src="vendor/d3/d3.js"></script>
 
   <!-- load custom scripts -->
   <script src="js/main.js"></script>
