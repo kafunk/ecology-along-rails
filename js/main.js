@@ -154,7 +154,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
 // PAN/ZOOM BEHAVIOR
 
   d3.select("button#zoom-in")
-    .on('click', zoomClick)
+    .on('click', function() {
+      // preventing bug in Safari causing automatic zoom-in event following event zoom-out! only passed zoom-in btn as d3.event target when zoom-out clicked first (otherwise target == svg)
+      if (d3.event.target.id === "zoom-in") return;
+      zoomClick.call(this)
+    })
     .on('mouseenter', highlightBtn)  // triggering mouseover style changes programmatically remedies bug of #zoom-in's hover state being triggered concurrent to #zoom-out's
     .on('mouseleave', removeHighlight);
   d3.select("button#zoom-out")
@@ -500,13 +504,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
   childResizers.call(childResize)
   siblingResizers.call(siblingResize)
 
-  // ensure no event listener conflicts between resizer divs and nearby collapse btns (https://bl.ocks.org/mbostock/a84aeb78fea81e1ad806)
-  d3.select("#dash-collapse-btn")
-    .on("touchstart", nozoom)
-    .on("touchmove", nozoom)
-  d3.select("#about-collapse-btn")
-    .on("touchstart", nozoom)
-    .on("touchmove", nozoom)
 
 /////////////////////////////
 ////// ACTION! FINALLY //////
@@ -519,10 +516,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     data0 = getMesh(data,"countries");
     bounds0 = {
       get bounds() { return path.bounds(data0); },
-      get domEdge() {
-        if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
-        return this._domEdge;
-      }
+      // get domEdge() {
+      //   if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
+      //   return this._domEdge;
+      // },
+      domEdge: longerEdge(path.bounds(data0)) // won't change with screen resizes; store explicitly upfront so no miscalculations when height/width in flux upon adjustSize, etc
     }
     resetZoom(true)  // state0 == true;
     restoreState0(true)  // init == true;
@@ -1321,10 +1319,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
         .on("start", () => {
           currentBounds = {
             get bounds() { return path.bounds(currentRoute.views.data1); },
-            get domEdge() {
-              if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
-              return this._domEdge;
-            }
+            // get domEdge() {
+            //   if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
+            //   return this._domEdge;
+            // },
+            domEdge: longerEdge(path.bounds(currentRoute.views.data1))
           }
           transitionIn()
         })
@@ -1773,10 +1772,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
         // store currentBounds
         currentBounds = {
           get bounds() { return path.bounds(currentRoute.views.data2); },
-          get domEdge() {
-            if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
-            return this._domEdge;
-          }
+          // get domEdge() {
+          //   if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
+          //   return this._domEdge;
+          // },
+          domEdge: longerEdge(path.bounds(currentRoute.views.data2))
         }
         // dim background layers
         if (experience.reversing.i < 1) dimBackground(t/2)
@@ -2101,8 +2101,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
   function calcSize() {
 
     let calculated = {
-      height: window.innerHeight - d3.select("#header").node().clientHeight -
-      d3.select("#footer").node().clientHeight,
+      height: window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight,
       width: window.innerWidth
     };
 
@@ -2561,10 +2560,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     zoom.scaleExtent(scaleExtent)
   }
 
-  function nozoom() {
-    d3.event.preventDefault();
-  }
-
 //// DRAG BEHAVIOR
 
   function childDrag() {
@@ -2901,10 +2896,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
       .on("start", () => {
         currentBounds = {
           get bounds() { return path.bounds(currentRoute.views.data3); },
-          get domEdge() {
-            if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
-            return this._domEdge;
-          }
+          // get domEdge() {
+          //   if (!this._domEdge) this._domEdge = longerEdge(this.bounds);
+          //   return this._domEdge;
+          // },
+          domEdge: longerEdge(path.bounds(currentRoute.views.data3))
         }
       })
       .on("end", () => {
