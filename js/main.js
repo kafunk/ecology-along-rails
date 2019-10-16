@@ -166,7 +166,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     .on("zoom", zoomed)
     .filter(() => {
       // dbl-clicking on background does not trigger zoom (but rather resets it)
-      return !(d3.event.type === "dblclick" && d3.event.path[0].classList.contains('no-zoom'))
+      return !(d3.event.type === "dblclick" && d3.event.target.classList.contains('no-zoom'))
     })
 
 //// COLORS
@@ -1035,10 +1035,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
         lat: topMatch.lat,
         lng: topMatch.lng
       } : null;
-    }
-
-    function fightBack(opt0,opt1) {
-
     }
 
   }
