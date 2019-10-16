@@ -3,7 +3,7 @@
 <head>
   <meta charset='utf-8' />
   <title>Ecology Along the Rails</title>
-  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <meta name="viewport" content="initial-scale=1">
   <link href='https://api.mapbox.com/mapbox-assembly/v0.21.2/assembly.min.css' rel='stylesheet' />
   <link href="https://fonts.googleapis.com/css?family=Mirza:400,500,600,700|Buda:300|Quattrocento+Sans:400,400i,700,700i|Fredericka+the+Great|Sirin+Stencil" rel="stylesheet" />
   <!-- <link href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous" rel="stylesheet" /> -->
@@ -12,16 +12,16 @@
 <body>
 
   <!-- inner body wrapper (vertical)-->
-  <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross bg-base viewport-full"> <!-- pb6 -->
+  <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross bg-base viewport-full h-full"> <!-- pb6 -->
 
     <!-- header stays up top, takes up full width -->
     <header id="header" class="flex-child flex-child--no-shrink bg-lighten25 shadow-darken25 z5">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--center-cross grid px6 py3 py6-mm px12-mm px18-ml px24-mxl">
+      <div class="flex-parent flex-parent--center-cross grid px6 py3 py6-mm px12-mm px18-ml px24-mxl h-full">
         <!-- TITLE -->
         <div class="flex-child col col--12">
-          <div class="flex-parent flex-parent--column flex-parent--center-main">
+          <div class="flex-parent flex-parent--column flex-parent--center-main h-full">
             <h1 id="title" class="flex-child txt-h3 txt-h2-ml txt-nowrap pt3-ml pt6-mxl ml3 mt6 color-lighten75">Ecology along the rails:</h1> <!-- mt-neg3 mt3 mb-neg12 -->
             <h2 id="subtitle" class="flex-child txt-h5 txt-h4-ml ml18 ml24-mm ml30-ml ml36-mxl mb6 mt-neg12 pb3-ml pb6-mxl color-darken50">Visualizing the journeys implicit in passenger train travel within North America</h2> <!-- mb-neg3 mt3 mt0-ml mb0-mm  -->
           </div>
@@ -34,18 +34,18 @@
     <main id="main" class="flex-child flex-child--grow bg-main">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden h-full"> <!--h-full-->
+      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden h-full">
 
         <!-- map and dash pane -->
         <section id="section" class="flex-child flex-child--grow scroll-hidden bg-section">
 
           <!-- inner map and dash wrapper -->
-          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative h-full"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane--> <!--h-full-->
+          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative h-full"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane-->
 
             <!-- map and overlay pane -->
             <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-map">
 
-              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-darken25 h-full"> <!--h-full-->
+              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-darken25 h-full">
 
                 <!-- map overlay: buttons, legend, other ui -->
                 <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl point-none"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
