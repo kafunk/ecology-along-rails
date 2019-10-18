@@ -121,6 +121,8 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     .classed("point-all opacity75 bg-lighten25 no-zoom absolute top left",true)
     .on("dblclick", () => {
       // d3.event.stopPropagation();  // intended to prevent play/pause/etc if other active svg click event listeners; useless because reaches here AFTER togglePause(); also interferes with collapsing modal on dblclick
+      console.log(width)
+      console.log(height)
       resetZoom();
     })
 
@@ -2105,6 +2107,10 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
       width: window.innerWidth
     };
 
+    console.log(calculated.width)
+    console.log(d3.select("#aside").node().clientWidth)
+    console.log(calculated.width - d3.select("#aside").node().clientWidth)
+
     // if screen mxl, account for #aside on right vs bottom
     if (window.innerWidth >= 1200) {
 
@@ -2122,7 +2128,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
           // make sure section-wrapper not "relative"
           d3.select("#section-wrapper").classed("relative",false)
           // adjust dash (& associated) padding so long as #about collapsed on mxl
-          svg.attr("transform","translate(13,0)")
+          // svg.attr("transform","translate(13,0)")
           d3.select("#attribution").classed("mr26-mxl", true)
           d3.select("#dash-content").classed("px30-mxl",true)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
@@ -2151,8 +2157,8 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
       if (d3.select("#aside").classed("mxl")) {
         // remove mxl flag, then reset a variety of styles
         d3.select("#aside").classed("mxl", false)
-        // if svg had been adjusted on @screen mxl
-        svg.attr("transform",null)
+        // // if svg had been adjusted on @screen mxl
+        // svg.attr("transform",null)
         // reset #about-wrapper height
         d3.select("#about-wrapper").style("height", null);
         // if #about was manually collapsed on screen mxl
@@ -4150,7 +4156,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
           d3.select("#center-controls").classed("mr-neg26",false)
           d3.select("#lrg-control-text").classed("mr-neg26",false)
-          svg.attr("transform",null)
+          // svg.attr("transform",null)
         } else {
           d3.select("#dash-up").classed("mt-neg21", true)
           d3.select("#dash-up").classed("mt-neg10", false)
@@ -4192,7 +4198,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
         d3.select("#attribution").classed("mr26-mxl", true)
         d3.select("#dash-content").classed("px30-mxl",true)
         d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
-        svg.attr("transform","translate(13,0)")
+        // svg.attr("transform","translate(13,0)")
       } else {
         d3.select("#dash-up").classed("mt-neg10", true)
         d3.select("#dash-up").classed("mt-neg21", false)
@@ -4828,11 +4834,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
         .style("top", (d3.event.layerY - 30) + "px")
         .attr("fill", "honeydew")
         .attr("stroke", "dimgray")
-        .attr("opacity", 0) // initially
+        .attr("opacity", 1) // initially
 
-      // bring tooltip into full opacity
-      tooltip.transition().duration(100)
-        .style("opacity", 1)
+      // // bring tooltip into full opacity
+      // tooltip.transition().duration(100)
+      //   .style("opacity", 1)
 
       // automatically fade tooltip after 5 seconds
       d3.timeout(() => {
@@ -4908,7 +4914,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     let tooltip = d3.select("#map").selectAll(".tooltip") // don't bother matching by id; should only ever be one tooltip open at a time
 
     // transition tooltip away
-    tooltip.transition().duration(300)
+    tooltip // .transition().duration(300)
       .style("opacity", 0)
 
     // remove tooltip from DOM
