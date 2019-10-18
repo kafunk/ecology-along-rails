@@ -121,8 +121,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     .classed("point-all opacity75 bg-lighten25 no-zoom absolute top left",true)
     .on("dblclick", () => {
       // d3.event.stopPropagation();  // intended to prevent play/pause/etc if other active svg click event listeners; useless because reaches here AFTER togglePause(); also interferes with collapsing modal on dblclick
-      console.log(width)
-      console.log(height)
       resetZoom();
     })
 
@@ -2106,10 +2104,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
       height: window.innerHeight - d3.select("#header").node().clientHeight - d3.select("#footer").node().clientHeight,
       width: window.innerWidth
     };
-
-    console.log(calculated.width)
-    console.log(d3.select("#aside").node().clientWidth)
-    console.log(calculated.width - d3.select("#aside").node().clientWidth)
 
     // if screen mxl, account for #aside on right vs bottom
     if (window.innerWidth >= 1200) {
@@ -4834,11 +4828,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
         .style("top", (d3.event.layerY - 30) + "px")
         .attr("fill", "honeydew")
         .attr("stroke", "dimgray")
-        .attr("opacity", 1) // initially
-
-      // // bring tooltip into full opacity
-      // tooltip.transition().duration(100)
-      //   .style("opacity", 1)
+        .attr("opacity", 1)
 
       // automatically fade tooltip after 5 seconds
       d3.timeout(() => {
@@ -4914,8 +4904,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     let tooltip = d3.select("#map").selectAll(".tooltip") // don't bother matching by id; should only ever be one tooltip open at a time
 
     // transition tooltip away
-    tooltip // .transition().duration(300)
-      .style("opacity", 0)
+    tooltip.style("opacity", 0)
 
     // remove tooltip from DOM
     tooltip.remove();
