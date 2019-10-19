@@ -62,7 +62,7 @@ details.color-symbol > summary > span {
 }
 
 /* #about, #dash, #modal, #veil { transition: 0.6s all; } */
-#dash { transition: 0.6s; } /* not doing much */
+/* #dash { transition: 0.6s; } */ /* not doing much */
 
 #elevation,#clock {
   border-radius: 5px 50px;
@@ -106,7 +106,6 @@ details.color-symbol > summary > span {
 .mt-neg9 { margin-top: -9px; }
 .mt-neg21 { margin-top: -21px; }
 .mt-neg10 { margin-top: -10px; }
-.mr-neg26 { margin-right: -26px; }
 .pl9 { padding-left: 9px; }
 .pr9 { padding-right: 9px; }
 .pb9 { padding-bottom: 9px;}

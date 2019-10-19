@@ -110,7 +110,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
   svgLoaded = true;
 
   var hiddenSvg = d3.select("#map").append("svg")
-    .attr("width",0)
+    .attr("width", 0)
     .attr("height", 0)
 
   var background = svg.append("rect")
@@ -121,6 +121,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     .classed("point-all opacity75 bg-lighten25 no-zoom absolute top left",true)
     .on("dblclick", () => {
       // d3.event.stopPropagation();  // intended to prevent play/pause/etc if other active svg click event listeners; useless because reaches here AFTER togglePause(); also interferes with collapsing modal on dblclick
+      // console.log("dblclicked")
       resetZoom();
     })
 
@@ -1987,7 +1988,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
   d3.select("#dash-collapse-btn").on("click", () =>  collapse('dash','down'))
   d3.select("#modal-close-btn").on("click", () =>  toggleModal())
   d3.select("#about-up-btn").on("click", () => {
-    d3.select("#about").classed("manual-close",false);
+  d3.select("#about").classed("manual-close",false);
     if (!d3.select("#modal-about").classed("none")) toggleModal("modal-about")
     expand('about','up')
   })
@@ -2000,7 +2001,7 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     d3.select("#about").classed("manual-close",true);
     collapse('about','down')
   })
-  d3.select("#about-right-btn").on("click", () => {
+  d3.select("#about-right-btn").on("click", function() {
     d3.select("#about").classed("manual-close",true);
     collapse('about','right')
   })
@@ -2077,11 +2078,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     svg.attr("width", width)
        .attr("height", height)
 
-    projection.clipExtent(extent0)
-
-    // constrain zoom behavior
-    // zoom.translateExtent(extent0)
-
     let currentTransform = d3.zoomTransform(svg.node()),
            currentCenter = getCenterFromTransform(currentTransform, {width: oWidth, height: oHeight }),
                       k0 = currentTransform.k,
@@ -2119,27 +2115,23 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
           d3.select("#about")
             .classed("disappear-down",false)
             .classed("disappear-right",true)
-          // make sure section-wrapper not "relative"
-          d3.select("#section-wrapper").classed("relative",false)
+          // make sure section not "relative"
+          d3.select("#section").classed("relative", false);
           // adjust dash (& associated) padding so long as #about collapsed on mxl
-          // svg.attr("transform","translate(13,0)")
           d3.select("#attribution").classed("mr26-mxl", true)
+          d3.select("#zoom-btns").classed("mr36-mxl", true)
           d3.select("#dash-content").classed("px30-mxl",true)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
-          d3.select("#center-controls").classed("mr-neg26",true)
-          d3.select("#lrg-control-text").classed("mr-neg26",true)
-          // if #about was *manually* hidden on smaller window
-          if (d3.select("#about").classed("manual-close")) {
-            // keep collapsed; do nothing
-          } else if (d3.select("#modal-about").classed("none")) {
-            // if #about not manually closed && modal-about not open
-            expand("about","left");
-          }
+          // if #about not manually closed && modal-about not open
+          if (d3.select("#modal-about").classed("none") && !d3.select("#about").classed("manual-close")) expand("about","left");
         }
 
       }
 
-      calculated.width -= d3.select("#aside").node().clientWidth;
+      // if #about open on wide screen, subtract its width from calculated
+      if (!d3.select("#about").classed("disappear-right")) {
+        calculated.width -= d3.select("#aside").node().clientWidth;
+      }
 
       // update #about-wrapper to align with full map height
       d3.select("#about-wrapper")
@@ -2151,8 +2143,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
       if (d3.select("#aside").classed("mxl")) {
         // remove mxl flag, then reset a variety of styles
         d3.select("#aside").classed("mxl", false)
-        // // if svg had been adjusted on @screen mxl
-        // svg.attr("transform",null)
         // reset #about-wrapper height
         d3.select("#about-wrapper").style("height", null);
         // if #about was manually collapsed on screen mxl
@@ -2161,14 +2151,13 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
           d3.select("#about")
             .classed("disappear-down",true)
             .classed("disappear-right",false)
-          // replace previously-removed "relative" class in #section-wrapper
-          d3.select("#section-wrapper").classed("relative", true);
+          // replace previously-removed "relative" class in #section
+          d3.select("#section").classed("relative", true);
           // reset dash and attribution margins
           d3.select("#attribution").classed("mr26-mxl", false)
+          d3.select("#zoom-btns").classed("mr36-mxl",false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
-          d3.select("#center-controls").classed("mr-neg26",false)
-          d3.select("#lrg-control-text").classed("mr-neg26",false)
         }
         // collapse #about (regardless of whether collapsed on mxl; too jarring to have it open upon return to smaller screen)
         d3.select("#about").classed("disappear-right", false)
@@ -2391,8 +2380,6 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
 
     g.style("stroke-width", 1 / (tk * tk * tk) + "px");
 
-    // projection.clipExtent(extent0)
-
     if (d3.event.sourceEvent && experience.initiated && d3.event.sourceEvent.type === "mousemove") {
 
       if (experience.manuallyPaused) {
@@ -2500,6 +2487,12 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     return transform;
 
   }
+
+  // function getRightPad() {
+  //   console.log(window.innerWidth)
+  //   console.log(d3.select("#aside").node().clientWidth)
+  //   return window.innerWidth < 1200 || d3.select("#aside").node().clientWidth > 26 ? 0 : -13;
+  // }
 
   function getIdentity(atTransform,k) {
     // returns d3.zoomIdentity while providing option for stable k
@@ -4144,13 +4137,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
       if (elementStr === "about") {
 
         if (window.innerWidth >= 1200) {
-          d3.select("#section-wrapper").classed("relative", true);
+          d3.select("#section").classed("relative", true);
           d3.select("#attribution").classed("mr26-mxl", false)
+          d3.select("#zoom-btns").classed("mr36-mxl",false)
           d3.select("#dash-content").classed("px30-mxl",false)
           d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",false)
-          d3.select("#center-controls").classed("mr-neg26",false)
-          d3.select("#lrg-control-text").classed("mr-neg26",false)
-          // svg.attr("transform",null)
         } else {
           d3.select("#dash-up").classed("mt-neg21", true)
           d3.select("#dash-up").classed("mt-neg10", false)
@@ -4186,13 +4177,11 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
     if (elementStr === "about") {
 
       if (window.innerWidth >= 1200) {
-        d3.select("#section-wrapper").classed("relative", false)
-        d3.select("#center-controls").classed("mr-neg26",true)
-        d3.select("#lrg-control-text").classed("mr-neg26",true)
+        d3.select("#section").classed("relative", false);
         d3.select("#attribution").classed("mr26-mxl", true)
+        d3.select("#zoom-btns").classed("mr36-mxl", true)
         d3.select("#dash-content").classed("px30-mxl",true)
         d3.select("#dash").select(".resizer").classed("ml-neg36-mxl",true)
-        // svg.attr("transform","translate(13,0)")
       } else {
         d3.select("#dash-up").classed("mt-neg10", true)
         d3.select("#dash-up").classed("mt-neg21", false)

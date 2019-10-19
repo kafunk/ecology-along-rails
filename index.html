@@ -12,7 +12,7 @@
 <body>
 
   <!-- inner body wrapper (vertical)-->
-  <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross bg-base viewport-full h-full"> <!-- pb6 -->
+  <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross bg-base viewport-full h-full">
 
     <!-- header stays up top, takes up full width -->
     <header id="header" class="flex-child flex-child--no-shrink bg-lighten25 shadow-darken25 z5">
@@ -31,95 +31,91 @@
     </header>
 
     <!-- grows vertically in the middle -->
-    <main id="main" class="flex-child flex-child--grow bg-main">
+    <main id="main" class="flex-child flex-child--grow bg-main relative">
 
       <!-- inner horizontal wrapper -->
-      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross relative scroll-hidden h-full">
+      <div class="flex-parent flex-parent--column flex-parent--row-mxl flex-parent--center-main flex-parent--stretch-cross scroll-hidden absolute top left bottom right">
 
         <!-- map and dash pane -->
-        <section id="section" class="flex-child flex-child--grow scroll-hidden bg-section">
+        <section id="section" class="flex-child flex-child--grow scroll-hidden bg-section relative"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane-->
 
           <!-- inner map and dash wrapper -->
-          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross relative h-full"> <!-- RELATIVE FOR ATTRIBUTION AND keeping #about separate from map pane-->
+          <div id="section-wrapper" class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross h-full absolute top right left bottom">
 
             <!-- map and overlay pane -->
-            <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-map">
+            <div id="map-plus" class="flex-child flex-child--grow scroll-hidden bg-map relative">
 
-              <div class="flex-parent flex-parent--center-main flex-parent--center-cross relative bg-darken25 h-full">
+              <!-- map overlay: buttons, legend, other ui -->
+              <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl point-none"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
 
-                <!-- map overlay: buttons, legend, other ui -->
-                <div id="overlay" class="absolute top bottom right left mx3-mm my3-mm mx6-mxl my6-mxl point-none"> <!-- child elements' zIndex individually increased to prevent blocking access to map itself -->
-
-                  <!-- top left // Custom Data UI Elements -->
-                  <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my9 z3 txt-s txt-m-mxl h30 h36-mxl'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
-                    <button disabled id="select-new" class='flex-child flex-child--grow flex-child--no-shrink btn round reset-options point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active mx3 mx6-ml my6 h-full'>Select New Route</button>
-                    <button disabled id="play-pause-btn" class='flex-child flex-child--no-shrink btn round play-pause point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active mx3 mx6-mm my6 h-full w30 w36-mxl toggle-none none'>
-                      <div class="flex-parent flex-parent--center-cross flex-parent--center-main">
-                        <div id="play-pause-icon" class="flex-child flex-child--grow txt-bold point-none">
-                          <span id="pause-icon" class="relative ml3 mr-neg3 mr-neg1-mxl icon-opt toggle-none none">
-                            <svg class='icon pause ml-neg12 mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top left'><use xlink:href='#icon-minus'/></svg>
-                            <svg class='icon pause mr-neg6 mr-neg9-mxl mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top right'><use xlink:href='#icon-minus'/></svg>
-                          </span>
-                          <span class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main">
-                            <svg id="replay-icon" class='icon icon-opt replay mt-neg3 h24 w24 h30-mxl w30-mxl toggle-none none'><use xlink:href='#icon-rotate'/></svg>
-                            <svg id="play-icon" class='icon icon-opt play mr12 mt-neg3 h24 w24 h30-mxl w30-mxl toggle-none none'><use xlink:href='#icon-smooth-ramp'/></svg>
-                          </span>
-                          <div id="reversing-icon" class="icon-opt horz-flip mr-neg6 mr-neg3-mxl toggle-none none">
-                            <span class="loading loading--s"></span>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <!-- top right // About/Info icon on small screens -->
-                  <div id="info" class="absolute top right mr-neg6 z3 none-ml">
-                    <button id="info-btn" class='btn color-lighten75 bg-transparent color-accent1-on-hover color-accent2-on-active round point-all'>
-                      <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
-                    </button>
-                  </div>
-
-                  <!-- also top right: zoom buttons -->
-                  <label id="zoom-btns" class="absolute top right flex-parent-inline flex-parent--column mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
-                    <button id="zoom-in" disabled class="btn btn--pill btn--pill-vt round zoom-btn px3 py3 px6-mm px3-ml py6-mm z3 point-all bg-lighten75">
-                      <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-plus'></use></svg>
-                    </button>
-                    <button id="zoom-out" disabled class="btn btn--pill btn--pill-vb round zoom-btn px3 py3 px6-mm py6-mm px3-ml z3 point-all bg-lighten75">
-                      <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-minus'></use></svg>
-                    </button>
-                  </label>
-
-                  <div id="center-controls-parent" class="absolute top left right flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none z4">
-                    <div id="center-controls" class="round point-none shadow-darken50 none">
-                      <div id="play-lrg" class="flex-child round opacity100 none">
-                        <div class="round bg-lighten50 px60 py60 flex-parent flex-parent--center-cross flex-parent--center-main">
-                          <svg id="play-icon-lrg" class="flex-child icon color-darken75"><use xlink:href="#icon-smooth-ramp"></use>
-                          </svg>
-                        </div>
-                      </div>
-                      <div id="pause-lrg" class="flex-child round bg-darken25 opacity75 none">
-                        <div class="round bg-lighten50 px36 py60 flex-parent flex-parent--center-cross flex-parent--center-main">
-                          <svg id="pause-icon-left" class="left flex-child icon mx3 mx6-sm"><use xlink:href="#icon-minus"></use></svg>
-                          <svg id="pause-icon-right" class="right flex-child icon mx3 mx6-sm"><use xlink:href="#icon-minus"></use></svg>
+                <!-- top left // Custom Data UI Elements -->
+                <div id="nav-btns" class='flex-parent flex-parent--center-cross flex-parent--center-main absolute top left mx6 my9 z3 txt-s txt-m-mxl h30 h36-mxl'><!-- decrese zIndex if more than 1 button visible to avoid blocking modal-->
+                  <button disabled id="select-new" class='flex-child flex-child--grow flex-child--no-shrink btn round reset-options point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active mx3 mx6-ml my6 h-full'>Select New Route</button>
+                  <button disabled id="play-pause-btn" class='flex-child flex-child--no-shrink btn round play-pause point-all color-darken50 bg-lighten75 bg-accent1-on-hover bg-accent2-on-active mx3 mx6-mm my6 h-full w30 w36-mxl toggle-none none'>
+                    <div class="flex-parent flex-parent--center-cross flex-parent--center-main">
+                      <div id="play-pause-icon" class="flex-child flex-child--grow txt-bold point-none">
+                        <span id="pause-icon" class="relative ml3 mr-neg3 mr-neg1-mxl icon-opt toggle-none none">
+                          <svg class='icon pause ml-neg12 mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top left'><use xlink:href='#icon-minus'/></svg>
+                          <svg class='icon pause mr-neg6 mr-neg9-mxl mt-neg6 mt-neg9-mxl h24 w24 h30-mxl w30-mxl rotate90 absolute top right'><use xlink:href='#icon-minus'/></svg>
+                        </span>
+                        <span class="flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main">
+                          <svg id="replay-icon" class='icon icon-opt replay mt-neg3 h24 w24 h30-mxl w30-mxl toggle-none none'><use xlink:href='#icon-rotate'/></svg>
+                          <svg id="play-icon" class='icon icon-opt play mr12 mt-neg3 h24 w24 h30-mxl w30-mxl toggle-none none'><use xlink:href='#icon-smooth-ramp'/></svg>
+                        </span>
+                        <div id="reversing-icon" class="icon-opt horz-flip mr-neg6 mr-neg3-mxl toggle-none none">
+                          <span class="loading loading--s"></span>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </button>
+                </div>
 
-                  <div id="lrg-control-text" class="absolute top right left flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none mt60 mb-neg120 z4 hide-visually none">
-                    <div class="round point-none shadow-darken50">
-                      <div class="round bg-darken75 px24 py12 flex-parent flex-parent--center-cross flex-parent--center-main">
-                        <span class="flex-child align-center txt-s txt-m-mm txt-l-ml color-accent3 txt-nowrap-ml txt-bold opacity90">click screen or press spacebar to play/pause animation</span>
+                <!-- top right // About/Info icon on small screens -->
+                <div id="info" class="absolute top right mr-neg6 z3 none-ml">
+                  <button id="info-btn" class='btn color-lighten75 bg-transparent color-accent1-on-hover color-accent2-on-active round point-all'>
+                    <svg class='icon h24 w24 h30-mm w30-mm'><use xlink:href='#icon-info'/></svg>
+                  </button>
+                </div>
+
+                <!-- also top right: zoom buttons -->
+                <label id="zoom-btns" class="absolute top right flex-parent-inline flex-parent--column mr6 mr12-ml mt36 mt0-ml pt6-mm pr1-mm pr0-ml pt12-ml w24 w30-mm">
+                  <button id="zoom-in" disabled class="btn btn--pill btn--pill-vt round zoom-btn px3 py3 px6-mm px3-ml py6-mm z3 point-all bg-lighten75">
+                    <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-plus'></use></svg>
+                  </button>
+                  <button id="zoom-out" disabled class="btn btn--pill btn--pill-vb round zoom-btn px3 py3 px6-mm py6-mm px3-ml z3 point-all bg-lighten75">
+                    <svg class='icon w18 h18 w24-ml link color-darken50'><use xlink:href='#icon-minus'></use></svg>
+                  </button>
+                </label>
+
+                <div id="center-controls-parent" class="absolute top left right flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none z4">
+                  <div id="center-controls" class="round point-none shadow-darken50 none">
+                    <div id="play-lrg" class="flex-child round opacity100 none">
+                      <div class="round bg-lighten50 px60 py60 flex-parent flex-parent--center-cross flex-parent--center-main">
+                        <svg id="play-icon-lrg" class="flex-child icon color-darken75"><use xlink:href="#icon-smooth-ramp"></use>
+                        </svg>
+                      </div>
+                    </div>
+                    <div id="pause-lrg" class="flex-child round bg-darken25 opacity75 none">
+                      <div class="round bg-lighten50 px36 py60 flex-parent flex-parent--center-cross flex-parent--center-main">
+                        <svg id="pause-icon-left" class="left flex-child icon mx3 mx6-sm"><use xlink:href="#icon-minus"></use></svg>
+                        <svg id="pause-icon-right" class="right flex-child icon mx3 mx6-sm"><use xlink:href="#icon-minus"></use></svg>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                </div> <!-- end of ui-overlay-group -->
+                <div id="lrg-control-text" class="absolute top right left flex-parent flex-parent--column flex-parent--center-cross flex-parent--center-main point-none mt60 mb-neg120 z4 hide-visually none">
+                  <div class="round point-none shadow-darken50">
+                    <div class="round bg-darken75 px24 py12 flex-parent flex-parent--center-cross flex-parent--center-main">
+                      <span class="flex-child align-center txt-s txt-m-mm txt-l-ml color-accent3 txt-nowrap-ml txt-bold opacity90">click screen or press spacebar to play/pause animation</span>
+                    </div>
+                  </div>
+                </div>
 
-                <!-- map svg/canvas -->
-                <div id="map" class="bg-darken50 h-full mt-neg3 mb-neg3"></div> <!-- mb-neg6 -->
+              </div> <!-- end of ui-overlay-group -->
 
-              </div>
+              <!-- map svg/canvas -->
+              <div id="map" class="bg-darken50 absolute top bottom left right"></div>
 
             </div>
 
@@ -134,7 +130,7 @@
                   <div class="flex-parent flex-parent--center-cross flex-parent--center-main relative">
 
                     <!-- dash expand triggers -->
-                    <label id="dash-expand" class="flex-child h24 z2">
+                    <label id="dash-expand" class="flex-child h24 z2 w-full">
                       <!-- dash expand triangle--u -->
                       <button id="dash-expand-btn" class='absolute left right btn color-lighten100 bg-accent1 bg-red-light-on-hover color-darken50-on-hover color-darken75-on-active round-t-full h18 h24-mxl mt6 mt0-mxl border-b border-b--0-mxl w-full shadow-darken25'>
                         <span id="dash-up" class='absolute left right icon triangle-l triangle-l--u mx-auto mt-neg21 mt-neg12-mxl'></span>
@@ -378,16 +374,16 @@
               <div class="flex-child flex-parent flex-parent--center-cross flex-parent--center-main bg-transparent bg-lighten75 z5">
 
                 <!-- modal content options -->
-                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative none"> <!-- h-full -->
+                <div id="modal" class="flex-child flex-child--grow mx36 my36 mx60-ml my60-ml round relative none">
 
                   <!-- inner modal wrapper -->
-                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round'> <!-- point-none h-full -->
+                  <div class='flex-parent flex-parent--center-cross grid px24 py24 mx-auto round'>
 
                     <!-- featured content // Modal About -->
-                    <div id="modal-about" class='flex-child flex-child--grow shadow-darken75 round px12 mx-auto py12 bg-modal none wmax360 wmax600-mm'> <!-- hmax360 h-full -->
+                    <div id="modal-about" class='flex-child flex-child--grow shadow-darken75 round px12 mx-auto py12 bg-modal none wmax360 wmax600-mm'>
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main point-all'> <!-- h-full -->
+                      <div class='flex-parent flex-parent--column flex-parent--center-main point-all'>
 
                         <!-- About--Header -->
                         <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 pt6 pb3 flex-parent flex-parent--center-cross flex-parent--center-main">
@@ -395,7 +391,7 @@
                         </div>
 
                         <!-- About--Main -->
-                        <div class="flex-child flex-child--grow bg-lighten75 round-bl round-br hmax-twothirds scroll-auto"> <!-- hmax300 -->
+                        <div class="flex-child flex-child--grow bg-lighten75 round-bl round-br hmax-twothirds scroll-auto">
 
                           <!-- inner content wrapper -->
                           <div class="flex-parent flex-parent--column flex-parent--space-between-main flex-parent--stretch-cross py12 px18 px24-mm px30-ml py18-ml">
@@ -673,8 +669,7 @@
         </section>
 
         <!-- ASIDE -->
-        <aside id="aside" class='flex-child scroll-hidden bg-aside wmax360-mxl'>
-          <!-- w-full -->
+        <aside id="aside" class='flex-child scroll-hidden bg-aside wmax360-mxl z1'>
 
           <!-- inner about/sidebar content wrapper -->
           <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross h-full">
@@ -724,8 +719,7 @@
 
                 </div>
 
-                <div id="about" class="flex-child flex-child--grow">
-                   <!-- w360-mxl wmin240-mxl -->
+                <div id="about" class="flex-child">
 
                   <!-- about inner wrapper -->
                   <div id="about-wrapper" class='flex-parent flex-parent--column-mxl flex-parent--stretch-cross flex-parent--center-main py12-mxl px12-mxl'>
@@ -734,8 +728,7 @@
                     <div id="about-content" class='flex-child bg-lighten25 round-mm shadow-darken25-mm h-full-mxl mx6-mm mb6-mm mx12-mm mb12-mm mx0-mxl my0-mxl w-full w-auto-mxl'>
 
                       <!-- inner vertical wrapper -->
-                      <div class='flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross flex-parent--space-between-main h-full-mxl px6 py6'>
-
+                      <div class='flex-parent flex-parent--column flex-parent--center-main flex-parent--stretch-cross flex-parent--space-between-main h-full px6 py6'>
                         <!-- About--Header -->
                         <div class="flex-child flex-child--no-shrink bg-lighten25 round-tl round-tr hmin18 hmin36-mxl pt6 pb3 flex-parent flex-parent--center-cross flex-parent--center-main relative">
                           <h3 class='flex-child txt-h4 txt-bold txt-em pt3 pt0-mxl'>About This Map</h3>
@@ -748,7 +741,7 @@
                         </div>
 
                         <!-- About--Main -->
-                        <div class="flex-child hmax120 hmax-none-mxl h-full-mxl bg-lighten50 txt-s txt-m-ml round-bl round-br scroll-auto">
+                        <div class="flex-child hmax120 hmax-none-mxl bg-lighten50 txt-s txt-m-ml round-bl round-br scroll-auto h-full">
 
                           <!-- inner content wrapper -->
                           <div class="flex-parent flex-parent--column flex-parent--row-mm flex-parent--column-mxl flex-parent--space-between-main flex-parent--stretch-cross grid px12 py6 py12-mm px18-mxl py18-mxl mx6 my6 mx0-mm my0-mm mx12-mxl my6-mxl">
@@ -966,7 +959,6 @@
       <!-- inner horizontal wrapper -->
       <div class='flex-parent flex-parent--center-cross flex-parent--space-between-main grid px6 px12-mm my6 px18-ml px24-mxl'>
         <!-- author info -->
-        <!-- mb-neg3 -->
         <div class='flex-child flex-child--no-shrink col col--5'>
           <div class="flex-parent flex-parent--column flex-parent--center-main flex-parent--row-mm flex-parent--start-main-mm flex-parent--center-cross-mm ml6">
             <span class="flex-child txt-nowrap-sm">Map by <a target='_blank' href='https://www.kafunk.com' class="txt-nowrap">Katrina Funk</a></span>
@@ -983,7 +975,7 @@
         </div>
         <!-- social media -->
         <div class="flex-child flex-child--no-shrink col col--5">
-          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr3 mb-neg3"> <!-- mb-neg6 -->
+          <div class="flex-parent flex-parent--end-main flex-parent--center-cross mr3 mb-neg3">
             <a target="_blank" href="mailto:kafunk@gmail.com">
               <svg class='flex-child inline-block icon h24 w24 mr6' alt="email"><use xlink:href='#icon-mail'/></svg>
             </a>
