@@ -1021,6 +1021,8 @@ quadtreeReps = d3.json("./data/final/quadtree_search_reps.json"),
           currentRoute = routeData;
           // bind all trigger points to the DOM for en route intersection;
           bindQuadtreeData(currentRoute.quadtree,true) // triggerPtFlag === true
+          // in case on a mobile device, combat weirdness
+          adjustSize()
           // initiate experience
           initExp(storedFlag);
         }, onError);
